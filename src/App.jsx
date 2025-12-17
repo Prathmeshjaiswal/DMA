@@ -3,13 +3,70 @@ import { useState } from 'react'
 // import viteLogo from '/vite.svg'
 import './App.css'
 import Login from './Components/Auth/Login.jsx'
+import HomePage from './Components/HomePage.jsx'
+import AddDemands from "./Components/DemandsManagement/AddDemands.jsx"
+import DemandSheet from "./Components/DemandsManagement/DemandSheet.jsx"
+import OnBoardingTracker from "./Components/DemandsManagement/OnBoardingTracker.jsx"
+import ProfileTracker from "./Components/DemandsManagement/ProfileTracker.jsx"
+import RDGTeam from "./Components/DemandsManagement/RDGTeam.jsx"
+import Report from "./Components/DemandsManagement/Report.jsx"
+import TATeam from "./Components/DemandsManagement/TATeam.jsx"
+import AddDemands2 from "./Components/DemandsManagement/AddDemands2.jsx"
+import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
+import DashBoard from "./Components/DemandsManagement/DashBoard.jsx"
+import NavBar from "./Components/NavBar.jsx"
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 
 function App() {
-  const [count, setCount] = useState(0)
+        const [userRole,setUserRole] = useState("");
+//     const [user, setUser] = useState(null);
+
+
+//   const [form, setForm] = useState({
+// //     demandId: "DMD-1234", // read-only in screenshot
+// //     rr: "RR-5678",        // read-only in screenshot
+//     lob: "",
+//     positions: "",
+//     skillCluster: "",
+//     primarySkill: "",
+//     secondarySkill: "",
+//     demandReceivedDate: "",
+//     hiringManager: "",
+//     salesSpoc: "",
+//     deliveryManager: "",
+//     pmo: "",
+//     hbu: "",
+//     demandType: "",
+//   });
+
 
   return (
     <>
-      <Login/>
+    <Router>
+          <Routes>
+            {/* Default redirect to /home */}
+            <Route path="/" element={<Navigate to="/Login" replace />} />
+            <Route path="/Login" element={<Login userRole={userRole}/>} />
+            <Route path="/DashBoard" element={<DashBoard />} />
+            <Route path="/HomePage" element={<HomePage />} />
+            <Route path="/AddNewDemands" element={<AddDemands />}/>
+            <Route path="/AddDemands2" element={<AddDemands2 />}/>
+            <Route path="/EditDemand" element={<EditDemand />}/>
+            <Route path="/DemandSheet" element={<DemandSheet userRole={userRole}/>}/>
+            <Route path="/OnBoardingTracker" element={<OnBoardingTracker />} />
+            <Route path="/ProfileTracker" element={<ProfileTracker />} />
+            <Route path="/RDGTeam" element={<RDGTeam />} />
+            <Route path="/Report" element={<Report />} />
+            <Route path="/TATeam" element={<TATeam />} />
+
+            {/* Fallback for unknown routes */}
+            <Route path="*" element={<h2>Page not found</h2>} />
+          </Routes>
+        </Router>
+      <div>
+{/*               {user =="admin" ? <DashBoard />: <Login handleLogin={handleLogin}/>} */}
+            </div>
     </>
   )
 }
