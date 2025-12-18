@@ -298,6 +298,20 @@ export default function AddDemands() {
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Demand Timeline</span>
             <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
+              <option value="">Select Demand Timeline</option>
+              {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Demand Type</span>
+            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
+              <option value="">Select Demand Type</option>
+              {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Demand Timeline</span>
+            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
               <option value="">Select Demand Type</option>
               {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
