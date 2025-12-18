@@ -117,10 +117,10 @@ export default function AddDemands() {
   return (
     <>
       <NavBar />
-      <form onSubmit={onUpdate} className="bg-white pt-15">
-        <div className="flex justify-between px-6 mt-6">
+      <form onSubmit={onUpdate} className="bg-white pt-1">
+        <div className="flex justify-between px-45 mt-1">
           <div className="flex items-center gap-3">
-            <button type="button" className="">Add New Demand Here :-</button>
+            <button type="button" className="font-bold">Add New Demand Here :-</button>
           </div>
         </div>
         {/*           <span className={`${labelPill}`}>Demand ID (Only Text)</span> */}
@@ -130,7 +130,7 @@ export default function AddDemands() {
         {/*       <div className="mt-4"><hr className="border-gray-300" /></div> */}
 
 
-        <div className="grid grid-cols-2 gap-5 mx-9 px-9">
+        <div className="grid grid-cols-2 gap-5 mx-5 px-50">
           <div className="grid grid-rows-3 items-center">
             <span className={labelPill}>Line of Business</span>
             <select className={inputBox} value={form.lob} onChange={(e) => setForm("lob", e.target.value)}>
