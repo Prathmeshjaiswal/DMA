@@ -296,7 +296,7 @@ export default function AddDemands() {
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
-            <span className={labelPill}>Demand Type</span>
+            <span className={labelPill}>Demand Timeline</span>
             <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
               <option value="">Select Demand Type</option>
               {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
