@@ -30,6 +30,7 @@ export default function AddDemands() {
     pmo: "",
     hbu: "",
     demandType: "",
+    demandTimeline:"",
   });
 
 
@@ -47,6 +48,7 @@ export default function AddDemands() {
       ["pmo", "PMO"],
       ["hbu", "HBU"],
       ["demandType", "Demand Type"],
+      ["demandTimeline","Demand Timeline"]
     ];
 
 
@@ -100,7 +102,8 @@ export default function AddDemands() {
   const PMO_LIST = ["Shubham Kadam", "Upal / Shubham", "Swati Pahuja", "Gouri /abhishek", "Shobhit Bhardwaj", "Shobhit/Gouri", "Upal / Mayuri"];
   const HBUs = ["HBU-North", "HBU-South", "HBU-East", "HBU-West"];
   const DELIVERY_MANAGERS = ["Nitin", "Anurag", "DM-3"];
-  const DEMAND_TYPES = ["Current", "Future"];
+  const DEMAND_TIMELINE =["Current","Future"]
+  const DEMAND_TYPES = ["New", "Replacement"];
 
   //
   const skillClusterOptions = SKILL_CLUSTERS.map(s => ({ label: s, value: s }))
@@ -304,9 +307,9 @@ export default function AddDemands() {
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Demand Type</span>
-            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
+            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandTimeline", e.target.value)}>
               <option value="">Select Demand Type</option>
-              {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+              {DEMAND_TIMELINE.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
