@@ -33,7 +33,7 @@ export default function NavBar() {
             onClick={() => setIsOpen(true)}
             className="px-3 py-1 rounded bg-[#F15B40] text-white hover:brightness-110"
           >
-            Dashboard
+            Demand
           </button>
         </div>
       </div>

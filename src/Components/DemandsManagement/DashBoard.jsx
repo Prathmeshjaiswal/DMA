@@ -44,12 +44,12 @@ const navigate = useNavigate();
           {/* Chart Card */}
           <div className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
             <div className="flex items-center justify-between mb-3">
-          <select className="text-black">
-            <option value="">Select Charts</option>
-            <option>Pie chart</option>
-            <option>Bar Graph</option>
-            <option>Line Graph</option>
-            </select>
+{/*           <select className="text-black"> */}
+{/*             <option value="">Select Charts</option> */}
+{/*             <option>Pie chart</option> */}
+{/*             <option>Bar Graph</option> */}
+{/*             <option>Line Graph</option> */}
+{/*             </select> */}
           <select className="text-black">
             <option value="">Select Time Period</option>
             <option>6 Months</option>

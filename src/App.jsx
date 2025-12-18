@@ -20,6 +20,22 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 
 function App() {
         const [userRole,setUserRole] = useState("");
+            const handleUserRole=(userid,password)=>{
+              if(userid=="dev@coforge.com" && password=="1234"){
+                setUserRole("dev");
+              }
+              else if(userid=="dm@coforge.com" && password=="1234"){
+                  setUserRole("Delivery Manager");
+                  navigate("/DashBoard");
+                  }
+              else if(userid=="pmo@coforge.com" && password=="1234"){
+                  setUserRole("PMO");
+                  navigate("/DashBoard");
+                  }
+              else{
+                alert("Invalid Credentials")
+              }
+            }
 //     const [user, setUser] = useState(null);
 
 
@@ -40,14 +56,13 @@ function App() {
 //     demandType: "",
 //   });
 
-
   return (
     <>
     <Router>
           <Routes>
             {/* Default redirect to /home */}
             <Route path="/" element={<Navigate to="/Login" replace />} />
-            <Route path="/Login" element={<Login userRole={userRole}/>} />
+            <Route path="/Login" element={<Login userRole={handleUserRole}/>} />
             <Route path="/DashBoard" element={<DashBoard />} />
             <Route path="/HomePage" element={<HomePage />} />
             <Route path="/AddNewDemands" element={<AddDemands />}/>

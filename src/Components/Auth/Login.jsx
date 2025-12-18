@@ -10,6 +10,7 @@ const navigate = useNavigate();
 const submitHandler =(e) =>{
         e.preventDefault()
         handleLogin(userid,password)
+        props.handleUserRole(userid,password);
         setUserid("")
         setPassword("")
         console.log(userid,password);
