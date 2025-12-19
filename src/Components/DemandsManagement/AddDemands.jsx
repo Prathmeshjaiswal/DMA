@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState, useRef ,useEffect} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
 import Select, { components } from "react-select";
@@ -14,10 +14,21 @@ import "react-datepicker/dist/react-datepicker.css"
 
 export default function AddDemands() {
   const navigate = useNavigate();
+  //storage
+  const STORAGE_KEY="addDemandsFormData"
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(()=>{
     //     demandId: "DMD-1234", // read-only in screenshot
     //     rr: "RR-5678",        // read-only in screenshot
+    const savedForm = localStorage.getItem(STORAGE_KEY);
+    if (savedForm) {
+      try {
+        return JSON.parse(savedForm);
+      } catch (error) {
+        console.error("Error parsing saved form:", error);
+      }
+    }
+    return{
     lob: "",
     positions: "",
     skillCluster: [],//array
@@ -31,7 +42,13 @@ export default function AddDemands() {
     hbu: "",
     demandType: "",
     demandTimeline:"",
+    }
   });
+
+   // Save form to localStorage whenever it changes
+   useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+  }, [form]);
 
 
   const onUpdate = (e) => {
@@ -137,14 +154,14 @@ export default function AddDemands() {
         <div className="grid grid-cols-2 gap-5 mx-5 px-50">
           <div className="grid grid-rows-3 items-center">
             <span className={labelPill}>Line of Business</span>
-            <select className={inputBox} value={form.lob} onChange={(e) => setForm("lob", e.target.value)}>
+            <select className={inputBox} value={form.lob} onChange={(e) => setForm({...form,lob: e.target.value})}>
               <option value="">Select Line of Business</option>
               {LOB_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>No. of Positions</span>
-            <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm("positions", e.target.value)} />
+            <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm({...form,positions: e.target.value})} />
 
           </div>
 
@@ -308,7 +325,7 @@ export default function AddDemands() {
 
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Hiring Manager</span>
-            <select className={inputBox} value={form.hiringManager} onChange={(e) => setForm("hiringManager", e.target.value)}>
+            <select className={inputBox} value={form.hiringManager} onChange={(e) => setForm({...form,hiringManager: e.target.value})}>
               <option value="">Select Hiring Manager</option>
               {MANAGERS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -317,7 +334,7 @@ export default function AddDemands() {
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Sales SPOC</span>
-            <select className={inputBox} value={form.salesSpoc} onChange={(e) => setForm("salesSpoc", e.target.value)}>
+            <select className={inputBox} value={form.salesSpoc} onChange={(e) =>setForm({...form,salesSpoc: e.target.value})}>
               <option value="">Select Sales SPOC</option>
               {SPOCS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -325,37 +342,37 @@ export default function AddDemands() {
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Delivery Manager</span>
-            <select className={inputBox} value={form.deliveryManager} onChange={(e) => setForm("deliveryManager", e.target.value)}>
+            <select className={inputBox} value={form.deliveryManager} onChange={(e) => setForm({...form,deliveryManager: e.target.value})}>
               <option value="">Select Delivery Manager</option>
               {DELIVERY_MANAGERS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>PMO</span>
-            <select className={inputBox} value={form.pmo} onChange={(e) => setForm("pmo", e.target.value)}>
+            <select className={inputBox} value={form.pmo} onChange={(e) => setForm({...form,pmo: e.target.value})}>
               <option value="">Select PMO</option>
               {PMO_LIST.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>HBU</span>
-            <select className={inputBox} value={form.hbu} onChange={(e) => setForm("hbu", e.target.value)}>
+            <select className={inputBox} value={form.hbu} onChange={(e) => setForm({...form,hbu: e.target.value})}>
               <option value="">Select HBU</option>
               {HBUs.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Demand Timeline</span>
-            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
+            <select className={inputBox} value={form.demandTimeline} onChange={(e) => setForm({...form,demandTimeline: e.target.value})}>
               <option value="">Select Demand Timeline</option>
-              {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+              {DEMAND_TIMELINE.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Demand Type</span>
-            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandTimeline", e.target.value)}>
+            <select className={inputBox} value={form.demandType} onChange={(e) => setForm({...form,demandType: e.target.value})}>
               <option value="">Select Demand Type</option>
-              {DEMAND_TIMELINE.map((o) => <option key={o} value={o}>{o}</option>)}
+              {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-0.5 items-center">
