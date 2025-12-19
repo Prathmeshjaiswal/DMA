@@ -76,7 +76,7 @@ export default function AddDemands() {
   const CheckboxOption = (props) => {
     return (
       <components.Option {...props}>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-fu">
           <span>{props.label}</span>
           <input
             type="checkbox"
@@ -115,6 +115,7 @@ export default function AddDemands() {
   const cxButtonOrange = "rounded-md bg-green-100 text-white px-4 py-2 border border-orange-800 shadow-sm";
   const labelPill = "rounded-md bg-gray-800 text-white px-4 py-1 text-sm font-medium border border-[#52624E]";
   const inputBox = "w-full rounded-md border border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
+  // const inputBox2 = "w-full  border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 
   return (
@@ -159,7 +160,7 @@ export default function AddDemands() {
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
               components={{
-                Option: CheckboxOption
+                Option: CheckboxOption,
               }}
               value={form.skillCluster}
               onChange={(selected) =>
@@ -167,12 +168,28 @@ export default function AddDemands() {
               }
               placeholder="Select Skill Cluster"
               className="w-full"
+             
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
 
             />
@@ -204,11 +221,26 @@ export default function AddDemands() {
               placeholder="Select Primary Skills"
               className="w-full"
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
             />
           </div>
@@ -235,13 +267,27 @@ export default function AddDemands() {
               placeholder="Select Secondary Skills"
               className="w-full"
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
-
             />
           </div>
 
