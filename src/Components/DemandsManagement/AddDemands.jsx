@@ -102,8 +102,8 @@ export default function AddDemands() {
   const PMO_LIST = ["Shubham Kadam", "Upal / Shubham", "Swati Pahuja", "Gouri /abhishek", "Shobhit Bhardwaj", "Shobhit/Gouri", "Upal / Mayuri"];
   const HBUs = ["HBU-North", "HBU-South", "HBU-East", "HBU-West"];
   const DELIVERY_MANAGERS = ["Nitin", "Anurag", "DM-3"];
-  const DEMAND_TIMELINE =["Current","Future"]
-  const DEMAND_TYPES = ["New", "Replacement"];
+  const DEMAND_TIMELINE =["New", "Replacement"];  
+  const DEMAND_TYPES = ["Current","Future"];
 
   //
   const skillClusterOptions = SKILL_CLUSTERS.map(s => ({ label: s, value: s }))
