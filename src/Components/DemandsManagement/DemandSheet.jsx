@@ -1,18 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
 import { Link } from "react-router-dom";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
 export default function DemandSheet(props) {
-const CAN_EDIT_ROLES = ["Delivery Manager", "PMO"];
-const pillOrange = "rounded-md bg-orange-700 text-white px-4 py-2 border border-orange-800 shadow-sm";
-const pillGreen  = "rounded-md bg-gray-800 text-white px-4 py-2 border border-[#52624E] shadow-sm";
-const inputBox   = "w-full rounded-md border border-[#52624E] px-2 py-1 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
-const badge      = "inline-block rounded-md bg-[#8FA58A] text-white px-3 py-1 text-sm border border-[#52624E]";
-
-const todayISO = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
 const initialRows = [
   {
     demandId: "DMD-1001",
@@ -80,14 +72,14 @@ const SELECT_OPTIONS = {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
 
-
+// comment
   const defaultVisible = ALL_COLUMNS
     .filter(c => c.alwaysVisible || ["rr","lob","manager","skillCluster","primarySkill","secondarySkill","currentProfileShared","dateOfProfileShared","externalInternal","status"].includes(c.key))
     .map(c => c.key);
   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
 
-
-  const [filtersEnabled, setFiltersEnabled] = useState(true);
+  const [columnsEnabled, setColumnsEnabled] = useState(false);
+  const [filtersEnabled, setFiltersEnabled] = useState(false);
   const [filters, setFilters] = useState({
     demandId:"",
     rr: "",
@@ -160,6 +152,37 @@ const SELECT_OPTIONS = {
         : [...prev, key];
     });
   };
+  
+  // per column filter state
+  const filterKeys = Object.keys(filters);
+  const DEFAULT_ENABLED = new Set(["demandId", "rr", "lob"]);
+  // Per-field enable map
+  const [enabledFilterFields, setEnabledFilterFields] = useState(() =>
+    filterKeys.reduce((acc, key) => {
+        acc[key] = DEFAULT_ENABLED.has(key); // true only for demandId, rrid, lob
+        return acc;
+      }, {})
+  );
+
+  // Keep map in sync if filters keys change dynamically
+  useEffect(() => {
+    setEnabledFilterFields(prev => {
+      const next = {};
+      for (const k of filterKeys) next[k] = prev[k] ?? true;
+      return next;
+    });
+  }, [filterKeys.join("|")]);
+
+  // clear its value when turning OFF
+  const toggleFilterField = (key) => {
+    setEnabledFilterFields(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (!next[key]) {
+        setFilters(f => ({ ...f, [key]: "" }));
+      }
+      return next;
+    });
+  };
 
   return (
       <>
@@ -169,87 +192,133 @@ const SELECT_OPTIONS = {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[16rem_1fr]">
           <section className="w-full md:sticky md:top-4 self-start">
             <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="mb-2 font-medium text-gray-800">Columns</div>
-
-              {/* Scrollable area*/}
-              <div className="flex flex-col gap-2 max-h-80 overflow-auto pr-1">
-                {ALL_COLUMNS.map(col => (
-                  <label
-                    key={col.key}
-                    className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm
-                      ${col.alwaysVisible ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}
-                      ${visibleColumns.includes(col.key) ? "border-indigo-500 bg-indigo-50" : "border-gray-300 bg-gray-50"}`}
-                    title={col.alwaysVisible ? "Always visible" : ""}
-                  >
-                    <input
-                      type="checkbox"
-                      className="accent-indigo-600"
-                      checked={visibleColumns.includes(col.key)}
-                      onChange={() => toggleColumn(col.key)}
-                      disabled={col.alwaysVisible}
-                    />
-                    {col.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="w-full">
-            <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium text-gray-800">Filters (optional)</span>
+                <span className="font-medium text-gray-800">Columns</span>
                 <label className="inline-flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     className="accent-indigo-600"
-                    checked={filtersEnabled}
-                    onChange={(e) => setFiltersEnabled(e.target.checked)}
+                    checked={columnsEnabled}
+                    onChange={(e) => setColumnsEnabled(e.target.checked)}
                   />
-                  Enable filters
+                  Enable columns
                 </label>
               </div>
 
-              {filtersEnabled && (
-                // scrollable container
-                <div className="max-h-80 overflow-auto pr-1">
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    {Object.keys(filters).map((key) => {
-                      const isSelect = SELECT_OPTIONS[key] && SELECT_OPTIONS[key].length > 0;
-                      return (
-                        <div key={key} className="flex flex-col">
-                          <label className="mb-1 text-xs font-medium text-gray-500">
-                            {ALL_COLUMNS.find(c => c.key === key)?.label ?? key}
-                          </label>
-
-                          {isSelect ? (
-                            <select
-                              className="rounded-md border border-gray-300 bg-white p-2 text-sm"
-                              value={filters[key]}
-                              onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
-                            >
-                              <option value="">All</option>
-                              {SELECT_OPTIONS[key].map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              className="rounded-md border border-gray-300 p-2 text-sm"
-                              placeholder="Type to filter"
-                              value={filters[key]}
-                              onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+              {/* Scrollable area */}
+              {columnsEnabled && (
+                <div className="flex flex-col gap-2 max-h-80 overflow-auto pr-1">
+                  {ALL_COLUMNS.map(col => (
+                    <label
+                      key={col.key}
+                      className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm
+                        ${col.alwaysVisible ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}
+                        ${visibleColumns.includes(col.key) ? "border-indigo-500 bg-indigo-50" : "border-gray-300 bg-gray-50"}`}
+                      title={col.alwaysVisible ? "Always visible" : ""}
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-indigo-600"
+                        checked={visibleColumns.includes(col.key)}
+                        onChange={() => toggleColumn(col.key)}
+                        disabled={col.alwaysVisible}
+                      />
+                      {col.label}
+                    </label>
+                  ))}
                 </div>
               )}
             </div>
           </section>
+
+
+          
+<section className="w-full">
+  <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="mb-2 flex items-center justify-between">
+      <span className="font-medium text-gray-800">Filters (optional)</span>
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="accent-indigo-600"
+          checked={filtersEnabled}
+          onChange={(e) => setFiltersEnabled(e.target.checked)}
+        />
+        Enable filters
+      </label>
+    </div>
+
+    {filtersEnabled && (
+      // scrollable container
+      <div className="max-h-80 overflow-auto pr-1">
+        {/* Per-field toggles (like Columns) */}
+        <div className="mb-3 flex flex-wrap gap-2">
+          {Object.keys(filters).map((key) => {
+            const label = ALL_COLUMNS.find(c => c.key === key)?.label ?? key;
+            const enabled = enabledFilterFields[key];
+
+            return (
+              <label
+                key={key}
+                className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm
+                  ${enabled ? "border-indigo-500 bg-indigo-50" : "border-gray-300 bg-gray-50"}`}
+                title={enabled ? "Filter enabled" : "Filter disabled"}
+              >
+                <input
+                  type="checkbox"
+                  className="accent-indigo-600"
+                  checked={enabled}
+                  onChange={() => toggleFilterField(key)}
+                />
+                {label}
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Inputs grid — render only when the field is enabled */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {Object.keys(filters).map((key) => {
+            if (!enabledFilterFields[key]) return null;
+
+            const isSelect = SELECT_OPTIONS[key] && SELECT_OPTIONS[key].length > 0;
+            const label = ALL_COLUMNS.find(c => c.key === key)?.label ?? key;
+
+            return (
+              <div key={key} className="flex flex-col">
+                <label className="mb-1 text-xs font-medium text-gray-500">
+                  {label}
+                </label>
+
+                {isSelect ? (
+                  <select
+                    className="rounded-md border border-gray-300 bg-white p-2 text-sm"
+                    value={filters[key]}
+                    onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
+                  >
+                    <option value="">All</option>
+                    {SELECT_OPTIONS[key].map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className="rounded-md border border-gray-300 p-2 text-sm"
+                    placeholder="Type to filter"
+                    value={filters[key]}
+                    onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </div>
+</section>
+
         </div>
       </div>
 
@@ -269,42 +338,54 @@ const SELECT_OPTIONS = {
                   </th>
                 ))}
                 {/* Actions column only when editing */}
-                {editingId && <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>}
+                {editingId && (
+                  <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
+
             <tbody>
               {filteredRows.map((row) => {
                 const isEditing = editingId === row.demandId;
+
                 return (
                   <tr key={row.demandId} className="hover:bg-gray-50">
                     {ALL_COLUMNS.filter(c => visibleColumns.includes(c.key)).map(col => {
                       const value = isEditing ? draft[col.key] : row[col.key];
-                      
-                      // Demand ID cell: pencil + clickable ID
+
+                      // Demand ID: ALWAYS non-editable
                       if (col.key === "demandId") {
                         return (
                           <td key={col.key} className="border-b border-gray-200 px-4 py-3">
-                            {isEditing ? (
-                              <input
-                                type="text"
-                                value={draft.demandId}
-                                onChange={(e) => onDraftChange("demandId", e.target.value)}
-                                className="w-36 rounded-md border border-gray-300 p-2 text-sm"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {/* Pencil icon/button triggers inline edit */}
-                                <button
-                                  type="button"
-                                  onClick={() => startEdit(row)}
-                                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
-                                  aria-label={`Edit demand ${row.demandId}`}
-                                  title="Edit"
-                                >
-                                  <PencilSquareIcon className="h-6 w-6 text-gray-700" />
-                                </button>
+                            <div className="flex items-center gap-2">
+                              {/* View mode: pencil + link */}
+                              {!isEditing && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEdit(row)}
+                                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+                                    aria-label={`Edit demand ${row.demandId}`}
+                                    title="Edit"
+                                  >
+                                    <PencilSquareIcon className="h-6 w-6 text-gray-700" />
+                                  </button>
 
-                                {/* Demand ID navigates to details page */}
+                                  <Link
+                                    to={`/demands/${row.demandId}`}
+                                    className="inline-flex w-32 justify-center rounded-md bg-olive-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-olive-700"
+                                    style={{ backgroundColor: "#6b8e23" }}
+                                    title="View details"
+                                  >
+                                    {row.demandId}
+                                  </Link>
+                                </>
+                              )}
+
+                              {/* Edit mode*/}
+                              {isEditing && (
                                 <Link
                                   to={`/demands/${row.demandId}`}
                                   className="inline-flex w-32 justify-center rounded-md bg-olive-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-olive-700"
@@ -313,14 +394,11 @@ const SELECT_OPTIONS = {
                                 >
                                   {row.demandId}
                                 </Link>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </td>
                         );
                       }
-
-
-                      // Editing UI for other cells
                       if (isEditing) {
                         // dropdowns for select columns
                         if (SELECT_OPTIONS[col.key]) {
@@ -364,7 +442,7 @@ const SELECT_OPTIONS = {
                         );
                       }
 
-                      // Read-only cells
+                      // Read-only cells (non-editing)
                       return (
                         <td key={col.key} className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-sm text-gray-800">
                           {value || (col.key === "dateOfProfileShared" ? "" : "")}
