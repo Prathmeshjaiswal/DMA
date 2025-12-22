@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState, useRef ,useEffect} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
 import Select, { components } from "react-select";
@@ -14,10 +14,21 @@ import "react-datepicker/dist/react-datepicker.css"
 
 export default function AddDemands() {
   const navigate = useNavigate();
+  //storage
+  const STORAGE_KEY="addDemandsFormData"
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(()=>{
     //     demandId: "DMD-1234", // read-only in screenshot
     //     rr: "RR-5678",        // read-only in screenshot
+    const savedForm = localStorage.getItem(STORAGE_KEY);
+    if (savedForm) {
+      try {
+        return JSON.parse(savedForm);
+      } catch (error) {
+        console.error("Error parsing saved form:", error);
+      }
+    }
+    return{
     lob: "",
     positions: "",
     skillCluster: [],//array
@@ -30,7 +41,14 @@ export default function AddDemands() {
     pmo: "",
     hbu: "",
     demandType: "",
+    demandTimeline:"",
+    }
   });
+
+   // Save form to localStorage whenever it changes
+   useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+  }, [form]);
 
 
   const onUpdate = (e) => {
@@ -47,6 +65,7 @@ export default function AddDemands() {
       ["pmo", "PMO"],
       ["hbu", "HBU"],
       ["demandType", "Demand Type"],
+      ["demandTimeline","Demand Timeline"]
     ];
 
 
@@ -74,7 +93,7 @@ export default function AddDemands() {
   const CheckboxOption = (props) => {
     return (
       <components.Option {...props}>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-fu">
           <span>{props.label}</span>
           <input
             type="checkbox"
@@ -100,7 +119,8 @@ export default function AddDemands() {
   const PMO_LIST = ["Shubham Kadam", "Upal / Shubham", "Swati Pahuja", "Gouri /abhishek", "Shobhit Bhardwaj", "Shobhit/Gouri", "Upal / Mayuri"];
   const HBUs = ["HBU-North", "HBU-South", "HBU-East", "HBU-West"];
   const DELIVERY_MANAGERS = ["Nitin", "Anurag", "DM-3"];
-  const DEMAND_TYPES = ["Current", "Future"];
+  const DEMAND_TIMELINE =["New", "Replacement"];  
+  const DEMAND_TYPES = ["Current","Future"];
 
   //
   const skillClusterOptions = SKILL_CLUSTERS.map(s => ({ label: s, value: s }))
@@ -112,15 +132,16 @@ export default function AddDemands() {
   const cxButtonOrange = "rounded-md bg-green-100 text-white px-4 py-2 border border-orange-800 shadow-sm";
   const labelPill = "rounded-md bg-gray-800 text-white px-4 py-1 text-sm font-medium border border-[#52624E]";
   const inputBox = "w-full rounded-md border border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
+  // const inputBox2 = "w-full  border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 
   return (
     <>
       <NavBar />
-      <form onSubmit={onUpdate} className="bg-white pt-15">
-        <div className="flex justify-between px-6 mt-6">
+      <form onSubmit={onUpdate} className="bg-white pt-1">
+        <div className="flex justify-between px-45 mt-1">
           <div className="flex items-center gap-3">
-            <button type="button" className="">Add New Demand Here :-</button>
+            <button type="button" className="font-bold">Add New Demand Here :-</button>
           </div>
         </div>
         {/*           <span className={`${labelPill}`}>Demand ID (Only Text)</span> */}
@@ -130,17 +151,17 @@ export default function AddDemands() {
         {/*       <div className="mt-4"><hr className="border-gray-300" /></div> */}
 
 
-        <div className="grid grid-cols-2 gap-5 mx-9 px-9">
+        <div className="grid grid-cols-2 gap-5 mx-5 px-50">
           <div className="grid grid-rows-3 items-center">
             <span className={labelPill}>Line of Business</span>
-            <select className={inputBox} value={form.lob} onChange={(e) => setForm("lob", e.target.value)}>
+            <select className={inputBox} value={form.lob} onChange={(e) => setForm({...form,lob: e.target.value})}>
               <option value="">Select Line of Business</option>
               {LOB_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>No. of Positions</span>
-            <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm("positions", e.target.value)} />
+            <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm({...form,positions: e.target.value})} />
 
           </div>
 
@@ -156,7 +177,7 @@ export default function AddDemands() {
               closeMenuOnSelect={false}
               hideSelectedOptions={false}
               components={{
-                Option: CheckboxOption
+                Option: CheckboxOption,
               }}
               value={form.skillCluster}
               onChange={(selected) =>
@@ -164,12 +185,28 @@ export default function AddDemands() {
               }
               placeholder="Select Skill Cluster"
               className="w-full"
+             
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
 
             />
@@ -201,11 +238,26 @@ export default function AddDemands() {
               placeholder="Select Primary Skills"
               className="w-full"
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
             />
           </div>
@@ -232,13 +284,27 @@ export default function AddDemands() {
               placeholder="Select Secondary Skills"
               className="w-full"
               styles={{
-                control: (base) => ({
+                control: (base, state) => ({
                   ...base,
-                  borderColor: "#52624E",
-                  minHeight: "42px"
-                })
+                  borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
+                  boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
+                  minHeight: "42px",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    borderColor: state.isFocused ? "#ea580c" : "#52624E",
+                  },
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused ? "#d3d3d3" : "#ffffff",
+                  color: "#000000",
+                  padding: "10px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: "#808080",
+                  },
+                }),
               }}
-
             />
           </div>
 
@@ -259,7 +325,7 @@ export default function AddDemands() {
 
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Hiring Manager</span>
-            <select className={inputBox} value={form.hiringManager} onChange={(e) => setForm("hiringManager", e.target.value)}>
+            <select className={inputBox} value={form.hiringManager} onChange={(e) => setForm({...form,hiringManager: e.target.value})}>
               <option value="">Select Hiring Manager</option>
               {MANAGERS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -268,7 +334,7 @@ export default function AddDemands() {
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Sales SPOC</span>
-            <select className={inputBox} value={form.salesSpoc} onChange={(e) => setForm("salesSpoc", e.target.value)}>
+            <select className={inputBox} value={form.salesSpoc} onChange={(e) =>setForm({...form,salesSpoc: e.target.value})}>
               <option value="">Select Sales SPOC</option>
               {SPOCS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -276,31 +342,52 @@ export default function AddDemands() {
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Delivery Manager</span>
-            <select className={inputBox} value={form.deliveryManager} onChange={(e) => setForm("deliveryManager", e.target.value)}>
+            <select className={inputBox} value={form.deliveryManager} onChange={(e) => setForm({...form,deliveryManager: e.target.value})}>
               <option value="">Select Delivery Manager</option>
               {DELIVERY_MANAGERS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>PMO</span>
-            <select className={inputBox} value={form.pmo} onChange={(e) => setForm("pmo", e.target.value)}>
+            <select className={inputBox} value={form.pmo} onChange={(e) => setForm({...form,pmo: e.target.value})}>
               <option value="">Select PMO</option>
               {PMO_LIST.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>HBU</span>
-            <select className={inputBox} value={form.hbu} onChange={(e) => setForm("hbu", e.target.value)}>
+            <select className={inputBox} value={form.hbu} onChange={(e) => setForm({...form,hbu: e.target.value})}>
               <option value="">Select HBU</option>
               {HBUs.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Demand Timeline</span>
+            <select className={inputBox} value={form.demandTimeline} onChange={(e) => setForm({...form,demandTimeline: e.target.value})}>
+              <option value="">Select Demand Timeline</option>
+              {DEMAND_TIMELINE.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Demand Type</span>
-            <select className={inputBox} value={form.demandType} onChange={(e) => setForm("demandType", e.target.value)}>
+            <select className={inputBox} value={form.demandType} onChange={(e) => setForm({...form,demandType: e.target.value})}>
               <option value="">Select Demand Type</option>
               {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
+          </div>
+          <div className="grid grid-rows-3 gap-0.5 items-center">
+            <span className={labelPill}>Remark</span>
+            <textarea className={`${inputBox}resize-none`}
+             rows={1}
+             maxLength={250} 
+             placeholder="Enter remark (max 250 char)" 
+             value={form.remark || ""}
+            onChange={(e)=> setForm({...form,remark: e.target.value})}
+            />
+             <span className="text-xs text-gray-500">
+              {form.remark?.length || 0}/250
+            </span>
+           
           </div>
           <div className="flex items-center gap-4 m-2 px-6">
 
@@ -310,7 +397,6 @@ export default function AddDemands() {
             <button onClick={() => navigate("/AddDemands2")} className=" bg-gray-800 rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Next
             </button>
-
 
           </div>
 
