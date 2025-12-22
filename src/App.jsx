@@ -1,6 +1,4 @@
 import { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
 import './App.css'
 import Login from './Components/Auth/Login.jsx'
 import HomePage from './Components/HomePage.jsx'
@@ -14,7 +12,7 @@ import TATeam from "./Components/DemandsManagement/TATeam.jsx"
 import AddDemands2 from "./Components/DemandsManagement/AddDemands2.jsx"
 import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
 import DashBoard from "./Components/DemandsManagement/DashBoard.jsx"
-import NavBar from "./Components/NavBar.jsx"
+import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 
@@ -60,7 +58,6 @@ function App() {
     <>
     <Router>
           <Routes>
-            {/* Default redirect to /home */}
             <Route path="/" element={<Navigate to="/Login" replace />} />
             <Route path="/Login" element={<Login userRole={handleUserRole}/>} />
             <Route path="/DashBoard" element={<DashBoard />} />
@@ -73,7 +70,8 @@ function App() {
             <Route path="/ProfileTracker" element={<ProfileTracker />} />
             <Route path="/RDGTeam" element={<RDGTeam />} />
             <Route path="/Report" element={<Report />} />
-            <Route path="/TATeam" element={<TATeam />} />          
+            <Route path="/TATeam" element={<TATeam />} />
+            <Route path="/demands/:demandId" element={<DemandDetails />} />
 
             {/* Fallback for unknown routes */}
             <Route path="*" element={<h2>Page not found</h2>} />

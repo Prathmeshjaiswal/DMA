@@ -112,7 +112,7 @@ export default function DemandSheet(props) {
   });
 
   //multi select cols
-  const [isColumnOpen, setIsColumnOpen] = useState(false);
+  // const [isColumnOpen, setIsColumnOpen] = useState(false);
 
 
 
@@ -173,7 +173,7 @@ export default function DemandSheet(props) {
       <div className="p-16">
         {/* Controls above the table */}
         <div className="mb-4 flex flex-col gap-4">
-           <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-2 font-medium text-gray-800">Columns</div>
           <div className="flex flex-wrap gap-3">
             {ALL_COLUMNS.map(col => (
@@ -195,8 +195,8 @@ export default function DemandSheet(props) {
               </label>
             ))}
           </div>
-        </div> 
- 
+        </div>
+
 
         
 
@@ -210,8 +210,8 @@ export default function DemandSheet(props) {
               onClick={() => setIsColumnOpen(prev => !prev)}
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm shadow-sm hover:bg-gray-50"
             >
-              Select Columns */}
-            {/* </button> */}
+              Select Columns
+            </button> */}
 
             {/* Dropdown content */}
             {/* {isColumnOpen && (
@@ -221,8 +221,8 @@ export default function DemandSheet(props) {
                     key={col.key}
                     className={`flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 ${col.alwaysVisible ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                       }`}
-                  > */}
-                    {/* <input
+                  >
+                    <input
                       type="checkbox"
                       checked={visibleColumns.includes(col.key)}
                       disabled={col.alwaysVisible}
