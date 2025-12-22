@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
-import { Link } from "react-router-dom";
-import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
 export default function DemandSheet(props) {
 const initialRows = [
@@ -74,36 +72,44 @@ const SELECT_OPTIONS = {
 
 // comment
   const defaultVisible = ALL_COLUMNS
-    .filter(c => c.alwaysVisible || ["rr","lob","manager","skillCluster","primarySkill","secondarySkill","currentProfileShared","dateOfProfileShared","externalInternal","status"].includes(c.key))
+    .filter(c => c.alwaysVisible || ["rr", "lob", "manager", "skillCluster", "primarySkill", "secondarySkill", "currentProfileShared", "dateOfProfileShared", "externalInternal", "status"].includes(c.key))
     .map(c => c.key);
   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
 
   const [columnsEnabled, setColumnsEnabled] = useState(false);
   const [filtersEnabled, setFiltersEnabled] = useState(false);
   const [filters, setFilters] = useState({
-    demandId:"",
+    demandId: "",
     rr: "",
-    demandRecievedDate:"",
-    podprogrammeName:"",
+    demandRecievedDate: "",
+    podprogrammeName: "",
     lob: "",
     manager: "",
     skillCluster: "",
     primarySkill: "",
     secondarySkill: "",
-    experience:"",
+    experience: "",
     priority: "",
     demandLocation: "",
-    salesSpoc:"",
-    priorityComment:"",
-    pmoSpoc:"",
-    pm:"",
-    hbu:"",
-    band:"",
-    p1Age:"",
+    salesSpoc: "",
+    priorityComment: "",
+    pmoSpoc: "",
+    pm: "",
+    hbu: "",
+    band: "",
+    p1Age: "",
     currentProfileShared: "",
     externalInternal: "",
     status: "",
   });
+
+  //multi select cols
+  // const [isColumnOpen, setIsColumnOpen] = useState(false);
+
+
+
+
+
 
   const filteredRows = useMemo(() => {
     if (!filtersEnabled) return rows;
@@ -320,8 +326,32 @@ const SELECT_OPTIONS = {
 </section>
 
         </div>
-      </div>
 
+        {/* Table */}
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-gray-50">
+                <tr>
+                  {ALL_COLUMNS.filter(c => visibleColumns.includes(c.key)).map(col => (
+                    <th
+                      key={col.key}
+                      className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-700"
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                  {/* Actions column only when editing */}
+                  {editingId && <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const isEditing = editingId === row.demandId;
+                  return (
+                    <tr key={row.demandId} className="hover:bg-gray-50">
+                      {ALL_COLUMNS.filter(c => visibleColumns.includes(c.key)).map(col => {
+                        const value = isEditing ? draft[col.key] : row[col.key];
 
       {/* Table */}
       <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -389,8 +419,9 @@ const SELECT_OPTIONS = {
                                 <Link
                                   to={`/demands/${row.demandId}`}
                                   className="inline-flex w-32 justify-center rounded-md bg-olive-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-olive-700"
-                                  style={{ backgroundColor: "#6b8e23" }}
-                                  title="View details"
+                                  style={{
+                                    backgroundColor: "#6b8e23", // Tailwind doesn’t have 'olive' by default, use inline
+                                  }}
                                 >
                                   {row.demandId}
                                 </Link>
@@ -416,80 +447,84 @@ const SELECT_OPTIONS = {
                             </td>
                           );
                         }
-                        // date picker
-                        if (col.key === "dateOfProfileShared") {
+
+                        // Editing UI for other cells
+                        if (isEditing) {
+                          // dropdowns for select columns
+                          if (SELECT_OPTIONS[col.key]) {
+                            return (
+                              <td key={col.key} className="border-b border-gray-200 px-4 py-3">
+                                <select
+                                  value={value ?? ""}
+                                  onChange={(e) => onDraftChange(col.key, e.target.value)}
+                                  className="w-40 rounded-md border border-gray-300 bg-white p-2 text-sm"
+                                >
+                                  {SELECT_OPTIONS[col.key].map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            );
+                          }
+                          // date picker
+                          if (col.key === "dateOfProfileShared") {
+                            return (
+                              <td key={col.key} className="border-b border-gray-200 px-4 py-3">
+                                <input
+                                  type="date"
+                                  value={value ?? ""}
+                                  onChange={(e) => onDraftChange(col.key, e.target.value)}
+                                  className="rounded-md border border-gray-300 p-2 text-sm"
+                                />
+                              </td>
+                            );
+                          }
+                          // text input default
                           return (
                             <td key={col.key} className="border-b border-gray-200 px-4 py-3">
                               <input
-                                type="date"
+                                type="text"
                                 value={value ?? ""}
                                 onChange={(e) => onDraftChange(col.key, e.target.value)}
-                                className="rounded-md border border-gray-300 p-2 text-sm"
+                                className="w-40 rounded-md border border-gray-300 p-2 text-sm"
                               />
                             </td>
                           );
                         }
-                        // text input default
+
+                        // Read-only cells
                         return (
-                          <td key={col.key} className="border-b border-gray-200 px-4 py-3">
-                            <input
-                              type="text"
-                              value={value ?? ""}
-                              onChange={(e) => onDraftChange(col.key, e.target.value)}
-                              className="w-40 rounded-md border border-gray-300 p-2 text-sm"
-                            />
+                          <td key={col.key} className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-sm text-gray-800">
+                            {value || (col.key === "dateOfProfileShared" ? "" : "")}
                           </td>
                         );
-                      }
+                      })}
 
                       // Read-only cells (non-editing)
                       return (
                         <td key={col.key} className="whitespace-nowrap border-b border-gray-200 px-4 py-3 text-sm text-gray-800">
                           {value || (col.key === "dateOfProfileShared" ? "" : "")}
                         </td>
-                      );
-                    })}
+                      )}
+                    </tr>
+                  );
+                })}
 
-                    {/* Actions when editing */}
-                    {isEditing && (
-                      <td className="border-b border-gray-200 px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={saveEdit}
-                            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className="rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    )}
+                {filteredRows.length === 0 && (
+                  <tr>
+                    <td
+                      className="px-4 py-6 text-center text-sm text-gray-500"
+                      colSpan={visibleColumns.length + (editingId ? 1 : 0)}
+                    >
+                      No results found.
+                    </td>
                   </tr>
-                );
-              })}
-
-              {filteredRows.length === 0 && (
-                <tr>
-                  <td
-                    className="px-4 py-6 text-center text-sm text-gray-500"
-                    colSpan={visibleColumns.length + (editingId ? 1 : 0)}
-                  >
-                    No results found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 

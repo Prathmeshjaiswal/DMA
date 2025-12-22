@@ -141,7 +141,7 @@ const ALLOWED_EXTS = ["doc", "pdf"];
       </div>
 
    <div className="w-full px-6 py-4">
-      <div className="mx-auto  flex w-4/5 items-center gap-4">
+      <div className="mx-auto  flex w-1/2 items-center gap-4">
         <button type="button" onClick={triggerFileDialog} className={`w-1/6 h-9 rounded-md bg-[#8FA58A] hover:bg-[#81977C] text-white px-4 py-2 border cxButtonGreen shadow-sm transition-colors`}>Attach JD
         </button>
         <input ref={inputRef} type="file" accept=".doc,.pdf" onChange={onFileChange} className="sr-only" aria-hidden="true"/>
@@ -171,8 +171,10 @@ const ALLOWED_EXTS = ["doc", "pdf"];
       </div>
     </div>
           <div className="mt-8">
-            <div className="mx-auto max-w-4xl px-6 py-3">
-              <button type="submit" className="w-full rounded-md bg-gray-800 text-white py-2 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-700">Submit
+            <div className="mx-auto max-w-4xl px-6 py-3 flex gap-4">
+            <button type="button" onClick={()=>navigate("/AddNewDemands")} className="w-1/2 rounded-md bg-gray-800 text-white py-2 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-700">Previous
+            </button>
+              <button type="submit" className="w-1/2 rounded-md bg-gray-800 text-white py-2 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-700">Submit
               </button>
             </div>
           </div>
