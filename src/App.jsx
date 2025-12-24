@@ -16,6 +16,7 @@ import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 
+
 function App() {
         const [userRole,setUserRole] = useState("");
             const handleUserRole=(userid,password)=>{
@@ -35,24 +36,41 @@ function App() {
               }
             }
 //     const [user, setUser] = useState(null);
+const[demandData,setDemandData] = useState([]);
+  const [form, setForm] = useState(()=>{
+    return{
+    lob: "",
+    buisenessFunction:"",
+    podprogrammeName:"",
+    experience:"",
+    noOfPositions: "",
+    skillCluster: "",
+    primarySkills: "",
+    secondarySkills: "",
+    demandReceivedDate: "",
+    hiringManager: "",
+    salesSpoc: "",
+    deliveryManager: "",
+    priority:"",
+    demandLocation:"",
+    p1FlagData:"",
+    priorityComment:"",
+    pmoSpoc:"",
+    pmo: "",
+    hbu: "",
+    band:"",
+    p1Age:"",
+    demandType: "",
+    currentProfileShared:"",
+    dateOfProfileShared:"",
+    externalInternal:"",
+    status:"",
+    demandTimeline:"",
+    remark:"",
+    }
+  });
 
 
-//   const [form, setForm] = useState({
-// //     demandId: "DMD-1234", // read-only in screenshot
-// //     rr: "RR-5678",        // read-only in screenshot
-//     lob: "",
-//     positions: "",
-//     skillCluster: "",
-//     primarySkill: "",
-//     secondarySkill: "",
-//     demandReceivedDate: "",
-//     hiringManager: "",
-//     salesSpoc: "",
-//     deliveryManager: "",
-//     pmo: "",
-//     hbu: "",
-//     demandType: "",
-//   });
 
   return (
     <>
@@ -62,8 +80,8 @@ function App() {
             <Route path="/Login" element={<Login userRole={handleUserRole}/>} />
             <Route path="/DashBoard" element={<DashBoard />} />
             <Route path="/HomePage" element={<HomePage />} />
-            <Route path="/AddNewDemands" element={<AddDemands />}/>
-            <Route path="/AddDemands2" element={<AddDemands2 />}/>
+            <Route path="/AddNewDemands" element={<AddDemands setForm={setForm} form={form} demandData={demandData} setDemandData={setDemandData}/>}/>
+            <Route path="/AddDemands2" element={<AddDemands2 demandData={demandData} setDemandData={setDemandData}/>}/>
             <Route path="/EditDemand" element={<EditDemand />}/>
             <Route path="/DemandSheet" element={<DemandSheet userRole={userRole}/>}/>
             <Route path="/OnBoardingTracker" element={<OnBoardingTracker />} />

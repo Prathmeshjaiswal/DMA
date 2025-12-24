@@ -150,20 +150,20 @@ export default function DashBoard() {
 
 
                   {/* Time Period Dropdown */}
-                  <select
-                    className="text-black px-3 py-2 rounded border border-gray-300 flex-1"
-                    value={selectedTimePeriod}
-                    onChange={(e) => setSelectedTimePeriod(e.target.value)}
-                  >
-                    <option value="">Select Time Period</option>
-                    <option value="6">6 Months</option>
-                    <option value="12">12 Months</option>
-                    <option value="18">18 Months</option>
-                    <option value="24">24 Months</option>
-                  </select>
+{/*                   <select */}
+{/*                     className="text-black px-3 py-2 rounded border border-gray-300 flex-1" */}
+{/*                     value={selectedTimePeriod} */}
+{/*                     onChange={(e) => setSelectedTimePeriod(e.target.value)} */}
+{/*                   > */}
+{/*                     <option value="">Select Time Period</option> */}
+{/*                     <option value="6">6 Months</option> */}
+{/*                     <option value="12">12 Months</option> */}
+{/*                     <option value="18">18 Months</option> */}
+{/*                     <option value="24">24 Months</option> */}
+{/*                   </select> */}
 
                   <select
-                    className="text-black px-3 py-2 rounded border border-gray-300 flex-1"
+                    className="text-black px-3 py-2 rounded border git add .selectflex-1"
                     value={selectedTimePeriod}
                     onChange={(e) => setSelectedTimePeriod(e.target.value)}
               
