@@ -38,7 +38,7 @@ export default function NavBar() {
         </div>
       </div>
 
-      <div className="h-14" />
+      <div className="h-11" />
       <Sidebar
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}

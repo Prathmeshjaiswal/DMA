@@ -13,6 +13,7 @@
     "@coreui/react": "^5.9.2",
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.1.18",
+    "antd": "^6.1.2",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "primeicons": "^7.0.0",

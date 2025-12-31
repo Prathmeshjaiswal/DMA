@@ -1,6 +1,4 @@
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
 import logo from "../../assets/progress.png"
 export default function DemandDetails() {
 
@@ -11,6 +9,5 @@ export default function DemandDetails() {
         className="w-64 h-64 object-cover rounded-lg shadow-lg"
       />
       </div>
-
   );
 };
