@@ -25,8 +25,8 @@ export default function Sidebar({ isOpen, onClose, links = [] }) {
   const toggle = (label) => setOpenLabel((prev) => (prev === label ? null : label));
   const childButtonsMap = {
     Demands: [
-      { text: "Add", onClick: () => navigate("/AddNewDemands") },
-      { text: "View", onClick: () => navigate("/DemandSheet") },
+      { text: "Add", onClick: () => navigate("/addDemands8") },
+      { text: "View", onClick: () => navigate("/DemandSheet7") },
     ],
     Track: [
       { text: "Profiles", onClick: () => navigate("/ProfileTracker") },

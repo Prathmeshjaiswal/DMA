@@ -9,11 +9,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css"
 import axios from 'axios'
 
-
-
-
-
-export default function AddDemands(props) {
+export default function AddDemands() {
   const navigate = useNavigate();
   //storage
   const STORAGE_KEY="addDemandsFormData"
@@ -147,7 +143,7 @@ const options = Array.isArray(dropDownData)
     <>
       <NavBar />
       <form onSubmit={onUpdate} className="bg-white pt-1">
-        <div className="flex justify-between px-45 mt-1">
+        <div className="flex justify-center px-45 mb-3">
           <div className="flex items-center gap-3">
             <button type="button" className="font-bold">Add New Demand Here :-</button>
           </div>
@@ -159,9 +155,8 @@ const options = Array.isArray(dropDownData)
         {/*       <div className="mt-4"><hr className="border-gray-300" /></div> */}
 
 
-        <div className="grid grid-cols-2 gap-5 justify-between px-20 mx-30">
-
-          <div className="grid grid-rows-2 pb-3 mr-10 items-center">
+        <div className="grid grid-cols-2 gap-x-8 mx-4 px-30">
+          <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Line of Business</span>
             <select className={inputBox} name="lob" value={props.form.lob} onChange={handleChange}>
               <option value="">Select Line of Business</option>
@@ -169,10 +164,9 @@ const options = Array.isArray(dropDownData)
                   {opt.lob}</option>)}
             </select>
           </div>
-
-          <div className="grid grid-rows-2 pb-3 ml-10 gap-1 items-center">
+          <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>No. of Positions</span>
-            <input className={inputBox} name="noOfPositions" type="number" min={1} placeholder="Enter positions" value={props.form.noOfPositions} onChange={handleChange} />
+            <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm({...form,positions: e.target.value})} />
           </div>
 
            <div className="grid grid-rows-2 pb-3 mr-10 gap-1 items-center">
@@ -275,22 +269,27 @@ const options = Array.isArray(dropDownData)
              {DEMAND_TYPES_OPTIONS.map((opt) => <option key={opt.id} value={opt.demandType}>{opt.demandType}</option>)}
             </select>
           </div>
-          <div className="grid grid-rows-2 pb-3 ml-10 gap-0.5 items-center">
+
+          
+          <div className="grid grid-rows-3 gap-0.5 items-center">
             <span className={labelPill}>Remark</span>
-            <textarea className={inputBox} name="remark"
-             rows={1}
-             maxLength={250}
-             placeholder="Enter remark (max 250 char)"
-             value={props.form.remark}
-            onChange={handleChange}
-            />
-{/*              <span className="text-xs text-gray-500"> */}
-{/*               {props.form.remark?.length || 0}/250 */}
-{/*             </span> */}
 
+            <div className="relative">
+              <textarea
+                className={`${inputBox} resize-none`}
+                rows={1}
+                maxLength={250}
+                placeholder="Enter remark (max 250 char)"
+                value={form.remark || ""}
+                onChange={(e) => setForm({ ...form, remark: e.target.value })}
+              />
+              <span className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none select-none">
+                {(form.remark?.length || 0)}/250
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 m-2 px-6">
-
+        </div>
+        <div className="flex items-center justify-center gap-4 m-2 px-6">
             <button onClick={() => navigate("/DashBoard")} className=" bg-gray-300 rounded-md text-gray-800 py-2 px-10 font-medium tracking-wide hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Previous
             </button>
@@ -298,10 +297,7 @@ const options = Array.isArray(dropDownData)
  className=" bg-gray-800 rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Next
             </button>
-
           </div>
-
-        </div>
       </form>
     </>
   );
