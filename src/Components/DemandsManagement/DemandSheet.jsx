@@ -3,65 +3,72 @@ import { useNavigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
 import { Link } from "react-router-dom";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
-import axios from 'axios'
 
 export default function DemandSheet(props) {
-
-  useEffect(() => {
-    const fetchDemands = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = axios.get("http://localhost:8080/api/v1/demands");
-        const data = res.data;
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || "Failed to load demands");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDemands();
-  }, []);
+const initialRows = [
+  {
+    demandId: "DMD-1001",
+    rr: "RR-501",
+    lob: "Banking",
+    manager: "Alice",
+    skillCluster: "Java",
+    primarySkill: "Spring",
+    secondarySkill: "React",
+    currentProfileShared: "No",
+    dateOfProfileShared: "",
+    externalInternal: "External",
+    status: "Open",
+  },
+  {
+    demandId: "DMD-1002",
+    rr: "RR-502",
+    lob: "Insurance",
+    manager: "Bob",
+    skillCluster: "Data",
+    primarySkill: "Python",
+    secondarySkill: "PowerBI",
+    currentProfileShared: "Yes",
+    dateOfProfileShared: "2025-12-17",
+    externalInternal: "Internal",
+    status: "Closed",
+  },
+];
 
 const ALL_COLUMNS = [
-  { key: "demandId", value:"121", label: "Demand ID", alwaysVisible: true },
-  { key: "rr", value:demandData.rr, label: "RR" },
-  { key: "demandRecievedDate", value:demandData.demand_business_id, label: "Demand Recieved Date" },
-  { key: "buisenessFunction", value:demandData.demand_business_id, label: "Buiseness Function" },
-  { key: "podprogrammeName", value:demandData.demand_business_id, label: "Pod /Programme Name" },
-  { key: "lob", value:demandData.demand_business_id, label: "LOB" },
-  { key: "manager", value:demandData.demand_business_id, label: "HSBC Hiring Manager" },
-  { key: "skillCluster", value:demandData.demand_business_id, label: "Skill Cluster" },
-  { key: "primarySkill", value:demandData.demand_business_id, label: "Primary Skill" },
-  { key: "secondarySkill", value:demandData.demand_business_id, label: "Secondary Skill" },
-  { key: "experience", value:demandData.demand_business_id, label: "Experience" },
-  { key: "priority", value:demandData.demand_business_id, label: "Priority" },
-  { key: "demandLocation", value:demandData.demand_business_id, label: "Demand Location" },
-  { key: "salesSpoc", value:demandData.demand_business_id, label: "Sales Spoc" },
-  { key: "p1FlagData", value:demandData.demand_business_id, label: "P1 Flag Date" },
-  { key: "priorityComment", value:demandData.demand_business_id, label: "Priority Comment" },
-  { key: "pmoSpoc", value:demandData.demand_business_id, label: "PMO SPOC" },
-  { key: "pm", value:demandData.demand_business_id, label: "PM" },
-  { key: "hbu", value:demandData.demand_business_id, label: "HBU" },
-  { key: "band", value:demandData.demand_business_id, label: "Band" },
-  { key: "p1Age", value:demandData.demand_business_id, label: "P1 Age" },
-  { key: "currentProfileShared", value:demandData.demand_business_id, label: "Current Profile Shared (Drop Down)" },
-  { key: "dateOfProfileShared", value:demandData.demand_business_id, label: "Date of Profile Shared (Auto Populate)" },
-  { key: "externalInternal", value:demandData.demand_business_id, label: "External / Internal" },
-  { key: "status", value:demandData.demand_business_id, label: "Status" },
+  { key: "demandId", label: "Demand ID", alwaysVisible: true },
+  { key: "rr", label: "RR" },
+  { key: "demandRecievedDate", label: "Demand Recieved Date" },
+  { key: "buisenessFunction", label: "Buiseness Function" },
+  { key: "podprogrammeName", label: "Pod /Programme Name" },
+  { key: "lob", label: "LOB" },
+  { key: "manager", label: "HSBC Hiring Manager" },
+  { key: "skillCluster", label: "Skill Cluster" },
+  { key: "primarySkill", label: "Primary Skill" },
+  { key: "secondarySkill", label: "Secondary Skill" },
+  { key: "experience", label: "Experience" },
+  { key: "priority", label: "Priority" },
+  { key: "demandLocation", label: "Demand Location" },
+  { key: "salesSpoc", label: "Sales Spoc" },
+  { key: "p1FlagData", label: "P1 Flag Date" },
+  { key: "priorityComment", label: "Priority Comment" },
+  { key: "pmoSpoc", label: "PMO SPOC" },
+  { key: "pm", label: "PM" },
+  { key: "hbu", label: "HBU" },
+  { key: "band", label: "Band" },
+  { key: "p1Age", label: "P1 Age" },
+  { key: "currentProfileShared", label: "Current Profile Shared (Drop Down)" },
+  { key: "dateOfProfileShared", label: "Date of Profile Shared (Auto Populate)" },
+  { key: "externalInternal", label: "External / Internal" },
+  { key: "status", label: "Status" },
 ];
 
 const SELECT_OPTIONS = {
   currentProfileShared: ["Yes", "No"],
   externalInternal: ["External", "Internal"],
-  status: ["Open", "Closed", "Profile Shared", "On Hold", "Selected"],
-
+  status: ["Open", "Closed", "Profile Shared" ,"On Hold","Selected"],
 };
 
-  const [rows, setRows] = useState([]);
- const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [rows, setRows] = useState(initialRows);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(null);
 
@@ -298,7 +305,7 @@ const SELECT_OPTIONS = {
                   <input
                     type="text"
                     className="rounded-md border border-gray-300 p-2 text-sm"
-                    placeholder="Type to Search"
+                    placeholder="Type to filter"
                     value={filters[key]}
                     onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
                   />
@@ -372,7 +379,7 @@ const SELECT_OPTIONS = {
                                     style={{ backgroundColor: "#6b8e23" }}
                                     title="View details"
                                   >
-                                    {row.demandID || "_"}
+                                    {row.demandId}
                                   </Link>
                                 </>
                               )}
@@ -385,7 +392,7 @@ const SELECT_OPTIONS = {
                                   style={{ backgroundColor: "#6b8e23" }}
                                   title="View details"
                                 >
-                                  {row.demandID || "_"}
+                                  {row.demandId}
                                 </Link>
                               )}
                             </div>
@@ -393,6 +400,7 @@ const SELECT_OPTIONS = {
                         );
                       }
                       if (isEditing) {
+                        // dropdowns for select columns
                         if (SELECT_OPTIONS[col.key]) {
                           return (
                             <td key={col.key} className="border-b border-gray-200 px-4 py-3">

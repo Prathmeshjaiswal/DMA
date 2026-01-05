@@ -3,21 +3,17 @@ import {useState,useEffect,useRef} from "react"
 import { useNavigate } from "react-router-dom";
 import NavBar from "../NavBar.jsx"
 import DashBoard from "./DashBoard.jsx"
-import { useLocation } from "react-router-dom";
-
-export default function AddDemands2(props){
+export default function AddDemands2(){
  const navigate = useNavigate();
+  const ROWS = 6;
 
-  const list = props.demandData?.data?.demandRRDTOList?? [] ;
 
-  const rows = Array.from({ length: Math.max(list.length, 1) }, (_, i) => {
-    const item = list?.[i] ?? {};
-    return {
-      demandId: item?.demandId ?? "",
-      rrNumber: item?.rrNumber ?? "",
-    };
-  });
-
+  const [demands, setDemands] = useState(
+    Array.from({ length: ROWS }, (_, i) => ({
+      demandId: `DMD-${1001 + i}`,
+      rrNo: "",
+    }))
+  );
 
   const handleRRChange = (index, value) => {
     setDemands((prev) => {
@@ -131,14 +127,14 @@ const ALLOWED_EXTS = ["doc", "pdf"];
 
 
         <div className="mt-4 space-y-3">
-          {rows.map((opt,idx) => (
+          {demands.map((row, idx) => (
             <div key={idx} className="grid grid-cols-[160px_1fr_60px_1fr] items-center gap-4">
               <div/>
-              <input className={inputBox} name="demandId" disabled  value={opt.demandId} readOnly/>
+              <input type="text" value={row.demandId} readOnly className="w-full rounded-md border border-gray-800 bg-white px-3 py-2 text-gray-900 shadow-sm "/>
               <div className="flex items-center justify-center text-gray-500">
                 <span className="select-none">↔︎</span>
               </div>
-              <input type="text" value={opt.rrNumber} onChange={(e) => handleRRChange(idx, e.target.value)} placeholder="Enter RR No." className="w-full rounded-md border border-gray-800 bg-white px-3 py-2 text-gray-900 shadow-sm "/>
+              <input type="text" value={row.rrNo} onChange={(e) => handleRRChange(idx, e.target.value)} placeholder="Enter RR No." className="w-full rounded-md border border-gray-800 bg-white px-3 py-2 text-gray-900 shadow-sm "/>
             </div>
           ))}
         </div>
@@ -183,8 +179,6 @@ const ALLOWED_EXTS = ["doc", "pdf"];
             </div>
           </div>
     </form>
-
-
 </>
 );
 };
