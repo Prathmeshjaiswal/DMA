@@ -307,7 +307,7 @@ const SELECT_OPTIONS = {
                     className="rounded-md border border-gray-300 p-2 text-sm"
                     placeholder="Type to filter"
                     value={filters[key]}
-                    onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
+                    onChange={(e) => setFilters(prev => ({ ...prev, [key]: e.target .value }))}
                   />
                 )}
               </div>
