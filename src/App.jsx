@@ -29,6 +29,7 @@ import DemandTable1 from './Components/DemandsManagement/DemandTable1.jsx'
 import DemandSheet7 from './Components/DemandsManagement/DemandSheet/DemandSheet7.jsx'
 import AddDemands8 from './Components/DemandsManagement/AddNewDemand/AddDemands8.jsx'
 
+
 function App() {
   return (
     <>
@@ -38,8 +39,8 @@ function App() {
             {/* <Route path="/Login" element={<Login />} /> */}
             <Route path="/DashBoard" element={<DashBoard />} />
             <Route path="/HomePage" element={<HomePage />} />
-            <Route path="/AddNewDemands" element={<AddDemands />}/>
-            <Route path="/AddDemands2" element={<AddDemands2 />}/>
+            <Route path="/AddNewDemands" element={<AddDemands setForm={setForm} form={form} demandData={demandData} setDemandData={setDemandData}/>}/>
+            <Route path="/AddDemands2" element={<AddDemands2 demandData={demandData} setDemandData={setDemandData}/>}/>
             <Route path="/EditDemand" element={<EditDemand />}/>
             {/* <Route path="/DemandSheet" element={<DemandSheet userRole={userRole}/>}/> */}
             <Route path="/OnBoardingTracker" element={<OnBoardingTracker />} />
