@@ -51,38 +51,38 @@ export default function ProfileTracker() {
     <>
       <NavBar />
 
-      <div className="p-16">
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full border-collapse">
-            <thead className="bg-gray-50">
+      <div className="p-32 bg-[#082340]">
+        <div className="overflow-x-auto rounded-lg border border-gray-500 bg-[#0F3A66] shadow-sm">
+          <table className="min-w-full border-collapse text-gray-400">
+            <thead className="bg-[#11406F]">
 
-              <tr>
-                <th className="px-2 py-2 text-xs font-semibold w-12">Edit</th>
-                <th className="px-2 py-2 text-xs font-semibold w-24">Demand ID</th>
-                <th className="px-2 py-2 text-xs font-semibold w-16">RR</th>
-                <th className="px-2 py-2 text-xs font-semibold w-20">LOB</th>
-                <th className="px-2 py-2 text-xs font-semibold w-32">HSBC Hiring Manager</th>
-                <th className="px-2 py-2 text-xs font-semibold w-24">Skill Cluster</th>
-                <th className="px-2 py-2 text-xs font-semibold w-24">Primary Skill</th>
-                <th className="px-2 py-2 text-xs font-semibold w-24">Secondary Skill</th>
-                <th className="px-2 py-2 text-xs font-semibold w-32">Current Profile Shared</th>
-                <th className="px-2 py-2 text-xs font-semibold w-32">Date of Profile Shared</th>  
-                <th className="px-2 py-2 text-xs font-semibold w-28">External/Internal</th>
-                <th className="px-2 py-2 text-xs font-semibold w-28">Interview Date</th>
-                <th className="px-2 py-2 text-xs font-semibold w-24">Status</th>
-                <th className="px-2 py-2 text-xs font-semibold w-28">Decision Date</th>
-                <th className="px-2 py-2 text-xs font-semibold w-20">Age</th>
+              <tr >
+                <th className="px-2 py-2 text-gray-200 text-sm font-semibold w-10">Edit</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-24">Demand ID</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-16">RR</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-20">LOB</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-32">HSBC Hiring Manager</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-24">Skill Cluster</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-24">Primary Skill</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-24">Secondary Skill</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-32">Current Profile Shared</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-32">Date of Profile Shared</th>  
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-28">External/Internal</th>
+                <th className="px-2 py-2  text-gray-200 -sm font-semibold w-28">Interview Date</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-24">Status</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-28">Decision Date</th>
+                <th className="px-2 py-2  text-gray-200 text-sm font-semibold w-20">Age</th>
               </tr>
 
             </thead>
 
             <tbody>
               {rows.map((row) => (
-                <tr key={row.demandId} className="hover:bg-gray-50">
+                <tr key={row.demandId} className="hover:bg-[#0F3A66]">
 
                   {/* EDIT ICON */}
                   <td className="px-4 py-3">
-                    <PencilSquareIcon className="h-5 w-5 text-gray-600 cursor-pointer" />
+                    <PencilSquareIcon className="h-5 w-5  cursor-pointer" />
                   </td>
 
                   {/* FIXED DATA (READ ONLY) */}
@@ -103,9 +103,10 @@ export default function ProfileTracker() {
                     </select>
                   </td>
 
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 ">
                     <input
                       type="date"
+                      
                       value={row.dateOfProfileShared || ""}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -118,7 +119,7 @@ export default function ProfileTracker() {
                           )
                         );
                       }}
-                      className="border rounded px-2 py-1"
+                      className="border rounded px-2 py-1 "
                     />
                   </td>
 
@@ -178,7 +179,7 @@ export default function ProfileTracker() {
             <button onClick={() => navigate("/DemandSheet")} className=" bg-gray-300 rounded-md text-gray-800 py-2 px-10 font-medium tracking-wide hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Previous
             </button>
-            <button onClick={() => navigate("/OnBoardingTracker")} className=" bg-gray-800 rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
+            <button onClick={() => navigate("/OnBoardingTracker")} className=" bg-[#F15B40] rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Next
             </button>
 
