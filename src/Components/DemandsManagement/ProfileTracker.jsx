@@ -173,7 +173,7 @@ export default function ProfileTracker() {
             </tbody>
           </table>
         </div>
-          <div className="flex items-center gap-4 m-2 px-6">
+          <div className="flex items-center gap-4 m-20 px-2">
 
             <button onClick={() => navigate("/DemandSheet")} className=" bg-gray-300 rounded-md text-gray-800 py-2 px-10 font-medium tracking-wide hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Previous
