@@ -30,7 +30,7 @@ export default function Sidebar({ isOpen, onClose, links = [] }) {
     ],
     Track: [
       { text: "Profiles", onClick: () => navigate("/ProfileTracker") },
-      { text: "Onboarding", onClick: () => navigate("/ProfileTracker") },
+      { text: "Onboarding", onClick: () => navigate("/OnBoardingTracker") },
     ],
     Reports: [{ text: "Download", onClick: () => navigate("/Report") }],
   };
