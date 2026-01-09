@@ -2,8 +2,6 @@ import { useState,useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import NavBar from "../NavBar.jsx";
-import DemandSheet from "./DemandSheet.jsx";
-import OnBoardingTracker from "./OnBoardingTracker.jsx";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
 
