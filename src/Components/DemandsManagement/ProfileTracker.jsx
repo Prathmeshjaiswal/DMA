@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,useMemo} from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import NavBar from "../NavBar.jsx";
@@ -29,6 +29,13 @@ export default function ProfileTracker() {
 
   ]);
 
+
+  
+ // Date range state (filter inputs)
+  const [fromDate, setFromDate] = useState(""); // yyyy-mm-dd
+  const [toDate, setToDate] = useState("");     // yyyy-mm-dd
+
+
   // Age calculation
   const calculateAge = (profileDate, decisionDate) => {
     if (!profileDate) return "-";
@@ -45,6 +52,49 @@ export default function ProfileTracker() {
   };
 
 
+  
+ // Utility: safe parse yyyy-mm-dd -> Date or null
+  const parseDate = (str) => {
+    if (!str) return null;
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+
+  
+ // Filter logic (inclusive range on dateOfProfileShared)
+  const filteredRows = useMemo(() => {
+    const from = parseDate(fromDate);
+    const to = parseDate(toDate);
+
+    
+
+ // If both filters empty, return all rows
+    if (!from && !to) return rows;
+
+    return rows.filter((row) => {
+      const profileDate = parseDate(row.dateOfProfileShared);
+      // If the row has no date, it should not match any filter
+      if (!profileDate) return false;
+
+      
+      // Inclusive comparison
+      const afterFrom = from ? profileDate >= from : true;
+      const beforeTo = to ? profileDate <= to : true;
+
+      return afterFrom && beforeTo;
+    });
+  }, [rows, fromDate, toDate]);
+
+  
+ // Reset filters
+  const resetFilters = () => {
+    setFromDate("");
+    setToDate("");
+  };
+
+
+
 
 
   return (
@@ -52,6 +102,48 @@ export default function ProfileTracker() {
       <NavBar />
 
       <div className="p-32  bg-[#082340]">
+ {/* Filter bar - top left */}
+        <div className="mb-4 flex items-end gap-4">
+          <div className="flex flex-col">
+            <label className="text-gray-200 text-sm mb-1">From date</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border rounded px-2 py-1 bg-[#0F3A66] text-gray-200 border-gray-500"
+            />
+          </div>
+
+
+          
+          <div className="flex flex-col">
+            <label className="text-gray-200 text-sm mb-1">To date</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border rounded px-2 py-1 bg-[#0F3A66] text-gray-200 border-gray-500"
+            />
+          </div>
+
+
+
+<button
+            onClick={resetFilters}
+            className="h-[36px] mt-[22px] bg-gray-600 rounded-md text-white px-4 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400"
+          >
+            Reset
+          </button>
+
+
+
+  {/* Optional: show count */}
+          <span className="text-gray-300 ml-2 mt-[22px]">
+            Showing {filteredRows.length} {filteredRows.length === 1 ? "profile" : "profiles"}
+          </span>
+        </div>
+
+
         <div className="overflow-x-auto rounded-lg border border-gray-500 bg-[#0F3A66] shadow-sm">
           <table className="min-w-full border-collapse text-gray-400">
             <thead className="bg-[#11406F]">
