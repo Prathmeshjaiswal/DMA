@@ -51,7 +51,7 @@ export default function ProfileTracker() {
     <>
       <NavBar />
 
-      <div className="p-32 bg-[#082340]">
+      <div className="p-32  bg-[#082340]">
         <div className="overflow-x-auto rounded-lg border border-gray-500 bg-[#0F3A66] shadow-sm">
           <table className="min-w-full border-collapse text-gray-400">
             <thead className="bg-[#11406F]">
@@ -176,10 +176,10 @@ export default function ProfileTracker() {
         </div>
           <div className="flex items-center gap-4 m-20 px-2">
 
-            <button onClick={() => navigate("/DemandSheet")} className=" bg-gray-300 rounded-md text-gray-800 py-2 px-10 font-medium tracking-wide hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
+            <button onClick={() => navigate("/DemandSheet")} className=" bg-gray-600 rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Previous
             </button>
-            <button onClick={() => navigate("/OnBoardingTracker")} className=" bg-[#F15B40] rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
+            <button onClick={() => navigate("/OnBoardingTracker")} className=" bg-[#F15B40] rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Next
             </button>
 
