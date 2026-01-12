@@ -12,10 +12,9 @@ export default function NavBar() {
     { label: "Demands", to: "/DashBoard" },
     { label: "Track", to: "/ProfileTracker" },
     // {label: "Notification", to :"/dummy "},
-    { label: "Reports", to: "/Report" },
-    {label: "dummy", to :"/dummy "},
-    {label: "dummy1", to :"/dummy "},
-    {label: "dummy3", to :"/dummy "}
+    {label: "RDG", to :"/RDGTeam "},
+    {label: "TA", to :"/TATeam "},
+    {label: "Reports", to: "/Report" },
   ];
 
   return (
@@ -35,10 +34,21 @@ export default function NavBar() {
           >
             Demand
           </button>
+                  <header className="ml-50">
+                    <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                      HSBC Demand Management System
+                    </h1>
+                  </header>
+          <button
+            onClick={() => navigate("/Login")}
+            className=" pl-65 font-bold text-xl text-white hover:brightness-110"
+          >
+            Login
+          </button>
         </div>
       </div>
 
-      <div className="h-14" />
+      <div className="h-11" />
       <Sidebar
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}

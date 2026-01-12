@@ -5,10 +5,8 @@ import { COLORS } from "./theme/colors";
 import NavBar from "../NavBar";
 import { login } from "../api/login";
 import { message } from "antd";
-import Register from "./Register.jsx"
-import Footer from ".././Footer.jsx"
 
-export default function Login() {
+export default function Login1() {
   const [form, setForm] = useState({
     userId: "",
     password: ""
@@ -155,16 +153,11 @@ export default function Login() {
             Login
           </button>
         </form>
-                  <button
-
-                    className="w-full py-2 text-white "
-                    onClick={() =>navigate("/Register")}
-                  >
-                    New User ? Register Here...
-                  </button>
       </div>
 
-{/* <Footer /> */}
+      <footer className="text-center text-sm mt-6 sticky" style={{ color: COLORS.navy }}>
+        © Coforge, 2026 | Confidential
+      </footer>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
-import AddDemands from "./DemandsManagement/AddDemands.jsx"
-import DemandSheet from "./DemandsManagement/DemandSheet.jsx"
+import AddDemands1 from "./DemandsManagement/AddNewDemand/AddDemands1.jsx"
+import DemandSheet1 from "./DemandsManagement/DemandSheet/DemandSheet1.jsx"
 import OnBoardingTracker from "./DemandsManagement/OnBoardingTracker.jsx"
 import ProfileTracker from "./DemandsManagement/ProfileTracker.jsx"
 import RDGTeam from "./DemandsManagement/RDGTeam.jsx"
@@ -17,10 +17,10 @@ export default function HomePage(){
         <div className="grid grid-cols-3 gap-5 mx-9 px-9">
 
             <div className="">
-                <button onClick={() => navigate("/AddNewDemands")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">Add New Demands</button>
+                <button onClick={() => navigate("/AddDemands1")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">Add New Demands</button>
             </div>
             <div className="">
-                <button onClick={() => navigate("/DemandSheet")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">Demand Sheet</button>
+                <button onClick={() => navigate("/DemandSheet1")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">Demand Sheet</button>
             </div>
             <div className="">
                 <button onClick={() => navigate("/OnBoardingTracker")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">OnBoarding Tracker</button>

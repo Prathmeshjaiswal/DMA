@@ -8,10 +8,6 @@ import Select, { components } from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css"
 
-
-
-
-
 export default function AddDemands() {
   const navigate = useNavigate();
   //storage
@@ -139,7 +135,7 @@ export default function AddDemands() {
     <>
       <NavBar />
       <form onSubmit={onUpdate} className="bg-white pt-1">
-        <div className="flex justify-between px-45 mt-1">
+        <div className="flex justify-center px-45 mb-3">
           <div className="flex items-center gap-3">
             <button type="button" className="font-bold">Add New Demand Here :-</button>
           </div>
@@ -151,8 +147,8 @@ export default function AddDemands() {
         {/*       <div className="mt-4"><hr className="border-gray-300" /></div> */}
 
 
-        <div className="grid grid-cols-2 gap-5 mx-5 px-50">
-          <div className="grid grid-rows-3 items-center">
+        <div className="grid grid-cols-2 gap-x-8 mx-4 px-30">
+          <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Line of Business</span>
             <select className={inputBox} value={form.lob} onChange={(e) => setForm({...form,lob: e.target.value})}>
               <option value="">Select Line of Business</option>
@@ -162,7 +158,6 @@ export default function AddDemands() {
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>No. of Positions</span>
             <input className={inputBox} type="number" min={1} placeholder="Enter positions" value={form.positions} onChange={(e) => setForm({...form,positions: e.target.value})} />
-
           </div>
 
           <div className="grid grid-rows-3 gap-1 items-center">
@@ -375,32 +370,34 @@ export default function AddDemands() {
               {DEMAND_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
+
+          
           <div className="grid grid-rows-3 gap-0.5 items-center">
             <span className={labelPill}>Remark</span>
-            <textarea className={`${inputBox}resize-none`}
-             rows={1}
-             maxLength={250} 
-             placeholder="Enter remark (max 250 char)" 
-             value={form.remark || ""}
-            onChange={(e)=> setForm({...form,remark: e.target.value})}
-            />
-             <span className="text-xs text-gray-500">
-              {form.remark?.length || 0}/250
-            </span>
-           
-          </div>
-          <div className="flex items-center gap-4 m-2 px-6">
 
+            <div className="relative">
+              <textarea
+                className={`${inputBox} resize-none`}
+                rows={1}
+                maxLength={250}
+                placeholder="Enter remark (max 250 char)"
+                value={form.remark || ""}
+                onChange={(e) => setForm({ ...form, remark: e.target.value })}
+              />
+              <span className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none select-none">
+                {(form.remark?.length || 0)}/250
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-4 m-2 px-6">
             <button onClick={() => navigate("/DashBoard")} className=" bg-gray-300 rounded-md text-gray-800 py-2 px-10 font-medium tracking-wide hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Previous
             </button>
             <button onClick={() => navigate("/AddDemands2")} className=" bg-gray-800 rounded-md text-white py-2 px-10 font-medium tracking-wide hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400">
               Next
             </button>
-
           </div>
-
-        </div>
       </form>
     </>
   );
