@@ -3,10 +3,9 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import TableHeader from "./TableHeader";
-import RowEdit1 from "../RowEdit1";
-import RowEdit2 from "./RowEdit2";
+import RowEdit from "./RowEdit";
 import RowView from "./RowView";
-export default function DemandTable3({
+export default function DemandTable({
   rows,
   columns,
   visibleColumns,
@@ -46,7 +45,7 @@ export default function DemandTable3({
 
             if (isEditing) {
               return (
-                  <RowEdit2
+                  <RowEdit
                     key={row.demandId}
                     row={row}
                     columns={columns}

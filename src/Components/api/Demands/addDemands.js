@@ -1,4 +1,3 @@
-
 import api from '../client';
 export const submitStep1 = async (form1Data) => {
   const params = new URLSearchParams();

@@ -235,7 +235,7 @@ export default function Register() {
               >
                 {/* Checkbox group */}
                 <div className="grid grid-cols-2 gap-2">
-                  {["ADMIN", "PMO", "PMO_MANAGER", "RDG", "TAT"].map((role) => (
+                  {["ADMIN", "Delivery Manager", "PMO_MANAGER", "RDG", "TA"].map((role) => (
                     <label
                       key={role}
                       className="flex items-center gap-2 cursor-pointer"

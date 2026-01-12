@@ -4,11 +4,12 @@ import NavBar from "../../NavBar.jsx"
 import { getDemandsheet } from "../../api/Demands/getDemands.js";
 import ColumnsSelector from "./ColumnsSelector.jsx"
 import FiltersPanel from "./FiltersPanel.jsx"
-import DemandTable3 from "./DemandTable3.jsx";
-import DemandTable4 from "../DemandTable4.jsx";
+import DemandTable from "./DemandTable.jsx";
+// import DemandTable4 from "../DemandTable4.jsx";
 import {Spin,Alert} from "antd";
+import Footer from "../../Footer.jsx"
 
-export default function DemandSheet7() {
+export default function DemandSheet1() {
 
 const ALL_COLUMNS = [
   { key: "demandId", label: "Demand ID", alwaysVisible: true },
@@ -269,13 +270,14 @@ const SELECT_OPTIONS = {
           />
         </div>
       </div>
-      <DemandTable3
+      <DemandTable
         rows={filteredRows}
         columns={ALL_COLUMNS}
         visibleColumns={visibleColumns}
         dropdowns={dropdowns}
       /> 
     </div>
+<Footer />
     </>
   );
 

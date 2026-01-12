@@ -6,15 +6,15 @@ export default function Footer() {
   return (
     <>
       {/* Fixed footer bar */}
-      <footer className="fixed inset-x-0 bottom-0 z-50 bg-[#082340] text-white border-t border-white/10 shadow-md">
-        <div className="flex items-center justify-between px-3 py-3 gap-3">
+      <footer className="fixed inset-x-0 bottom-0 z-50 text-black border-t border-white/10 shadow-md">
+        <div className="flex items-center pl-120 py-3 gap-3">
           {/* Left: logo (optional) */}
           <div className="flex items-center gap-2">
-            <img
-              src={logo}
-              alt="LOGO"
-              className="h-6 w-auto"
-            />
+{/*             <img */}
+{/*               src={logo} */}
+{/*               alt="LOGO" */}
+{/*               className="h-6 w-auto" */}
+{/*             /> */}
             <span className="text-sm opacity-80">
               © Coforge, 2026 | Confidential
             </span>

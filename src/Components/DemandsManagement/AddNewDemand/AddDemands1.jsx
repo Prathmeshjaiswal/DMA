@@ -18,7 +18,7 @@ import {
 
 import {getDropDownData, submitStep1} from "../../api/Demands/addDemands.js"
 
-export default function AddDemands8() {
+export default function AddDemands1() {
   const CheckboxOption = (props) => {
     return (
       <components.Option {...props}>
@@ -138,7 +138,7 @@ export default function AddDemands8() {
       const serverDTO = res?.data ?? res;
       console.log(serverDTO)
       message.success(`Demand ID has been generated successfully!`);
-      navigate('/addDemands7', { state: { form1Data: serverDTO } });
+      navigate('/addDemands2', { state: { form1Data: serverDTO } });
     } catch (err) {
       console.error('[Step1] error:', err);
       alert(`Step 1 failed: ${err.message}`);
@@ -203,7 +203,8 @@ export default function AddDemands8() {
             <Select
               options={options.skillCluster} isMulti
               closeMenuOnSelect={false}
-              hideSelectedOptions={false}
+              controlShouldRenderValue={true}
+              hideSelectedOptions={true}
               components={{
                 Option: CheckboxOption,
               }}
@@ -219,7 +220,9 @@ export default function AddDemands8() {
                   ...base,
                   borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
                   boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
-                  minHeight: "42px",
+                  maxHeight:"50px",
+                  width:"300px",
+                  overflow:"auto",
                   transition: "all 0.2s",
                   "&:hover": {
                     borderColor: state.isFocused ? "#ea580c" : "#52624E",
@@ -246,7 +249,8 @@ export default function AddDemands8() {
             <Select
               options={options.primarySkills} isMulti
               closeMenuOnSelect={false}
-              hideSelectedOptions={false}
+              controlShouldRenderValue={true}
+              hideSelectedOptions={true}
               components={{
                 Option: CheckboxOption
               }}
@@ -265,7 +269,9 @@ export default function AddDemands8() {
                   ...base,
                   borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
                   boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
-                  minHeight: "42px",
+                  maxHeight:"50px",
+                  width:"300px",
+                  overflow:"auto",
                   transition: "all 0.2s",
                   "&:hover": {
                     borderColor: state.isFocused ? "#ea580c" : "#52624E",
@@ -291,7 +297,8 @@ export default function AddDemands8() {
             <Select
               options={options.secondarySkills} isMulti
               closeMenuOnSelect={false}
-              hideSelectedOptions={false}
+              controlShouldRenderValue={true}
+              hideSelectedOptions={true}
               components={{
                 Option: CheckboxOption
               }}
@@ -306,7 +313,9 @@ export default function AddDemands8() {
                   ...base,
                   borderColor: state.isFocused ?"#ea580c" : "#52624E", // Orange border on focus
                   boxShadow: state.isFocused ? "0 0 0 2px rgba(230, 128, 32, 0.97)" : "none",
-                  minHeight: "42px",
+                  maxHeight:"50px",
+                  width:"300px",
+                  overflow:"auto",
                   transition: "all 0.2s",
                   "&:hover": {
                     borderColor: state.isFocused ? "#ea580c" : "#52624E",
@@ -336,9 +345,9 @@ export default function AddDemands8() {
     setForm({ ...form, demandReceivedDate: formatted });
   }}
 
-              dateFormat="dd/MMM/yyyy"
+              dateFormat="dd-MMM-yyyy"
               className={inputBox}
-              placeholderText="dd/mm/yyyy"
+              placeholderText="dd-mmm-yyyy"
             />
           </div>
 
@@ -626,6 +635,9 @@ export default function AddDemands8() {
 
         </button>
       </form>
+      <footer className="mt-6 text-center text-sm text-black">
+        © Coforge, 2026 | Confidential
+      </footer>
     </>
   );
 };

@@ -25,21 +25,25 @@ export default function Sidebar({ isOpen, onClose, links = [] }) {
   const toggle = (label) => setOpenLabel((prev) => (prev === label ? null : label));
   const childButtonsMap = {
     Demands: [
-      { text: "Add", onClick: () => navigate("/addDemands8") },
-      { text: "View", onClick: () => navigate("/DemandSheet7") },
+      { text: "Add", onClick: () => navigate("/addDemands1") },
+      { text: "View", onClick: () => navigate("/DemandSheet1") },
     ],
     Track: [
       { text: "Profiles", onClick: () => navigate("/ProfileTracker") },
       { text: "Onboarding", onClick: () => navigate("/ProfileTracker") },
     ],
+    RDG: [{ text: "Addprofiles", onClick: () => navigate("/RDGTeam") }],
+    TA: [{ text: "AddProfiles", onClick: () => navigate("/TATeam") }],
     Reports: [{ text: "Download", onClick: () => navigate("/Report") }],
+
+//
   };
 
   const getButtons = (label) =>
     childButtonsMap[label] ?? [
-      { text: "Action 1", onClick: () => console.log(`${label}: Action 1`) },
-      { text: "Action 2", onClick: () => console.log(`${label}: Action 2`) },
-      { text: "Action 3", onClick: () => console.log(`${label}: Action 3`) },
+//       { text: "Action 1", onClick: () => console.log(`${label}: Action 1`) },
+//       { text: "Action 2", onClick: () => console.log(`${label}: Action 2`) },
+//       { text: "Action 3", onClick: () => console.log(`${label}: Action 3`) },
     ];
 
   return (

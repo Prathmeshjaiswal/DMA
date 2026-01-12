@@ -6,7 +6,7 @@ import { UploadOutlined } from "@ant-design/icons";
 import { makeGetFieldOptions } from "./dropDownOptions";
 import { submitUpdateDemand } from "../../api/Demands/updateDemands"; 
 
-export default function RowEdit2({
+export default function RowEdit({
   row,
   columns,
   visibleColumns,
@@ -174,7 +174,20 @@ const toDisplayString = (arr) => (Array.isArray(arr) ? arr.join(', ') : String(a
             );
           }
 
-          
+          if (col.key === "rrNumber") {
+            return (
+              <td key={col.key} className="border-b border-gray-200 px-4 py-3">
+                  {row.rrNumber}
+              </td>
+            );
+          }
+          if (col.key === "lob") {
+            return (
+              <td key={col.key} className="border-b border-gray-200 px-4 py-3">
+                  {row.lob}
+              </td>
+            );
+          }
             const multiSelectFields = new Set(['skillCluter', 'primarySkills', 'secondarySkills']);
             const apiOpts = getFieldOptions(col.key);
             const isMulti = multiSelectFields.has(col.key);

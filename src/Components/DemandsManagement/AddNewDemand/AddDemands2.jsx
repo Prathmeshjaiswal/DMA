@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { submitStep2 } from '../../api/Demands/addDemands';
 import {message} from "antd";
 
-export default function AddDemands7() {
+export default function AddDemands2() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const form1Data = state?.form1Data ?? null;
@@ -15,7 +15,7 @@ export default function AddDemands7() {
   // Redirect if don't have form1data
   useEffect(() => {
     if (!form1Data) {
-      navigate('/addDemands8', { replace: true });
+      navigate('/addDemands1', { replace: true });
     }
   }, [form1Data, navigate]);
 
@@ -111,7 +111,7 @@ export default function AddDemands7() {
       const res = await submitStep2({ addNewDemandDTO, file: currentFile });
       const serverResponse = res?.data ?? res;
       message.success('Demand has been created successfully!');
-      navigate('/DemandSheet7', {
+      navigate('/DemandSheet1', {
         state: {
           form1Data: addNewDemandDTO,
           serverResponse,
