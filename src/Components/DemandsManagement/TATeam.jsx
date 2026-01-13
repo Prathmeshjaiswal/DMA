@@ -11,8 +11,20 @@ export default function TATeam() {
   const [selectedProfile, setSelectedProfile] = useState(null);
 
 
+  // drop profiles
+  // const [droppedProfiles, setDroppedProfiles] = useState([]);
 
-    const profiles = [
+
+   // Demand-wise dropped profiles
+  const [demandProfiles, setDemandProfiles] = useState({
+    DEM001: [],
+    DEM002: [],
+    DEM003: [],
+  });
+
+
+
+  const profiles = [
     {
       id: 1,
       name: "Prathmesh",
@@ -31,69 +43,111 @@ export default function TATeam() {
     },
   ];
 
+
+
+  const handleDrop = (e,demandId) => {
+    e.preventDefault();
+    const profile = JSON.parse(e.dataTransfer.getData("profile"));
+
+       setDemandProfiles((prev) => {
+      // prevent duplicates
+      if (prev[demandId].some((p) => p.id === profile.id)) {
+        return prev;
+      }
+ 
+      return {
+        ...prev,
+        [demandId]: [...prev[demandId], profile],
+      };
+    });
+  };
+
   return (
     <>
       <NavBar />
       <div className="flex h-[calc(100vh-64px)]">
-  {/* Left Column - Demand ID */}
-  <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
-    <h2 className="font-semibold mb-4">Demand ID</h2>
+        {/* Left Column - Demand ID */}
+        <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
+         <h2 className="font-semibold mb-4">Demand ID</h2>
+          {Object.keys(demandProfiles).map((demandId) => (
+          <div
+            key={demandId}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, demandId)}
+            className="mb-4 bg-white p-3 rounded shadow border-2 border-dashed border-gray-300"
+          >
+            <p className="font-semibold mb-2">{demandId}</p>
  
-    <ul className="space-y-2">
-      <li className="p-2 bg-white rounded shadow cursor-pointer hover:bg-blue-100">
-        DMD-01
-      </li>
-      <li className="p-2 bg-white rounded shadow cursor-pointer hover:bg-blue-100">
-        DMD-02
-      </li>
-      <li className="p-2 bg-white rounded shadow cursor-pointer hover:bg-blue-100">
-        DMD-03
-      </li>
-    </ul>
-  </div>
+            {demandProfiles[demandId].length === 0 && (
+              <p className="text-xs text-gray-400">
+                Drag profiles here
+              </p>
+            )}
  
-  {/* Right Column - Profile */}
-  <div className="w-2/4 p-6">
-    <h2 className="font-semibold mb-4">Profile</h2>
- 
-    {/* Profile list */}
-        <div className="flex flex-col gap-4">
-          {profiles.map((profile) => (
-            <div
-              key={profile.id}
-              onClick={() => setSelectedProfile(profile)}
-              className="bg-white p-4 rounded shadow cursor-pointer hover:bg-blue-50"
-            >
-              <p className="font-semibold">{profile.name}</p>
-              <p className="text-sm text-gray-600">{profile.skill}</p>
-            </div>
-          ))}
+            {demandProfiles[demandId].map((p) => (
+              <div
+                key={p.id}
+                className="text-sm bg-gray-100 p-1 rounded mt-1"
+              >
+                {p.name}
+              </div>
+            ))}
+          </div>
+        ))}
         </div>
- 
-        {/* Popup inside same container */}
-      {selectedProfile && (
-  <div className="absolute  right-0  w-1/3 bg-white border-l shadow-lg  p-6 transition-all">
- 
-    {/* Close button - bottom right */}
-    <button
-      className="absolute bottom-4 right-4 text-gray-600 hover:text-red-500"
-      onClick={() => setSelectedProfile(null)}
-    >
-    Close
-    </button>
- 
-    <h3 className="text-lg font-semibold mb-4">
-      {selectedProfile.name}
-    </h3>
- 
-    <p><b>Skill:</b> {selectedProfile.skill}</p>
-    <p><b>Experience:</b> {selectedProfile.experience}</p>
-    <p><b>Location:</b> {selectedProfile.location}</p>
-    <p><b>Email:</b> {selectedProfile.email}</p>
-  </div>
-)}
-  </div>
-</div>
+
+        {/* Right Column - Profile */}
+        <div className="w-2/4 p-6 relative">
+          <h2 className="font-semibold mb-4">Profile</h2>
+
+          {/* Profile list */}
+          <div className="flex flex-col gap-4">
+            {profiles.map((profile) => (
+              <div
+                key={profile.id}
+                draggable
+                onDragStart={(e) =>
+                  e.dataTransfer.setData(
+                    "profile",
+                    JSON.stringify(profile)
+                  )
+                }
+                onClick={() => setSelectedProfile(profile)}
+                className="bg-white p-4 rounded shadow cursor-pointer hover:bg-blue-50"
+              >
+                <p className="font-semibold">{profile.name}</p>
+                <p className="text-sm text-gray-600">{profile.skill}</p>
+              </div>
+            ))}
+          </div>
+
+
+        
+
+          {/* Popup inside same container */}
+          {selectedProfile && (
+            <div className="absolute  right-0  w-1/3 bg-white border-l shadow-lg  p-6 transition-all">
+
+              {/* Close button - bottom right */}
+              <button
+                className="absolute bottom-4 right-4 text-gray-600 hover:text-red-500"
+                onClick={() => setSelectedProfile(null)}
+              >
+                Close
+              </button>
+
+              <h3 className="text-lg font-semibold mb-4">
+                {selectedProfile.name}
+              </h3>
+
+              <p><b>Skill:</b> {selectedProfile.skill}</p>
+              <p><b>Experience:</b> {selectedProfile.experience}</p>
+              <p><b>Location:</b> {selectedProfile.location}</p>
+              <p><b>Email:</b> {selectedProfile.email}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
 
 
