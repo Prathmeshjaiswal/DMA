@@ -15,7 +15,7 @@ export default function TATeam() {
   // const [droppedProfiles, setDroppedProfiles] = useState([]);
 
 
-   // Demand-wise dropped profiles
+  // Demand-wise dropped profiles
   const [demandProfiles, setDemandProfiles] = useState({
     DEM001: [],
     DEM002: [],
@@ -23,15 +23,15 @@ export default function TATeam() {
   });
 
 
-//remove profile
+  //remove profile
   const removeProfileFromDemand = (demandId, profileId) => {
-  setDemandProfiles((prev) => ({
-    ...prev,
-    [demandId]: prev[demandId].filter(
-      (p) => p.id !== profileId
-    ),
-  }));
-};
+    setDemandProfiles((prev) => ({
+      ...prev,
+      [demandId]: prev[demandId].filter(
+        (p) => p.id !== profileId
+      ),
+    }));
+  };
 
 
   const profiles = [
@@ -55,16 +55,16 @@ export default function TATeam() {
 
 
 
-  const handleDrop = (e,demandId) => {
+  const handleDrop = (e, demandId) => {
     e.preventDefault();
     const profile = JSON.parse(e.dataTransfer.getData("profile"));
 
-       setDemandProfiles((prev) => {
+    setDemandProfiles((prev) => {
       // prevent duplicates
       if (prev[demandId].some((p) => p.id === profile.id)) {
         return prev;
       }
- 
+
       return {
         ...prev,
         [demandId]: [...prev[demandId], profile],
@@ -76,43 +76,47 @@ export default function TATeam() {
     <>
       <NavBar />
       <div className="flex h-[calc(100vh-64px)]">
+
+
+        
+        
         {/* Left Column - Demand ID */}
         <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
-         <h2 className="font-semibold mb-4">Demand ID</h2>
+          <h2 className="font-semibold mb-4">Demand ID</h2>
           {Object.keys(demandProfiles).map((demandId) => (
-          <div
-            key={demandId}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, demandId)}
-            className="mb-4 bg-white p-3 rounded shadow border border-gray-300"
-          >
-            <p className="font-semibold mb-2">{demandId}</p>
- 
-            {demandProfiles[demandId].length === 0 && (
-              <p className="text-xs text-gray-400">
-                Drag profiles here
-              </p>
-            )}
- 
-           {demandProfiles[demandId].map((p) => (
-  <div
-    key={p.id}
-    className="flex items-center justify-between text-sm bg-gray-100 p-1 rounded mt-1"
-  >
-    <span>{p.name}</span>
- 
-    <button
-      className="text-black-500 hover:text-red-700 text-xs ml-2"
-      onClick={() =>
-        removeProfileFromDemand(demandId, p.id)
-      }
-    >
-      ✕
-    </button>
-  </div>
-))}
-          </div>
-        ))}
+            <div
+              key={demandId}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, demandId)}
+              className="mb-4 bg-white p-3 rounded shadow border border-gray-300"
+            >
+              <p className="font-semibold mb-2">{demandId}</p>
+
+              {demandProfiles[demandId].length === 0 && (
+                <p className="text-xs text-gray-400">
+                  Drag profiles here
+                </p>
+              )}
+
+              {demandProfiles[demandId].map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between text-sm bg-gray-100 p-1 rounded mt-1"
+                >
+                  <span>{p.name}</span>
+
+                  <button
+                    className="text-black-500 hover:text-red-700 text-xs ml-2"
+                    onClick={() =>
+                      removeProfileFromDemand(demandId, p.id)
+                    }
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
 
         {/* Right Column - Profile */}
@@ -141,7 +145,7 @@ export default function TATeam() {
           </div>
 
 
-        
+
 
           {/* Popup inside same container */}
           {selectedProfile && (
@@ -166,7 +170,32 @@ export default function TATeam() {
             </div>
           )}
         </div>
+
+        {/* BOTTOM RIGHT ACTION BUTTONS */}
+        <div className="fixed bottom-4 right-6 flex gap-3">
+          <button
+            className="px-6 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
+            onClick={() => console.log("Submit clicked")}
+          >
+            Submit
+          </button>
+
+          <button
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded shadow hover:bg-gray-300"
+            onClick={() => console.log("Cancel clicked")}
+          >
+            Cancel
+          </button>
+        </div>
+
+
+
       </div>
+
+
+
+
+
 
 
 
