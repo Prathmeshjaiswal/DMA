@@ -79,10 +79,10 @@ export default function TATeam() {
 
 
         
-        
+
         {/* Left Column - Demand ID */}
         <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
-          <h2 className="font-semibold mb-4">Demand ID</h2>
+          <h2 className="font-bold mb-4">Demand ID</h2>
           {Object.keys(demandProfiles).map((demandId) => (
             <div
               key={demandId}
@@ -121,7 +121,7 @@ export default function TATeam() {
 
         {/* Right Column - Profile */}
         <div className="w-2/4 p-6 relative">
-          <h2 className="font-semibold mb-4">Profiles</h2>
+          <h2 className="font-bold mb-4">Profiles</h2>
 
           {/* Profile list */}
           <div className="flex flex-col gap-4">
@@ -170,6 +170,9 @@ export default function TATeam() {
             </div>
           )}
         </div>
+
+
+
 
         {/* BOTTOM RIGHT ACTION BUTTONS */}
         <div className="fixed bottom-4 right-6 flex gap-3">
