@@ -12,6 +12,9 @@ export default function HBU() {
   return (
       <>
       <NavBar />
+      <div>
+        hi
+      </div>
    
     </>
   );
