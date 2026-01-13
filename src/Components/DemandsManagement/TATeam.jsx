@@ -23,6 +23,16 @@ export default function TATeam() {
   });
 
 
+//remove profile
+  const removeProfileFromDemand = (demandId, profileId) => {
+  setDemandProfiles((prev) => ({
+    ...prev,
+    [demandId]: prev[demandId].filter(
+      (p) => p.id !== profileId
+    ),
+  }));
+};
+
 
   const profiles = [
     {
@@ -74,7 +84,7 @@ export default function TATeam() {
             key={demandId}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, demandId)}
-            className="mb-4 bg-white p-3 rounded shadow border-2 border-dashed border-gray-300"
+            className="mb-4 bg-white p-3 rounded shadow border border-gray-300"
           >
             <p className="font-semibold mb-2">{demandId}</p>
  
@@ -84,21 +94,30 @@ export default function TATeam() {
               </p>
             )}
  
-            {demandProfiles[demandId].map((p) => (
-              <div
-                key={p.id}
-                className="text-sm bg-gray-100 p-1 rounded mt-1"
-              >
-                {p.name}
-              </div>
-            ))}
+           {demandProfiles[demandId].map((p) => (
+  <div
+    key={p.id}
+    className="flex items-center justify-between text-sm bg-gray-100 p-1 rounded mt-1"
+  >
+    <span>{p.name}</span>
+ 
+    <button
+      className="text-black-500 hover:text-red-700 text-xs ml-2"
+      onClick={() =>
+        removeProfileFromDemand(demandId, p.id)
+      }
+    >
+      ✕
+    </button>
+  </div>
+))}
           </div>
         ))}
         </div>
 
         {/* Right Column - Profile */}
         <div className="w-2/4 p-6 relative">
-          <h2 className="font-semibold mb-4">Profile</h2>
+          <h2 className="font-semibold mb-4">Profiles</h2>
 
           {/* Profile list */}
           <div className="flex flex-col gap-4">
@@ -126,7 +145,7 @@ export default function TATeam() {
 
           {/* Popup inside same container */}
           {selectedProfile && (
-            <div className="absolute  right-0  w-1/3 bg-white border-l shadow-lg  p-6 transition-all">
+            <div className="absolute  right-0  w-2/3 bg-white border-l shadow-lg  p-6 transition-all">
 
               {/* Close button - bottom right */}
               <button
