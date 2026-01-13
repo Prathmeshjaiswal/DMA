@@ -6,15 +6,13 @@ import NavBar from "../NavBar.jsx";
 
 
 
-export default function HBU() {
+export default function () {
   const navigate = useNavigate();
+
 
   return (
       <>
       <NavBar />
-      <div>
-        hi
-      </div>
    
     </>
   );

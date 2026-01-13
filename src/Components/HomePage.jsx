@@ -5,7 +5,7 @@ import OnBoardingTracker from "./DemandsManagement/OnBoardingTracker.jsx"
 import ProfileTracker from "./DemandsManagement/ProfileTracker.jsx"
 import RDGTeam from "./DemandsManagement/RDGTeam.jsx"
 import Report from "./DemandsManagement/Report.jsx"
-import HBU from "./DemandsManagement/HBU.jsx"
+import TATeam from "./DemandsManagement/TATeam.jsx"
 import {useState} from "react"
 
 
@@ -29,7 +29,7 @@ export default function HomePage(){
                 <button onClick={() => navigate("/RDGTeam")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">RDG Team</button>
             </div>
             <div className="">
-                <button onClick={() => navigate("/HBU")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">HBU</button>
+                <button onClick={() => navigate("/TATeam")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">TA Team</button>
             </div>
             <div className="">
                 <button onClick={() => navigate("/ProfileTracker")} className="bg-amber-400 p-5 text-grey text-sm rounded-md font-medium hover:bg-amber-500 hover:text-black focus:border-black border-2  transition mt-8">Profile Tracker</button>
@@ -45,4 +45,4 @@ export default function HomePage(){
 
         </>
         );
-    }
+ 
