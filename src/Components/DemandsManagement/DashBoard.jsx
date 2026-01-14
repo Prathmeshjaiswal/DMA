@@ -38,19 +38,19 @@ export default function Dashboard() {
   const CARD_CONFIG = {
     totalDemands: {
       label: "Total Demands",
-      valueClass: "text-xl  text-gray-400",
+      labelClass: "text-sm  text-orange-400",
     },
     openPositions: {
       label: "Open Positions",
-      valueClass: "text-xl  text-gray-300",
+      labelClass: "text-sm  text-gray-300",
     },
     closedPositions: {
       label: "Closed Positions",
-      valueClass: "text-xl  text-gray-300",
+      labelClass: "text-sm  text-gray-300",
     },
     rejected: {
       label: "Rejected",
-      valueClass: "text-xl  text-gray-300",
+      labelClass: "text-sm  text-gray-300",
     },
   };
 
@@ -71,8 +71,8 @@ export default function Dashboard() {
         const formattedCards = Object.keys(CARD_CONFIG).map((key) => ({
           key,
           label: CARD_CONFIG[key].label,
+          labelClass: CARD_CONFIG[key].labelClass,
           value: apiData?.[key] ?? 0,
-          valueClass: CARD_CONFIG[key].valueClass,
         }));
 
         setData(apiData);
@@ -190,13 +190,17 @@ export default function Dashboard() {
               {cards.map((card) => (
                 <div
                   key={card.key}
-                  className="col-span-12 md:col-span-3 rounded-xl border border-slate-800 bg-gray-800 p-4 cursor-pointer hover:bg-gray-700 transition-all"
+                  className="col-span-12 md:col-span-3 rounded-lg border border-slate-700 bg-gray-800 px-4 py-1.5 cursor-pointer hover:bg-gray-700 transition-all "
                 >
-                  <div className="text-sm text-gray-300">
+                  <div className={card.labelClass}>
                     {card.label}
                   </div>
 
-                  <div className={`mt-2 ${card.valueClass}`}>
+                  {/* <div className={card.labelClass}>
+                    {card.value}
+                  </div> */}
+                
+                  <div className="text-sm text-white mt-0.5">
                     {card.value}
                   </div>
                 </div>
