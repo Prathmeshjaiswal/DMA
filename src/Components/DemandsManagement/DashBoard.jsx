@@ -14,10 +14,15 @@ export default function Dashboard() {
       dayjs()
     ]
   ); // default to today
-  //   const [selectedChart, setSelectedChart] = useState(null);
+
+
 
   const CARD_COLOR = 'text-blue-400';
 
+  //changed by simran 
+  const ALLOWED_KEYS = ["totalDemands", "openPositions", "closedPositions", "rejected"];
+
+  
   const displayFormat = (value) =>
     value ? value.format('DD-MMM-YYYY').toLowerCase() : '';
 
@@ -108,10 +113,10 @@ export default function Dashboard() {
 
             {/* Card grid */}
             <section className="grid grid-cols-12 gap-4">
-              {Object.entries(data).map(([key, value]) => (
+              {Object.entries(data).filter(([key]) => ALLOWED_KEYS.includes(key)).map(([key, value]) => (
                 <div
                   key={key}
-                  onClick={() => setSelectedChart(card.key)}
+                  // onClick={() => setSelectedChart(card.key)}
                   className="col-span-12 md:col-span-3 rounded-xl border border-slate-800 bg-gray-800 p-4 cursor-pointer hover:bg-gray-700 transition-all"
                 >
                   <div className="text-sm text-white">{key}</div>
