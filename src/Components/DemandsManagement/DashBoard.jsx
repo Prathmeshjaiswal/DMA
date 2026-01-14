@@ -138,7 +138,10 @@ export default function Dashboard() {
 
     <>
       <NavBar />
-      <div className="flex flex-col bg-white">
+    {/* change by simran */}
+      <div className="min-h-screen flex flex-col bg-white"> 
+        {/* main added by simran */}
+        <main className="flex-grow">
         <div className="bg-white mt-1">
           <div className="max-w-6xl mx-auto px-4">
 
@@ -226,11 +229,14 @@ export default function Dashboard() {
 
           </div>
         </div>
-      </div>
-
-      <footer className=" text-center text-sm text-black">
+        </main>   
+      
+      {/* update by simran */}
+      <footer className=" text-center text-sm text-black py-4">
         © Coforge, 2026 | Confidential
       </footer>
+      </div>
+
     </>
   );
 }
