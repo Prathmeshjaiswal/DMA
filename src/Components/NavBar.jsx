@@ -39,12 +39,12 @@ export default function NavBar() {
                       HSBC Demand Management System
                     </h1>
                   </header>
-          <button
+          {/* <button
             onClick={() => navigate("/Login")}
             className=" pl-65 font-bold text-xl text-white hover:brightness-110"
           >
             Login
-          </button>
+          </button> */}
         </div>
       </div>
 
