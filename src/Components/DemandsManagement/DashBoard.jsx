@@ -2,11 +2,23 @@
 import React, { useEffect, useState } from 'react';
 import NavBar from '../NavBar';
 import { DatePicker } from 'antd';
-const { RangePicker } = DatePicker;
 import dayjs from 'dayjs';
 import { DashBoardData } from "../api/DashBoardData.js";
 
 
+//by simran for chart
+import ChartContainer from "../Charts/ChartContainer.jsx";
+import BarStatusChart from '../Charts/BarStatusChart.jsx';
+import LineStatusChart from '../Charts/LineStatusChart.jsx';
+import PieStatusChart from '../Charts/PieStatusChart.jsx';
+
+
+
+
+
+
+
+const { RangePicker } = DatePicker;
 export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(
     [
@@ -17,6 +29,15 @@ export default function Dashboard() {
 
   //by simran
   const [cards, setCards] = useState([]);
+//by simran
+  const [status, setStatus] = useState("totalDemand");
+  const [timeline, setTimeline] = useState("monthly");
+
+  const mockChartData = [
+    { label: "Dec", value: 20 },
+    { label: "Jan", value: 45 },
+    { label: "Feb", value: 30 },
+  ];
 
 
   const CARD_COLOR = 'text-blue-400';
@@ -138,42 +159,42 @@ export default function Dashboard() {
 
     <>
       <NavBar />
-    {/* change by simran */}
-      <div className="min-h-screen flex flex-col bg-white"> 
+      {/* change by simran */}
+      <div className="min-h-screen flex flex-col bg-white">
         {/* main added by simran */}
         <main className="flex-grow">
-        <div className="bg-white mt-1">
-          <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white mt-1">
+            <div className="max-w-6xl mx-auto px-4">
 
 
 
-            {/* Header */}
-            <header className="relative mb-5 flex items-center justify-between">
-              <h1 className="text-3xl font-bold tracking-wide text-center">
-                Dashboard
-              </h1>
-              <div className="absolute right-0">
+              {/* Header */}
+              <header className="relative mb-5 flex items-center justify-between">
+                <h1 className="text-3xl font-bold tracking-wide text-center">
+                  Dashboard
+                </h1>
+                <div className="absolute right-0">
 
-                <RangePicker
-                  value={selectedDate}
-                  onChange={(range) => setSelectedDate(range)}
-                  placeholder={["Start date", "End date"]}
-                  className="w-[320px]"      // wider for two inputs
-                  size="middle"
-                  allowClear={false}
-                  format={displayFormat}
+                  <RangePicker
+                    value={selectedDate}
+                    onChange={(range) => setSelectedDate(range)}
+                    placeholder={["Start date", "End date"]}
+                    className="w-[320px]"      // wider for two inputs
+                    size="middle"
+                    allowClear={false}
+                    format={displayFormat}
 
-                  // Prevent selecting future dates
-                  disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                    // Prevent selecting future dates
+                    disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
 
-                />
-              </div>
-            </header>
+                  />
+                </div>
+              </header>
 
 
 
-            {/* Card grid */}
-            {/* <section className="grid grid-cols-12 gap-4">
+              {/* Card grid */}
+              {/* <section className="grid grid-cols-12 gap-4">
               {Object.entries(data).filter(([key]) => ALLOWED_KEYS.includes(key)).map(([key, value]) => (
                 <div
                   key={key}
@@ -188,53 +209,93 @@ export default function Dashboard() {
               <div>{console.log(Object.entries(data))}</div> */}
 
 
-            {/* by simran */}
-            <section className="grid grid-cols-12 gap-4 mb-6">
-              {cards.map((card) => (
-                <div
-                  key={card.key}
-                  className="col-span-12 md:col-span-3 rounded-lg border border-slate-700 bg-gray-800 px-4 py-1.5 cursor-pointer hover:bg-gray-700 transition-all "
-                >
-                  <div className={card.labelClass}>
-                    {card.label}
-                  </div>
+              {/* by simran */}
+              <section className="grid grid-cols-12 gap-4 mb-6">
+                {cards.map((card) => (
+                  <div
+                    key={card.key}
+                    className="col-span-12 md:col-span-3 rounded-lg border border-slate-700 bg-gray-800 px-4 py-1.5 cursor-pointer hover:bg-gray-700 transition-all "
+                  >
+                    <div className={card.labelClass}>
+                      {card.label}
+                    </div>
 
-                  {/* <div className={card.labelClass}>
+                    {/* <div className={card.labelClass}>
                     {card.value}
                   </div> */}
-                
-                  <div className="text-sm text-white mt-0.5">
-                    {card.value}
+
+                    <div className="text-sm text-white mt-0.5">
+                      {card.value}
+                    </div>
                   </div>
+                ))}
+              </section>
+
+              {/* Chart Placeholder */}
+              {/* <section className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
+                <div className="text-sm text-gray-200">
+                  Charts / graphs will render here based on selected date.
                 </div>
-              ))}
-            </section>
+              </section> */}
 
-            {/* Chart Placeholder */}
-            <section className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
-              <div className="text-sm text-gray-200">
-                Charts / graphs will render here based on selected date.
-              </div>
-            </section>
+              <section className="grid grid-cols-12 gap-4 mt-4">
+ 
+  <div className="col-span-12 md:col-span-6">
+    <ChartContainer
+      title="Bar Chart"
+      selectedStatus={status}
+      selectedTimeline={timeline}
+      onStatusChange={setStatus}
+      onTimelineChange={setTimeline}
+    >
+      <BarStatusChart data={mockChartData} />
+    </ChartContainer>
+  </div>
+ 
+  <div className="col-span-12 md:col-span-6">
+    <ChartContainer
+      title="Line Chart"
+      selectedStatus={status}
+      selectedTimeline={timeline}
+      onStatusChange={setStatus}
+      onTimelineChange={setTimeline}
+    >
+      <LineStatusChart data={mockChartData} />
+    </ChartContainer>
+  </div>
+ 
+  <div className="col-span-12">
+    <ChartContainer
+      title="Pie Chart"
+      selectedStatus={status}
+      selectedTimeline={timeline}
+      onStatusChange={setStatus}
+      onTimelineChange={setTimeline}
+    >
+      <PieStatusChart data={mockChartData} />
+    </ChartContainer>
+  </div>
+ 
+</section>
 
 
 
-            {/* Chart placeholder  */}
-            {/* <div className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
+              {/* Chart placeholder  */}
+              {/* <div className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
                 <div className="text-sm text-gray-200">
                   Charts/graphs will render here based on selected date.
                 </div>
               </div> */}
 
 
+            </div>
           </div>
-        </div>
-        </main>   
-      
-      {/* update by simran */}
-      <footer className=" text-center text-sm text-black py-4">
-        © Coforge, 2026 | Confidential
-      </footer>
+        </main>
+
+        {/* update by simran */}
+        <footer className=" text-center text-sm text-black py-4">
+          © Coforge, 2026 | Confidential
+        </footer>
       </div>
 
     </>
