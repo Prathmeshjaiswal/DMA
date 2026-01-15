@@ -29,7 +29,7 @@ export default function Dashboard() {
 
   //by simran
   const [cards, setCards] = useState([]);
-//by simran
+  //by simran
   const [status, setStatus] = useState("totalDemand");
   const [timeline, setTimeline] = useState("monthly");
 
@@ -239,44 +239,44 @@ export default function Dashboard() {
               </section> */}
 
               <section className="grid grid-cols-12 gap-4 mt-4">
- 
-  <div className="col-span-12 md:col-span-6">
-    <ChartContainer
-      title="Bar Chart"
-      selectedStatus={status}
-      selectedTimeline={timeline}
-      onStatusChange={setStatus}
-      onTimelineChange={setTimeline}
-    >
-      <BarStatusChart data={mockChartData} />
-    </ChartContainer>
-  </div>
- 
-  <div className="col-span-12 md:col-span-6">
-    <ChartContainer
-      title="Line Chart"
-      selectedStatus={status}
-      selectedTimeline={timeline}
-      onStatusChange={setStatus}
-      onTimelineChange={setTimeline}
-    >
-      <LineStatusChart data={mockChartData} />
-    </ChartContainer>
-  </div>
- 
-  <div className="col-span-12">
-    <ChartContainer
-      title="Pie Chart"
-      selectedStatus={status}
-      selectedTimeline={timeline}
-      onStatusChange={setStatus}
-      onTimelineChange={setTimeline}
-    >
-      <PieStatusChart data={mockChartData} />
-    </ChartContainer>
-  </div>
- 
-</section>
+
+                <div className="col-span-12 md:col-span-6">
+                  <ChartContainer
+                    title="Bar Chart"
+                    selectedStatus={status}
+                    selectedTimeline={timeline}
+                    onStatusChange={setStatus}
+                    onTimelineChange={setTimeline}
+                  >
+                    <BarStatusChart data={mockChartData} />
+                  </ChartContainer>
+                </div>
+
+                <div className="col-span-12 md:col-span-6">
+                  <ChartContainer
+                    title="Line Chart"
+                    selectedStatus={status}
+                    selectedTimeline={timeline}
+                    onStatusChange={setStatus}
+                    onTimelineChange={setTimeline}
+                  >
+                    <LineStatusChart data={mockChartData} />
+                  </ChartContainer>
+                </div>
+
+                <div className="col-span-12">
+                  <ChartContainer
+                    title="Pie Chart"
+                    selectedStatus={status}
+                    selectedTimeline={timeline}
+                    onStatusChange={setStatus}
+                    onTimelineChange={setTimeline}
+                  >
+                    <PieStatusChart data={mockChartData} />
+                  </ChartContainer>
+                </div>
+
+              </section>
 
 
 
