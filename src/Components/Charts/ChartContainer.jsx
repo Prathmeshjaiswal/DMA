@@ -1,6 +1,7 @@
 import React from "react";
 import { Select } from "antd";
 import { STATUS_OPTIONS, TIMELINE_OPTIONS } from "./chartConfig";
+import { responsiveArray } from "antd/es/_util/responsiveObserver";
  
 export default function ChartContainer({
   title,
@@ -20,6 +21,8 @@ export default function ChartContainer({
         </h3>
  
         <div className="flex gap-2">
+
+
           {/* MULTI SELECT STATUS */}
           <Select
             mode="multiple"
@@ -28,11 +31,25 @@ export default function ChartContainer({
             onChange={onStatusChange}
             className="w-44"
             placeholder="Status"
-            options={STATUS_OPTIONS.map(s => ({
-              value: s.key,
-              label: s.label,
-            }))}
-          />
+            optionLabelProp="label"
+            maxTagCount="responsive"
+            >
+              {STATUS_OPTIONS.map((s)=>(
+                <Select.Option key={s.key} value={s.key} label={s.label}>
+                  <div className="flex items-center gap-2">
+                    <input
+                    type="checkbox"
+                    checked={selectedStatus.includes(s.key)}
+                    readOnly
+                    />
+                    <span>{s.label}</span>
+                  </div>
+                  </Select.Option>
+            ))}
+
+            </Select>
+
+
  
           {/* TIMELINE */}
           <Select
