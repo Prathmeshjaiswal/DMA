@@ -1,18 +1,31 @@
 import React from "react";
 import { PieChart, Pie, Tooltip, ResponsiveContainer } from "recharts";
  
-export default function PieStatusChart({ data }) {
+const COLORS = {
+  openPosition: "#2563eb",
+  closedPostion: "#16a34a",
+  rejected: "#dc2626",
+};
+ 
+export default function PieStatusChart({ data, selectedStatus }) {
+  const pieData = selectedStatus.map(status => ({
+    name: status,
+    value: data.reduce((sum, d) => sum + d[status], 0),
+    fill: COLORS[status],
+  }));
+ 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={180}>
       <PieChart>
         <Pie
-          data={data}
+          data={pieData}
           dataKey="value"
-          nameKey="label"
-          outerRadius={90}
+          nameKey="name"
+          outerRadius={70}
         />
         <Tooltip />
       </PieChart>
     </ResponsiveContainer>
   );
 }
+ 
