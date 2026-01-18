@@ -12,7 +12,7 @@ export default function ChartContainer({
 }) {
   return (
     <div className="rounded-xl border border-slate-700 bg-white p-4">
-      
+ 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-700">
@@ -20,17 +20,21 @@ export default function ChartContainer({
         </h3>
  
         <div className="flex gap-2">
+          {/* MULTI SELECT STATUS */}
           <Select
+            mode="multiple"
             size="small"
             value={selectedStatus}
             onChange={onStatusChange}
-            className="w-40"
+            className="w-44"
+            placeholder="Status"
             options={STATUS_OPTIONS.map(s => ({
               value: s.key,
               label: s.label,
             }))}
           />
  
+          {/* TIMELINE */}
           <Select
             size="small"
             value={selectedTimeline}

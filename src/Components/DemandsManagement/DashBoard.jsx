@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import NavBar from '../NavBar';
-import { DatePicker, Select } from 'antd';
+import { DatePicker} from 'antd';
 import dayjs from 'dayjs';
 import { DashBoardData } from "../api/DashBoardData.js";
 
@@ -11,7 +11,7 @@ import ChartContainer from "../Charts/ChartContainer.jsx";
 import BarStatusChart from '../Charts/BarStatusChart.jsx';
 import LineStatusChart from '../Charts/LineStatusChart.jsx';
 import PieStatusChart from '../Charts/PieStatusChart.jsx';
-import { STATUS_OPTIONS, TIMELINE_OPTIONS } from '../Charts/chartConfig.js';
+
 
 
 
@@ -241,74 +241,49 @@ export default function Dashboard() {
                 </div>
               </section> */}
 
-            <div className="flex justify-end gap-3 mb-4">
-              <Select
-                mode="multiple"
-                size="small"
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                className="w-64"
-                placeholder="Select Status"
-                options={STATUS_OPTIONS.map(s => ({
-                  value: s.key,
-                  label: s.label,
-                }))}
-              />
 
-              <Select
-                size="small"
-                value={timeline}
-                onChange={setTimeline}
-                className="w-32"
-                options={TIMELINE_OPTIONS.map(t => ({
-                  value: t.key,
-                  label: t.label,
-                }))}
-              />
-            </div>
-
-
-
-
-
-
-
-
-
-
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
-
-              <ChartContainer
-                title="Bar Chart"
-              >
-                <BarStatusChart
-                  data={mockChartData}
-                  selectedStatus={selectedStatus} />
-              </ChartContainer>
-
-
-
-              <ChartContainer
-                title="Line Chart"
-              >
-                <LineStatusChart
-                  data={mockChartData}
-                  selectedStatus={selectedStatus} />
-              </ChartContainer>
-
-
-
-              <ChartContainer
-                title="Pie Chart"
-              >
-                <PieStatusChart
-                  data={mockChartData}
-                  selectedStatus={selectedStatus} />
-              </ChartContainer>
-
-
-            </section>
-
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ 
+  <ChartContainer
+    title="Bar Chart"
+    selectedStatus={selectedStatus}
+    onStatusChange={setSelectedStatus}
+    selectedTimeline={timeline}
+    onTimelineChange={setTimeline}
+  >
+    <BarStatusChart
+      data={mockChartData}
+      selectedStatus={selectedStatus}
+    />
+  </ChartContainer>
+ 
+  <ChartContainer
+    title="Line Chart"
+    selectedStatus={selectedStatus}
+    onStatusChange={setSelectedStatus}
+    selectedTimeline={timeline}
+    onTimelineChange={setTimeline}
+  >
+    <LineStatusChart
+      data={mockChartData}
+      selectedStatus={selectedStatus}
+    />
+  </ChartContainer>
+ 
+  <ChartContainer
+    title="Pie Chart"
+    selectedStatus={selectedStatus}
+    onStatusChange={setSelectedStatus}
+    selectedTimeline={timeline}
+    onTimelineChange={setTimeline}
+  >
+    <PieStatusChart
+      data={mockChartData}
+      selectedStatus={selectedStatus}
+    />
+  </ChartContainer>
+ 
+</section>
 
 
             {/* Chart placeholder  */}
