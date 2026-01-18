@@ -238,9 +238,9 @@ export default function Dashboard() {
                 </div>
               </section> */}
 
-              <section className="grid grid-cols-12 gap-4 mt-4">
+              <section className="grid grid-cols-2 md:grid-cols-2 gap-6 p-8 place-items-center">
 
-                <div className="col-span-12 md:col-span-6">
+                <div className="w-full max-w-3xl">
                   <ChartContainer
                     title="Bar Chart"
                     selectedStatus={status}
@@ -252,7 +252,7 @@ export default function Dashboard() {
                   </ChartContainer>
                 </div>
 
-                <div className="col-span-12 md:col-span-6">
+                <div className="w-full max-w-3xl">
                   <ChartContainer
                     title="Line Chart"
                     selectedStatus={status}
@@ -264,7 +264,7 @@ export default function Dashboard() {
                   </ChartContainer>
                 </div>
 
-                <div className="col-span-12">
+                <div className="w-full max-w-3xl">
                   <ChartContainer
                     title="Pie Chart"
                     selectedStatus={status}

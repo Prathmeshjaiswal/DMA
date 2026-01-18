@@ -10,11 +10,7 @@ export default function Footer() {
         <div className="flex items-center pl-120 py-3 gap-3">
           {/* Left: logo (optional) */}
           <div className="flex items-center gap-2">
-{/*             <img */}
-{/*               src={logo} */}
-{/*               alt="LOGO" */}
-{/*               className="h-6 w-auto" */}
-{/*             /> */}
+
             <span className="text-sm opacity-80">
               © Coforge, 2026 | Confidential
             </span>

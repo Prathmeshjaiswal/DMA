@@ -11,10 +11,10 @@ export default function ChartContainer({
   children,
 }) {
   return (
-    <div className="rounded-xl border border-slate-700 bg-white p-4">
+    <div className="rounded-xl border border-slate-300 p-4">
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h3 className="text-sm font-medium text-gray-700">
           {title}
         </h3>
