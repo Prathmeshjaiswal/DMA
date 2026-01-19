@@ -4,7 +4,7 @@ import NavBar from '../NavBar';
 import { DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { DashBoardData } from "../api/DashBoardData.js";
-
+import Layout from '../Layout.jsx';
 
 //by simran for chart
 import ChartContainer from "../Charts/ChartContainer.jsx";
@@ -146,7 +146,8 @@ export default function Dashboard() {
   return (
 
     <>
-      <NavBar />
+      {/* <NavBar /> */}
+      <Layout>
       {/* change by simran */}
       <div className="min-h-screen flex flex-col bg-white">
         {/* main added by simran */}
@@ -250,11 +251,12 @@ export default function Dashboard() {
         </main>
 
         {/* update by simran */}
-        <footer className=" text-center text-sm text-black py-4">
+        {/* <footer className=" text-center text-sm text-black py-4">
           © Coforge, 2026 | Confidential
-        </footer>
+        </footer> */}
+        
       </div>
-
+</Layout>
     </>
   );
 }
