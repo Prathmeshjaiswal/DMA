@@ -3,17 +3,21 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sliderbar";
 import logo from "../assets/cfg3.png";
 import { useAuth } from "./AuthProvider";
+import ProfileMenu from "./ProfileMenu";
 
 export default function NavBar() {
   const navigate = useNavigate();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  const userId=localStorage.getItem("userId");
+
 
   const handleLogout = () => {
-    localStorage.removeItem("roles");
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
+    // localStorage.removeItem("roles");
+    // localStorage.removeItem("token");
+    // localStorage.removeItem("userId");
+    localStorage.clear();
 
     setIsAuthenticated(false);
     navigate("/Login");
@@ -56,7 +60,7 @@ export default function NavBar() {
           </header>
 
           {/* Logout ONLY when authenticated */}
-          {isAuthenticated && (
+          {/* {isAuthenticated && (
             <button
               onClick={handleLogout}
               className="font-bold text-xl hover:brightness-110"
@@ -64,7 +68,15 @@ export default function NavBar() {
               Logout
             </button>
 
+          )} */}
+
+          {/* profile menu */}
+          {isAuthenticated &&(
+            <ProfileMenu userId={userId} onLogout={handleLogout}/>
           )}
+
+
+
         </div>
       </div>
 
