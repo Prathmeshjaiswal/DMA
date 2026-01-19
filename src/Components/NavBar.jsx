@@ -4,22 +4,22 @@ import Sidebar from "./Sliderbar";
 import logo from "../assets/cfg3.png";
 import { useAuth } from "./AuthProvider";
 import ProfileMenu from "./ProfileMenu";
+import ProfileModel from "./ProfileModel";
 
 export default function NavBar() {
   const navigate = useNavigate();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showProfile,setShowProfile]=useState(null);
 
   const userId=localStorage.getItem("userId");
+  const userId = localStorage.getItem("userId");
   // const email=localStorage.getItem("email");
 
 
   const handleLogout = () => {
-    // localStorage.removeItem("roles");
-    // localStorage.removeItem("token");
-    // localStorage.removeItem("userId");
+ 
     localStorage.clear();
-
     setIsAuthenticated(false);
     navigate("/Login");
 
@@ -72,18 +72,26 @@ export default function NavBar() {
           )} */}
 
           {/* profile menu */}
-          {isAuthenticated &&(
+          {isAuthenticated && (
             <ProfileMenu
-             userId={userId}
-            //  email={email}
-            onLogout={handleLogout}
-              />
+             
+              onLogout={handleLogout}
+               onProfile={()=>setShowProfile(true)}
+            />
           )}
 
 
 
         </div>
       </div>
+      <div className="h-14"/>
+
+      {/* profile */}
+      <ProfileModel
+      isOpen={showProfile}
+      onClose={()=>setShowProfile(false)}
+      />
+
 
       <div className="h-11" />
 
