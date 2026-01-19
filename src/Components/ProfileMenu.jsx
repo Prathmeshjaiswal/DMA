@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 
 
-export default function ProfileMenu({ userId, onLogout }) {
+export default function ProfileMenu({ onProfile, onLogout }) {
 
     const [open, setOpen] = useState(false);
     const menuRef = useRef(null);
@@ -22,34 +22,44 @@ export default function ProfileMenu({ userId, onLogout }) {
 
 
     return (
-        <div className="relative" ref={menuRef}>
+        <div className="relative flex item-center gap-1" ref={menuRef}>
 
             {/* profile circle */}
             <div
                 onClick={() => setOpen(!open)}
                 className="w-10 h-10 rounded-full bg-[#F15B40] text-white flex items-center justify-center cursor-pointer font-bold"
             >
-                {userId?.charAt(0)?.toUpperCase()}
+                U
             </div>
+
+            {/* arrow */}
+            <button
+                onClick={() => setOpen(!open)}
+                className="text-white text-xs"
+            >
+                ▼
+            </button>
 
 
             {/* dropdown */}
             {open && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border text-sm overflow-hidden">
+                <div className="absolute right-0 top-11 w-44 bg-white border rounded shadow z-50 text-sm">
 
-                    {/* User Info */}
-                    <div className=" px-4 py-2 border-b">
-                        <span className="font-semibold text-gray-800">User Id:</span>{" "}
-                        <span className="text-gray-700">
-                            {userId}
-                        </span>
+                    <button
+                        onClick={() => {
+                            onProfile();     //open profile on same page
+                            setOpen(false);
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-blue-600 font-medium"
+                    >
+                        Profile
+                    </button>
 
-                    </div>
+                    <div className="border-t" />
 
-                    {/* Logout */}
                     <button
                         onClick={onLogout}
-                        className="w-full flex justify-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 font-medium"
+                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 font-medium"
                     >
                         Logout
                     </button>
