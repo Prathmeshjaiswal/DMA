@@ -7,8 +7,12 @@ import { login } from "../api/login";
 import { message } from "antd";
 import Register from "./Register.jsx"
 import Footer from ".././Footer.jsx"
+import { useAuth } from "../AuthProvider.jsx"; 
 
 export default function Login() {
+//by simran
+const {setIsAuthenticated}=useAuth();
+
   const [form, setForm] = useState({
     userId: "",
     password: ""
@@ -42,6 +46,10 @@ export default function Login() {
           localStorage.setItem("token", resp.data.token);
           localStorage.setItem("userId", resp.data.userId);
           localStorage.setItem("roles", JSON.stringify(resp.data.roles));
+
+          //by simran
+          setIsAuthenticated(true);
+
           message.success({ content: "Logged in successfully.", duration: 2 });
           // Navigate to dashboard
           navigate("/Dashboard");

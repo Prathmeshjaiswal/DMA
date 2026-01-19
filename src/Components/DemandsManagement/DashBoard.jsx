@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import NavBar from '../NavBar';
-import { DatePicker} from 'antd';
+import { DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { DashBoardData } from "../api/DashBoardData.js";
 
@@ -14,13 +14,16 @@ import PieStatusChart from '../Charts/PieStatusChart.jsx';
 
 
 
-
-
-
-
-
 const { RangePicker } = DatePicker;
+
+
+
+
+
 export default function Dashboard() {
+
+  // states
+
   const [selectedDate, setSelectedDate] = useState(
     [
       dayjs().subtract(30, 'day'),//update by simran
@@ -36,7 +39,13 @@ export default function Dashboard() {
     "closedPosition",
     "rejected",
   ]);
+
   const [timeline, setTimeline] = useState("monthly");
+
+  const [data, setData] = useState(null);      // response payload
+  const [loading, setLoading] = useState(true); // loading flag
+  const [error, setError] = useState(null);     // error object or message
+
 
   const mockChartData = [
     { month: "Dec", openPosition: 20, closedPosition: 10, rejected: 5 },
@@ -56,9 +65,6 @@ export default function Dashboard() {
 
   //   const selectedCard = cards.find((c) => c.key === selectedChart);
 
-  const [data, setData] = useState(null);      // response payload
-  const [loading, setLoading] = useState(true); // loading flag
-  const [error, setError] = useState(null);     // error object or message
 
   //by simran
   const CARD_CONFIG = {
@@ -118,29 +124,6 @@ export default function Dashboard() {
 
 
 
-  // useEffect(() => {
-  //   let isMounted = true; // guard against state updates after unmount
-  //   const fetchDashboard = async () => {
-  //     setLoading(true);
-  //     setError(null);
-  //     try {
-  //       const res = await DashBoardData(); //
-  //       if (!isMounted) return;
-  //       console.log(res?.data?.data);
-  //       setData(res?.data);
-  //     } catch (err) {
-  //       if (!isMounted) return;
-  //       const msg = err?.response?.data?.message || err.message || 'Unknown error';
-  //       setError(msg);
-  //     } finally {
-  //       if (isMounted) setLoading(false);
-  //     }
-  //   };
-
-  //   fetchDashboard();
-  //   return () => { isMounted = false; }; // cleanup
-  // }, []);
-
   if (loading) {
     return <div className="skeleton">Loading dashboard…</div>;
   }
@@ -196,22 +179,6 @@ export default function Dashboard() {
 
 
 
-            {/* Card grid */}
-            {/* <section className="grid grid-cols-12 gap-4">
-              {Object.entries(data).filter(([key]) => ALLOWED_KEYS.includes(key)).map(([key, value]) => (
-                <div
-                  key={key}
-                  // onClick={() => setSelectedChart(card.key)}
-                  className="col-span-12 md:col-span-3 rounded-xl border border-slate-800 bg-gray-800 p-4 cursor-pointer hover:bg-gray-700 transition-all"
-                >
-                  <div className="text-sm text-white">{key}</div>
-                  <div className={`mt-1 text-3xl font-bold ${CARD_COLOR}`}>{value}</div>
-                </div>
-              ))}
-              
-              <div>{console.log(Object.entries(data))}</div> */}
-
-
             {/* by simran */}
             <section className="grid grid-cols-12 gap-4 mb-6">
               {cards.map((card) => (
@@ -234,65 +201,49 @@ export default function Dashboard() {
               ))}
             </section>
 
-            {/* Chart Placeholder */}
-            {/* <section className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
-                <div className="text-sm text-gray-200">
-                  Charts / graphs will render here based on selected date.
-                </div>
-              </section> */}
-
 
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
- 
-  <ChartContainer
-    title="Bar Chart"
-    selectedStatus={selectedStatus}
-    onStatusChange={setSelectedStatus}
-    selectedTimeline={timeline}
-    onTimelineChange={setTimeline}
-  >
-    <BarStatusChart
-      data={mockChartData}
-      selectedStatus={selectedStatus}
-    />
-  </ChartContainer>
- 
-  <ChartContainer
-    title="Line Chart"
-    selectedStatus={selectedStatus}
-    onStatusChange={setSelectedStatus}
-    selectedTimeline={timeline}
-    onTimelineChange={setTimeline}
-  >
-    <LineStatusChart
-      data={mockChartData}
-      selectedStatus={selectedStatus}
-    />
-  </ChartContainer>
- 
-  <ChartContainer
-    title="Pie Chart"
-    selectedStatus={selectedStatus}
-    onStatusChange={setSelectedStatus}
-    selectedTimeline={timeline}
-    onTimelineChange={setTimeline}
-  >
-    <PieStatusChart
-      data={mockChartData}
-      selectedStatus={selectedStatus}
-    />
-  </ChartContainer>
- 
-</section>
 
+              <ChartContainer
+                title="Bar Chart"
+                selectedStatus={selectedStatus}
+                onStatusChange={setSelectedStatus}
+                selectedTimeline={timeline}
+                onTimelineChange={setTimeline}
+              >
+                <BarStatusChart
+                  data={mockChartData}
+                  selectedStatus={selectedStatus}
+                />
+              </ChartContainer>
 
-            {/* Chart placeholder  */}
-            {/* <div className="col-span-12 rounded-xl border border-slate-800/80 bg-slate-900/40 backdrop-blur p-4">
-                <div className="text-sm text-gray-200">
-                  Charts/graphs will render here based on selected date.
-                </div>
-              </div> */}
+              <ChartContainer
+                title="Line Chart"
+                selectedStatus={selectedStatus}
+                onStatusChange={setSelectedStatus}
+                selectedTimeline={timeline}
+                onTimelineChange={setTimeline}
+              >
+                <LineStatusChart
+                  data={mockChartData}
+                  selectedStatus={selectedStatus}
+                />
+              </ChartContainer>
 
+              <ChartContainer
+                title="Pie Chart"
+                selectedStatus={selectedStatus}
+                onStatusChange={setSelectedStatus}
+                selectedTimeline={timeline}
+                onTimelineChange={setTimeline}
+              >
+                <PieStatusChart
+                  data={mockChartData}
+                  selectedStatus={selectedStatus}
+                />
+              </ChartContainer>
+
+            </section>
 
           </div>
 
