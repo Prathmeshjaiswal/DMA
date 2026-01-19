@@ -146,12 +146,11 @@ export default function Dashboard() {
   return (
 
     <>
-      {/* <NavBar /> */}
       <Layout>
       {/* change by simran */}
-      <div className="min-h-screen flex flex-col bg-white">
+      <div className=" bg-white">
         {/* main added by simran */}
-        <main className="flex-grow">
+        
           <div className="max-w-7xl mx-auto px-4 py-4">
 
 
@@ -248,12 +247,9 @@ export default function Dashboard() {
 
           </div>
 
-        </main>
+       
 
-        {/* update by simran */}
-        {/* <footer className=" text-center text-sm text-black py-4">
-          © Coforge, 2026 | Confidential
-        </footer> */}
+
         
       </div>
 </Layout>
