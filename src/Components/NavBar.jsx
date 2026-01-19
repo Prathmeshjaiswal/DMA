@@ -11,6 +11,7 @@ export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const userId=localStorage.getItem("userId");
+  // const email=localStorage.getItem("email");
 
 
   const handleLogout = () => {
@@ -72,7 +73,11 @@ export default function NavBar() {
 
           {/* profile menu */}
           {isAuthenticated &&(
-            <ProfileMenu userId={userId} onLogout={handleLogout}/>
+            <ProfileMenu
+             userId={userId}
+            //  email={email}
+            onLogout={handleLogout}
+              />
           )}
 
 
