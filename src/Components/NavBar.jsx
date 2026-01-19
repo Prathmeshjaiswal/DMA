@@ -12,7 +12,6 @@ export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showProfile,setShowProfile]=useState(null);
 
-  const userId=localStorage.getItem("userId");
   const userId = localStorage.getItem("userId");
   // const email=localStorage.getItem("email");
 
