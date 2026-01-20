@@ -16,8 +16,11 @@ import SetNewPassword from './Components/Auth/SetNewPassword.jsx'
 import AddDemands2 from './Components/DemandsManagement/AddNewDemand/AddDemands2.jsx'
 import DemandSheet1 from './Components/DemandsManagement/DemandSheet/DemandSheet1.jsx'
 import AddDemands1 from './Components/DemandsManagement/AddNewDemand/AddDemands1.jsx'
-
 import ProtectedRoute from './Components/Auth/ProtectedRoute.jsx'
+import PublicRoute from './Components/Auth/PublicRoute.jsx'
+
+
+
 
 function App() {
   return (
@@ -25,7 +28,7 @@ function App() {
     <Router>
           <Routes>
             <Route path="/" element={<Navigate to="/Login"/>} />
-            <Route path="/Login" element={<Login />} />
+            <Route path="/Login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/change" element={<ChangePassword />}/>   
             {/* protected */}
             <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
