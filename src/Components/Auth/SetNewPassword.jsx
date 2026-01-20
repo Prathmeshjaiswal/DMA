@@ -64,7 +64,7 @@ export default function SetNewPassword() {
       setMsg({ type: "success", text: successText });
       setNewPwd("");
       setConfirmPwd("");
-      navigate("/login1",5000);
+      navigate("/login",5000);
     } catch (err) {
       const errText = parseAxiosError(err);
       setMsg({

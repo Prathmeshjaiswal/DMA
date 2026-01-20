@@ -13,7 +13,6 @@ export default function ProfileMenu({ onProfile, onLogout }) {
                 setOpen(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
@@ -31,7 +30,6 @@ export default function ProfileMenu({ onProfile, onLogout }) {
             >
                 U
             </div>
-
             {/* arrow */}
             <button
                 onClick={() => setOpen(!open)}
@@ -67,5 +65,4 @@ export default function ProfileMenu({ onProfile, onLogout }) {
             )}
         </div>
     );
-
 }

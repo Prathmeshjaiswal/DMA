@@ -32,8 +32,8 @@ export default function Sidebar({ isOpen, onClose, links = [] }) {
       { text: "Profiles", onClick: () => navigate("/ProfileTracker") },
       { text: "Onboarding", onClick: () => navigate("/OnBoardingTracker") },
     ],
-    RDG: [{ text: "Addprofiles", onClick: () => navigate("/RDGTeam") }],
-    TA: [{ text: "AddProfiles", onClick: () => navigate("/TATeam") }],
+    RDGTA: [{ text: "AddProfiles", onClick: () => navigate("/RDGTATeam") }],
+    HBU: [{ text: "HBU", onClick: () => navigate("/HBU") }],
     Reports: [{ text: "Download", onClick: () => navigate("/Report") }],
 
 //

@@ -56,7 +56,7 @@ export default function Dashboard() {
 
   const CARD_COLOR = 'text-blue-400';
 
-  //changed by simran 
+  //changed by simran
   const ALLOWED_KEYS = ["totalDemands", "openPositions", "closedPositions", "rejected"];
 
 
@@ -150,7 +150,6 @@ export default function Dashboard() {
       {/* change by simran */}
       <div className=" bg-white">
         {/* main added by simran */}
-        
           <div className="max-w-7xl mx-auto px-4 py-4">
 
 
@@ -247,10 +246,10 @@ export default function Dashboard() {
 
           </div>
 
-       
 
 
-        
+
+
       </div>
 </Layout>
     </>

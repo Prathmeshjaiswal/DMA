@@ -5,7 +5,6 @@ import logo from "../assets/cfg3.png";
 import { useAuth } from "./AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
-
 export default function NavBar() {
   const navigate = useNavigate();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
@@ -31,7 +30,7 @@ export default function NavBar() {
     { label: "TA", to: "/TATeam" },
     { label: "Reports", to: "/Report" },
   ];
-
+ 
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-50 bg-[#082340] text-white border-b border-white/10 shadow-md">
@@ -42,7 +41,6 @@ export default function NavBar() {
             className="h-10 w-auto cursor-pointer"
             onClick={() => navigate("/DashBoard")}
           />
-
           {/* Demand ONLY when authenticated */}
           {isAuthenticated && (
             <button
@@ -58,7 +56,6 @@ export default function NavBar() {
               HSBC Demand Management System
             </h1>
           </header>
-
           {/* Logout ONLY when authenticated */}
           {/* {isAuthenticated && (
             <button
@@ -105,3 +102,4 @@ export default function NavBar() {
     </>
   );
 }
+ 

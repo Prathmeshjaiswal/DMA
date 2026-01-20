@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import NavBar from "../../NavBar.jsx"
 import { getProfilesByDemandID } from '../../api/Trackers/getProfileTracker';
+import { getProfilesByDateRange } from '../../api/Trackers/getProfileTracker';
 import { DatePicker } from 'antd';
 const { RangePicker } = DatePicker;
+import dayjs  from "dayjs";
 
 
 function calculateAgeDays(dateOfProfileShared, decisionDate) {
@@ -16,6 +18,12 @@ function calculateAgeDays(dateOfProfileShared, decisionDate) {
   return diffDays < 0 ? 0 : diffDays;
 }
 
+function parseISODateSafe(value) {
+  if (!value) return null; // handle null/undefined
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date; // return null if invalid
+}
+
 
 export default function ProfileTracker() {
   const [mode, setMode] = useState('bydemandId');
@@ -25,28 +33,46 @@ export default function ProfileTracker() {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedDate, setSelectedDate] = useState({ from: '', to: '' });
-
+  const [selectedDate, setSelectedDate] = useState({start:dayjs(),end:dayjs(),});
+  const BACKEND_FMT = "DD-MMM-YYYY";
   async function fetchByDemandId(demandId) {
-    const res = await getProfilesByDemandID();
-    const payload = res?.data?.data ?? res?.data;
+    const res = await getProfilesByDemandID(demandId);
+    const payload = res;
     const arr = Array.isArray(payload) ? payload : (payload ? [payload] : []);
-    return arr;
-  }
-   async function fetchByDateRange(range) {
-     const res = await getProfilesByDateRange();
-    const payload = res?.data?.data ?? res?.data;
+    return arr ;
+    }
+
+   async function fetchByDateRange(selectedDate) {
+     const res = await getProfilesByDateRange(selectedDate);
+    const payload = res;
     const arr = Array.isArray(payload) ? payload : (payload ? [payload] : []);
     return arr;
   }
 
   const displayFormat = (value) =>
-    value ? value.format('DD-MMM-YYYY').toLowerCase() : '';
+    value ? value.format('DD-MMM-YYYY'):'';
 
+//   const [dateRange,SetDateRange] = useState({ range: [dayjs("2026-01-01"), dayjs("2026-01-31")] });
 
-  const handleChange = (dates, dateStrings) => {
-    const [from, to] = dateStrings;
-    setSelectedDate({ from, to }); // store formatted strings
+  const handleChange = (values, dateStrings) => {
+  if (!values) return;
+
+  const [start,end] = values;
+
+  if (typeof start?.isValid !== "function" || typeof end?.isValid !== "function") {
+    console.log("Invalid date values. Ensure RangePicker returns Day.js values.");
+    return;
+  }
+
+  if (!start.isValid() || !end.isValid()) {
+      message.warning("Please select a valid date range.");
+    return;
+  }
+
+  const startDate = start.format(BACKEND_FMT);
+  const endDate = end.format(BACKEND_FMT);
+     setSelectedDate({ startDate, endDate });
+    console.log({ startDate, endDate, dateStrings });
   };
 
   async function submit(e) {
@@ -54,26 +80,25 @@ export default function ProfileTracker() {
     setError(null);
     setProfiles([]);
     setLoading(true);
+//     const err = validateDDMMMYYYYRange(from, to);
+//     if (err) return setError(err);
 
-    const { from, to } = selectedDate;
-    const err = validateDDMMMYYYYRange(from, to);
-    if (err) return setError(err);
+//     const apiFrom = ddMMMYYYY_to_YMD(from);
+//     const apiTo   = ddMMMYYYY_to_YMD(to);
 
-    const apiFrom = ddMMMYYYY_to_YMD(from);
-    const apiTo   = ddMMMYYYY_to_YMD(to);
-
-    await onSearch({ from: apiFrom, to: apiTo });
+//     await onSearch({ from: apiFrom, to: apiTo });
 
 
     try {
       if (mode === 'bydemandId') {
-        const id = demandId.trim();
+        const id = demandId;
         if (!id) throw new Error('Please enter a Demand ID.');
-        const rows = await fetchByDemandId(id);
+        const rows = await fetchByDemandId(demandId);
         if (rows.length === 0) setError('No profiles found for this Demand ID.');
         setProfiles(rows);
+        console.log(rows);
       } else {
-        const rows = await fetchByDateRange(range);
+        const rows = await fetchByDateRange(selectedDate);
         if (rows.length === 0) setError('No profiles found in this date range.');
         setProfiles(rows);
       }
@@ -87,15 +112,13 @@ export default function ProfileTracker() {
 
   function clearAll() {
     setDemandId('');
-    setFromDate('');
-    setToDate('');
     setProfiles([]);
     setError(null);
   }
 
   return (
       <>
-      <NavBar />
+{/*        <NavBar /> */}
     <div className="p-4">
             <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
                 Profile Tracker
@@ -134,7 +157,7 @@ export default function ProfileTracker() {
             <label htmlFor="demandId" className="sr-only">Demand ID</label>
             <input
               id="demandId"
-              type="search"
+              type="text"
               value={demandId}
               onChange={(e) => setDemandId(e.target.value)}
               placeholder="Enter Demand ID (e.g., HSBC-123)"
@@ -144,8 +167,12 @@ export default function ProfileTracker() {
         ) : (
           <div className="flex items-center gap-2">
                 <RangePicker
-                format="DD-MMM-YYYY"
-                  value={selectedDate}
+      value={[
+          selectedDate?.startDate ? dayjs(selectedDate.startDate, displayFormat) : null,
+          selectedDate?.endDate ? dayjs(selectedDate.endDate, displayFormat) : null,
+
+      ]}
+
                   onChange={handleChange}
                   placeholder={["Start date", "End date"]}
                   className="w-[320px]"      // wider for two inputs
@@ -188,7 +215,7 @@ export default function ProfileTracker() {
               <Th>Skill Cluster</Th>
               <Th>Primary Skill</Th>
               <Th>Secondary Skill</Th>
-              <Th>Current Profile Shared</Th>
+              <Th>Profile Shared</Th>
               <Th>Date of Profile Shared</Th>
               <Th>External/Internal</Th>
               <Th>Interview Date</Th>
@@ -217,18 +244,18 @@ export default function ProfileTracker() {
                     </button>
                   </Td>
                   <Td>{p?.demandId ?? '-'}</Td>
-                  <Td>{p?.rr ?? '-'}</Td>
+                  <Td>{p?.rrNumber ?? '-'}</Td>
                   <Td>{p?.lob ?? '-'}</Td>
                   <Td>{p?.hiringManager ?? '-'}</Td>
-                  <Td>{p?.skillCluster ?? '-'}</Td>
-                  <Td>{p?.primarySkill ?? '-'}</Td>
-                  <Td>{p?.secondarySkill ?? '-'}</Td>
+                  <Td>{p?.skillCluter ?? '-'}</Td>
+                  <Td>{p?.primarySkills ?? '-'}</Td>
+                  <Td>{p?.secondarySkills ?? '-'}</Td>
                   <Td>{p?.currentProfileShared ?? '-'}</Td>
-                  <Td>{formatDate(p?.dateOfProfileShared)}</Td>
+                  <Td>{displayFormat(p?.dateOfProfileShared)}</Td>
                   <Td>{p?.externalInternal ?? '-'}</Td>
-                  <Td>{formatDate(p?.interviewDate)}</Td>
+                  <Td>{displayFormat(p?.interviewDate)}</Td>
                   <Td>{p?.status ?? '-'}</Td>
-                  <Td>{formatDate(p?.decisionDate)}</Td>
+                  <Td>{displayFormat(p?.decisionDate)}</Td>
                   <Td>{calculateAgeDays(p?.dateOfProfileShared, p?.decisionDate) ?? '-'}</Td>
                 </tr>
               ))

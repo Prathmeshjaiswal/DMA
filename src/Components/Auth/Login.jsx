@@ -20,7 +20,7 @@ const {setIsAuthenticated}=useAuth();
   
   const [loading, setLoading] = useState(false);
   const [serverMsg, setServerMsg] = useState("");
-
+  const {setIsAuthenticated}=useAuth();
   const navigate = useNavigate();
 
   // Generic change handler: relies on input name attributes
@@ -34,15 +34,10 @@ const {setIsAuthenticated}=useAuth();
     console.log("Submitted form:", form);
     // call api pending
     try {
-      // Call backend
       const resp = await login(form);
       setServerMsg(resp?.message || "");
 
       if (resp?.success) {
-        const status = resp?.data?.status;
-
-        if (status === "SUCCESS") {
-          // Store auth
           localStorage.setItem("token", resp.data.token);
           localStorage.setItem("userId", resp.data.userId);
           localStorage.setItem("roles", JSON.stringify(resp.data.roles));
@@ -56,15 +51,14 @@ const {setIsAuthenticated}=useAuth();
         } else {
           setServerMsg(resp?.message || "Login failed.");
         }
-      } else {
-        setServerMsg(resp?.message || "Login failed.");
       }
-    } catch (err) {
-      const message =
+     catch (err) {
+      const errormessage =
         err?.response?.data?.message ||
         err?.message ||
         "Unable to login. Please try again.";
-      setServerMsg(message);
+      setServerMsg(errormessage);
+      message.error(errormessage);
     } finally {
         setLoading(false)
       setForm({ userId: "", password: "" });
@@ -73,27 +67,26 @@ const {setIsAuthenticated}=useAuth();
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center"
+      className="flex flex-col items-center justify-center"
       style={{ backgroundColor: COLORS.white }}
     >
       <NavBar />
 
       <div
-        className="shadow-lg rounded-lg p-8 w-[400px]"
+        className="shadow-lg rounded-lg px-8  py-15 w-[400px]"
         style={{ backgroundColor: COLORS.navyTint }}
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">
-            <span style={{ color: COLORS.orange }}>Co</span>
-            <span style={{ color: COLORS.white }}>forge Limited</span>
-          </h1>
-          <p className="text-lg font-semibold mt-2">
-            <span style={{ color: COLORS.orange }} className="text-xl">
+{/*           <h1 className="text-3xl font-bold"> */}
+{/*             <span style={{ color: COLORS.orange }}>Co</span> */}
+{/*             <span style={{ color: COLORS.white }}>forge Limited</span> */}
+{/*           </h1> */}
+          <p className="text-lg font-bold">
+            <h1 style={{ color: COLORS.orange }} className="text-3xl">
               HSBC
-            </span>
-            <br />
-            <span style={{ color: COLORS.white }}>Demand Management System</span>
+            </h1>
+            <span style={{ color: COLORS.white }} className="text-xl">Demand Management System</span>
           </p>
         </div>
 
@@ -104,7 +97,6 @@ const {setIsAuthenticated}=useAuth();
               className="block text-sm font-semibold mb-2"
               style={{ color: COLORS.white }}
             >
-              User ID
             </label>
             <input
               type="name"
@@ -112,7 +104,7 @@ const {setIsAuthenticated}=useAuth();
               value={form.userId}
               onChange={onChange}
               required
-              placeholder="Enter your UserId"
+              placeholder="Employee ID "
               className="w-full px-3 py-2 rounded-md outline-none"
               style={{
                 backgroundColor: COLORS.white,
@@ -129,7 +121,6 @@ const {setIsAuthenticated}=useAuth();
               className="block text-sm font-semibold mb-2"
               style={{ color: COLORS.white }}
             >
-              Password
             </label>
             <input
               type="password"
@@ -137,7 +128,7 @@ const {setIsAuthenticated}=useAuth();
               value={form.password}
               onChange={onChange}
               required
-              placeholder="Enter password"
+              placeholder="Password"
               className="w-full px-3 py-2 rounded-md outline-none"
               style={{
                 backgroundColor: COLORS.white,
@@ -163,13 +154,6 @@ const {setIsAuthenticated}=useAuth();
             Login
           </button>
         </form>
-                  <button
-
-                    className="w-full py-2 text-white "
-                    onClick={() =>navigate("/Register")}
-                  >
-                    New User ? Register Here...
-                  </button>
       </div>
 
 {/* <Footer /> */}

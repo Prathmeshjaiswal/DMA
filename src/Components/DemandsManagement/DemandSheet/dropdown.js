@@ -32,14 +32,6 @@ export function toOptions(arr) {
     .filter(Boolean);
 }
 
-/**
- * Given a list of items and a field name to extract (e.g., "lob", "deliveryManager"),
- * returns normalized {label, value} options.
- *
- * @param {Array<any>} list
- * @param {string} itemField
- * @returns {{label:string, value:any}[]}
- */
 export function listToOptionsByField(list = [], itemField) {
   const values = Array.isArray(list)
     ? list
@@ -49,17 +41,6 @@ export function listToOptionsByField(list = [], itemField) {
   return toOptions(values);
 }
 
-/**
- * Returns a function getFieldOptions(field) bound to the provided dropdowns object.
- * The mapping links UI fields to the list key and the item property to read.
- *
- * Usage:
- *   const getFieldOptions = makeGetFieldOptions(dropdowns);
- *   const lobOptions = getFieldOptions('lob'); // -> [{label, value}, ...]
- *
- * @param {Record<string, any>} dropdowns
- * @returns {(field: string) => {label:string, value:any}[]}
- */
 export function makeGetFieldOptions(dropdowns) {
   return function getFieldOptions(field) {
     // Map each UI field to: backend list key + the item property to pull from each object.

@@ -50,7 +50,6 @@ export default function ChartContainer({
             </Select>
 
 
- 
           {/* TIMELINE */}
           <Select
             size="small"
@@ -64,7 +63,6 @@ export default function ChartContainer({
           />
         </div>
       </div>
- 
       {/* Chart */}
       {children}
     </div>

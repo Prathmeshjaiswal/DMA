@@ -3,10 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import NavBar from "../NavBar.jsx";
-
-
-
-export default function TATeam() {
+export default function RDGTATeam() 
   const navigate = useNavigate();
   const [selectedProfile, setSelectedProfile] = useState(null);
 
@@ -75,10 +72,25 @@ export default function TATeam() {
   return (
     <>
       <NavBar />
-      <div className="flex h-[calc(100vh-64px)]">
+    <div className="min-h-screen bg-[#082340] text-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {/* Form cards */}
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4"
+        >
+          {/* Left column - labels styled like original green buttons (now gray theme) */}
+          <div className="space-y-4">
 
-
-        
+{/*             <Field label="Practise"></span> */}
+{/*             <select className={fieldClass} value={form.demandLocation} onChange={(e) => setForm({...form,demandLocation: e.target.value})}> */}
+{/*               <option value="">Select Practise</option> */}
+{/*               {options.lob.map((o) => ( */}
+{/*                 <option key={String(o.value)} value={String(o.value)}> */}
+{/*                   {o.label} */}
+{/*                 </option> */}
+{/*               ))} */}
+{/*             </select> */}
 
         {/* Left Column - Demand ID */}
         <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
