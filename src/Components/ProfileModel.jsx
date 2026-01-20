@@ -4,7 +4,7 @@ export default function ProfileModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const userId = localStorage.getItem("userId");
-  const roles = JSON.parse(localStorage.getItem("roles") || "[]");
+  const role = localStorage.getItem("role");
 
   return (
     <div className="fixed inset-0 flex items-center justify-center  bg-opacity-50 z-50">
@@ -22,7 +22,7 @@ export default function ProfileModal({ isOpen, onClose }) {
 
         <div className="space-y-2 text-gray-700">
           <p><strong>User ID:</strong> {userId}</p>
-          <p><strong>Roles:</strong> {roles.join(", ")}</p>
+          <p><strong>Roles:</strong> {role.join(", ")}</p>
         </div>
       </div>
     </div>

@@ -38,7 +38,7 @@ export default function Login() {
           localStorage.setItem("token", resp.data.token);
           localStorage.setItem("userId", resp.data.userId);
           localStorage.setItem("roles", JSON.stringify(resp.data.roles));
-          message.success({ content: "Logged in successfully.", duration: 2 });
+//           message.success({ content: "Logged in successfully.", duration: 2 });
           setIsAuthenticated(true);
           // Navigate to dashboard
           navigate("/Dashboard");
@@ -67,7 +67,7 @@ export default function Login() {
       <NavBar />
 
       <div
-        className="shadow-lg rounded-lg px-8  py-15 mt-10 w-[400px]"
+        className="shadow-lg rounded-lg px-8  py-15 w-[400px]"
         style={{ backgroundColor: COLORS.navyTint }}
       >
         {/* Header */}

@@ -58,7 +58,7 @@ export default function ChangePassword() {
     >
       <NavBar />
 
-      <main className="max-w-xl mx-auto w-full px-4 py-10 flex-1">
+      <main className="max-w-xl mx-auto w-full px-4flex-1">
         <div
           className="rounded-xl p-6 shadow-lg"
           style={{

@@ -53,7 +53,7 @@ export default function NavBar() {
             </button>
           )}
  
-          <header className="flex-1 text-center">
+          <header className="flex-1 text-center pr-27">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
               HSBC Demand Management System
             </h1>
