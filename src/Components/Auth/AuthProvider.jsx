@@ -4,7 +4,14 @@ const AuthContext=createContext();
 
 
 export default function AuthProvider({children}){
-    const [isAuthenticated,setIsAuthenticated]=useState(false);
+    const [isAuthenticated,setIsAuthenticated]=useState(!!localStorage.getItem("token"));
+
+    useEffect(()=>{
+        const token=localStorage.getItem("token");
+        if(token){
+            setIsAuthenticated(true);
+        }
+    },[])
 
     
     return(
