@@ -6,10 +6,16 @@ const { RangePicker } = DatePicker;
 import dayjs from 'dayjs';
 import {DashBoardData} from "../api/DashBoardData.js";
 
-export default function Dashboard() {
-  const [selectedDate, setSelectedDate] = useState(); // default to today
-//   const [selectedChart, setSelectedChart] = useState(null);
 
+
+function toPascalCase(str) {
+  return str
+    .replace(/[-_ ]+(.)/g, (_, char) => char.toUpperCase())
+    .replace(/^(.)/, (_, char) => char.toUpperCase());
+}
+
+export default function Dashboard() {
+  const [selectedDate, setSelectedDate] = useState();
   const CARD_COLOR = 'text-blue-400';
 
 //   const cards = [
@@ -88,7 +94,7 @@ export default function Dashboard() {
             {/* Header */}
             <header className="relative mb-5 flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-wide text-center">
-                Talent Overview Dashboard
+                Demand Overview Dashboard
               </h1>
               <div className="absolute right-0">
                 {/* <DatePicker
@@ -121,7 +127,7 @@ export default function Dashboard() {
 //                   onClick={() => setSelectedChart(card.key)}
                   className="col-span-12 md:col-span-3 rounded-xl border border-slate-800 bg-gray-800 p-4 cursor-pointer hover:bg-gray-700 transition-all"
                 >
-                  <div className="text-sm text-white">{key}</div>
+                  <div className="text-sm text-white">{toPascalCase(key)}</div>
                  <div className={`mt-1 text-3xl font-bold ${CARD_COLOR}`}>{value}</div>
                 </div>
               ))}

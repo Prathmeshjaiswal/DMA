@@ -1,5 +1,5 @@
 
-import React from "react";
+import React,{useState} from "react";
 import { Link } from "react-router-dom";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 
@@ -10,6 +10,41 @@ export default function RowView({
   startEdit,
   isLocked,
 }) {
+
+    const [copied, setCopied] = useState(false);
+
+
+const copyToClipboard = async (e) => {
+    e.preventDefault();      // avoid any default behavior
+    e.stopPropagation();     // ensure Link click isn't triggered
+
+    const text = String(row.demandId ?? "");
+
+    try {
+      // Prefer the modern Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for non-secure contexts
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
+      setCopied(true);
+      // Reset the “Copied!” indicator after 1.2s
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch (err) {
+      console.error("Failed to copy demandId:", err);
+    }
+  };
+
   return (
     <tr key={row.demandId} className="hover:bg-gray-50">
       {columns
@@ -59,6 +94,36 @@ export default function RowView({
                   >
                     {row.demandId}
                   </Link>
+
+<button
+          type="button"
+          onClick={copyToClipboard}
+          className="p-1 rounded hover:bg-gray-100 active:bg-gray-200 transition"
+          aria-label="Copy demand ID"
+          title={copied ? "Copied!" : "Copy demand ID"}
+        >
+          {/* Clipboard icon (inline SVG) */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5m-7 0h8m-8 0A2.5 2.5 0 0 0 6.5 10v7A2.5 2.5 0 0 0 9 19.5h6A2.5 2.5 0 0 0 17.5 17v-7A2.5 2.5 0 0 0 15 7.5"
+            />
+          </svg>
+        </button>
+
+        {/* Tiny “Copied!” badge (optional) */}
+        {copied && (
+          <span className="text-xs text-green-600 select-none">Copied!</span>
+        )}
+
                 </div>
               </td>
             );

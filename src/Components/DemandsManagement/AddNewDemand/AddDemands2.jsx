@@ -27,10 +27,10 @@ export default function AddDemands2() {
 
   const [rrNumbers, setRrNumbers] = useState([]);
 
-  // Initialize RR numbers whenever demandIds change
-  // useEffect(() => {
-  //   setRrNumbers(demandIds.map((_, idx) => 1000 + idx + 1));
-  // }, [demandIds]);
+//   Initialize RR numbers whenever demandIds change
+//   useEffect(() => {
+//     setRrNumbers(demandIds.map((_, idx) => 1000 + idx + 1));
+//   }, [demandIds]);
   
 //  File handling 
   const fileRef = useRef(null);
@@ -80,12 +80,12 @@ export default function AddDemands2() {
       return;
     }
 
-    // Validate RR numbers (must be numbers >= 0)
-    const invalidRR = rrNumbers.some((n) => n === '' || Number.isNaN(Number(n)) || Number(n) < 0);
-    if (invalidRR) {
-      alert('Please provide valid RR numbers (non-negative).');
-      return;
-    }
+//     Validate RR numbers (must be numbers >= 0)
+//     const invalidRR = rrNumbers.some((n) => n === '' || Number.isNaN(Number(n)) || Number(n) < 0);
+//     if (invalidRR) {
+//       alert('Please provide valid RR numbers (non-negative).');
+//       return;
+//     }
 
     // Validate file before submit
     const currentFile = fileRef.current?.files?.[0] ?? null;
@@ -123,11 +123,11 @@ export default function AddDemands2() {
       const data = err?.response?.data;
       console.error('[Step2] submit error:', { status, data, err });
 
-      alert(
-        `Step 2 failed: ${err.message}` +
-        (status ? ` (HTTP ${status})` : '') +
-        (data ? `\nServer says: ${typeof data === 'string' ? data : JSON.stringify(data)}` : '')
-      );
+//       alert(
+//         `Step 2 failed: ${err.message}` +
+//         (status ? ` (HTTP ${status})` : '') +
+//         (data ? `\nServer says: ${typeof data === 'string' ? data : JSON.stringify(data)}` : '')
+//       );
     } finally {
       setSubmitting(false);
     }
@@ -204,7 +204,6 @@ export default function AddDemands2() {
                     value={rrNumbers[idx] ?? ""}
                     onChange={(e) => onChangeRR(idx, e.target.value)}
                     placeholder="Enter RR No."
-                    required
                     className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>

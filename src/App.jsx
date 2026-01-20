@@ -4,9 +4,9 @@ import Login from './Components/Auth/Login.jsx'
 // import HomePage from './Components/HomePage.jsx'
 import OnBoardingTracker from "./Components/DemandsManagement/Tracking/OnBoardingTracker.jsx"
 import ProfileTracker from "./Components/DemandsManagement/Tracking/ProfileTracker.jsx"
-import RDGTeam from "./Components/DemandsManagement/RDGTeam.jsx"
+import RDGTATeam from "./Components/DemandsManagement/RDGTATeam.jsx"
 import Report from "./Components/DemandsManagement/Report.jsx"
-import TATeam from "./Components/DemandsManagement/TATeam.jsx"
+import HBU from "./Components/DemandsManagement/HBU.jsx"
 import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
 import DashBoard from "./Components/DemandsManagement/DashBoard.jsx"
 import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
@@ -36,16 +36,16 @@ function App() {
             <Route path="/EditDemand" element={<EditDemand />}/>
             <Route path="/OnBoardingTracker" element={<OnBoardingTracker />} />
             <Route path="/ProfileTracker" element={<ProfileTracker />} />
-            <Route path="/RDGTeam" element={<RDGTeam />} />
+            <Route path="/RDGTATeam" element={<RDGTATeam />} />
             <Route path="/Report" element={<Report />} />
-            <Route path="/TATeam" element={<TATeam />} />
+            <Route path="/HBU" element={<HBU />} />
             <Route path="/demands/:demandId" element={<DemandDetails />} />
             <Route path="/Register" element={<Register/>} />
             <Route path="/change" element={<ChangePassword />} />   
             <Route path="/setnewpassword" element={<SetNewPassword />} />
             <Route path="/adddemands2" element={<AddDemands2/>}/>
             <Route path="/adddemands1" element={<AddDemands1/>}/>
-             <Route path="/demandsheet1" element={<DemandSheet1/>}/>  */}
+             <Route path="/demandsheet1" element={<DemandSheet1/>}/>
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>

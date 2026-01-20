@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import {useState} from "react";
 import NavBar from "../NavBar.jsx";
-export default function TATeam() {
+export default function RDGTATeam() {
   const navigate = useNavigate();
 
 const [form, setForm] = useState({
@@ -49,110 +49,7 @@ const [form, setForm] = useState({
       <>
       <NavBar />
     <div className="min-h-screen bg-[#082340] text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 y-6">
-
-        <section className="bg-[#0c2f53] rounded-lg shadow-lg border border-gray-700 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-[#10345b] text-gray-200">
-                {[
-                  "Demand ID",
-                  "RR",
-                  "LOB",
-                  "HSBC Hiring Manager",
-                  "Skill Cluster",
-                  "Primary Skill",
-                  "Secondary Skill",
-                  "Date of Profile Shared",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-3 py-2 text-left font-semibold border-b border-gray-700 whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="text-gray-100">
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="demandId"
-                    value={form.demandId}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="e.g., DMD-1234"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="rr"
-                    value={form.rr}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="RR"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="lob"
-                    value={form.lob}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="Line of Business"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="manager"
-                    value={form.manager}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="Hiring Manager"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="skillCluster"
-                    value={form.skillCluster}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="Skill Cluster"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="primarySkill"
-                    value={form.primarySkill}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="Primary Skill"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    name="secondarySkill"
-                    value={form.secondarySkill}
-                    onChange={handleChange}
-                    className={fieldClass}
-                    placeholder="Secondary Skill"
-                  />
-                </td>
-                <td className="px-3 py-2 border-b border-gray-700">
-                  <input
-                    type="date"
-                    name="dateOfProfileShared"
-                    value={form.dateOfProfileShared}
-                    onChange={handleChange}
-                    className={fieldClass}
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* Form cards */}
         <form
           onSubmit={handleSubmit}
@@ -160,16 +57,16 @@ const [form, setForm] = useState({
         >
           {/* Left column - labels styled like original green buttons (now gray theme) */}
           <div className="space-y-4">
-            <Field label="Download JD">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-md shadow-sm transition"
-                >
-                  Download
-                </button>
-              </div>
-            </Field>
+
+{/*             <Field label="Practise"></span> */}
+{/*             <select className={fieldClass} value={form.demandLocation} onChange={(e) => setForm({...form,demandLocation: e.target.value})}> */}
+{/*               <option value="">Select Practise</option> */}
+{/*               {options.lob.map((o) => ( */}
+{/*                 <option key={String(o.value)} value={String(o.value)}> */}
+{/*                   {o.label} */}
+{/*                 </option> */}
+{/*               ))} */}
+{/*             </select> */}
 
             <Field label="Primary Skills">
               <input

@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 export const changePassword = async (payload) => {
-  const res = await api.post('/api/user/change-password', payload);
+  const res = await api.post('/auth_user/change-password', payload);
   console.log('[changePassword] response status:', res.status);
   return res.data;
 };

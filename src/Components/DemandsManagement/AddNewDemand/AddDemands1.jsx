@@ -40,12 +40,10 @@ export default function AddDemands1() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // initial state
   const [form, setForm] = useState({
-    // Required fields  
     lob: '',
     noOfPositions: '',          
-    skillCluter: '',            // keep exact backend field name
+    skillCluster: '',
     primarySkills: '',
     secondarySkills: '',
     demandReceivedDate: '',     
@@ -56,20 +54,11 @@ export default function AddDemands1() {
     hbu: '',
     demandType: '',
     demandTimeline: '',
-
-    // Optional fields
-    prodProgramName: '',
-    experience: '3-5 years',
-    priority: 'P2',
-    demandLocation: 'Pune',
-    priorityComment: '',
-    pm: 'Rahul',
-    band: 'B3',
-    p1Age: '',
-    currentProfileShared: 0,   // keep numeric in state; easier to work with
-    externalInternal: 'External',
-    status: 'Open',
-    pmoSpoc: 'Shubham Kadam',
+    priority:'',
+    demandLocation:'',
+    pm:'',
+    band: '',
+    status: '',
     remark: '',
   });
 
@@ -91,9 +80,9 @@ export default function AddDemands1() {
     if (!form.noOfPositions || Number(form.noOfPositions) < 1) {
       return alert('No. of Positions must be at least 1');
     }
-    if (!form.skillCluter) return alert('Skill Cluster is required');
+    if (!form.skillCluster) return alert('Skill Cluster is required');
     if (!form.demandReceivedDate) return alert('Demand Received Date is required');
-    const skillCluterStr = (form.skillCluter || []).map(i => i.value).join(',');
+    const skillClusterStr = (form.skillCluster || []).map(i => i.value).join(',');
     const primarySkillsStr = (form.primarySkills || []).map(i => i.value).join(',');
     const secondarySkillsStr = (form.secondarySkills || []).map(i => i.value).join(',');
     setLoading(true);
@@ -102,33 +91,22 @@ export default function AddDemands1() {
     const form1Data = {
       lob: form.lob,
       noOfPositions: Number(form.noOfPositions || 0),
-      skillCluter: skillCluterStr,
+      skillCluster: skillClusterStr,
       primarySkills: primarySkillsStr,
       secondarySkills: secondarySkillsStr,
       demandReceivedDate: form.demandReceivedDate, 
       hiringManager: form.hiringManager,
       salesSpoc: form.salesSpoc,
       deliveryManager: form.deliveryManager,
-      pmo: form.pmo,
       hbu: form.hbu,
       demandType: form.demandType,
       demandTimeline: form.demandTimeline,
-
-      // Optional
-      prodProgramName: form.prodProgramName,
-      experience: form.experience,
-      priority: form.priority,
-      demandLocation: form.demandLocation,
-      priorityComment: form.priorityComment,
+      demandLocation:form.demandLocation,
       pm: form.pm,
       band: form.band,
-      p1Age: form.p1Age,
-      currentProfileShared: form.currentProfileShared
-        ? Number(form.currentProfileShared)
-        : 0,
-      externalInternal: form.externalInternal,
+      priority:form.priority,
       status: form.status,
-      pmoSpoc: form.pmoSpoc,
+      pmo: form.pmo,
       remark: form.remark,
     };
 
@@ -208,9 +186,9 @@ export default function AddDemands1() {
               components={{
                 Option: CheckboxOption,
               }}
-              value={form.skillCluter}
+              value={form.skillCluster}
               onChange={(selected) =>
-                setForm({ ...form, skillCluter: selected })
+                setForm({ ...form, skillCluster: selected })
               }
               placeholder="Select Skill Cluster"
               className="w-full"
@@ -341,7 +319,7 @@ export default function AddDemands1() {
               selected={form.demandReceivedDate ? new Date(form.demandReceivedDate) : null}
               onChange={(date) =>{
     const formatted =
-      date ? format(date, 'dd-MMM-yyyy').toLowerCase() : '';
+      date ? format(date, 'dd-MMM-yyyy'): '';
     setForm({ ...form, demandReceivedDate: formatted });
   }}
 
@@ -361,20 +339,6 @@ export default function AddDemands1() {
                   </option>
                 ))}
             </select>
-
-
-          </div>
-          <div className="grid grid-rows-3 gap-1 items-center">
-            <span className={labelPill}>Sales SPOC</span>
-            <select className={inputBox} value={form.salesSpoc} onChange={(e) =>setForm({...form,salesSpoc: e.target.value})}>
-              <option value="">Select Sales SPOC</option>
-              {options.salesSpoc.map((o) => (
-                <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-            </select>
-
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
             <span className={labelPill}>Delivery Manager</span>
@@ -387,15 +351,41 @@ export default function AddDemands1() {
           ))}
             </select>
           </div>
+          <div className="grid grid-rows-3 gap-0.5 items-center">
+              <label className={labelPill}>
+                Project Manager (PM)
+              </label>
+              <input
+                className={inputBox}
+                name="pm"
+                value={form.pm}
+                onChange={handleChange}
+                placeholder="PM name"
+              />
+          </div>
           <div className="grid grid-rows-3 gap-1 items-center">
-            <span className={labelPill}>PMO</span>
-            <select className={inputBox} value={form.pmo} onChange={(e) => setForm({...form,pmo: e.target.value})}>
-              <option value="">Select PMO</option>
+            <span className={labelPill}>Sales SPOC</span>
+            <select className={inputBox} value={form.salesSpoc} onChange={(e) =>setForm({...form,salesSpoc: e.target.value})}>
+              <option value="">Select Sales SPOC</option>
+              {options.salesSpoc.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>
+                {o.label}
+              </option>
+            ))}
+            </select>
+          </div>
+         {/* PMO SPOC */}
+          <div className="grid grid-rows-3 gap-0.5 items-center">
+            <label className={labelPill}>
+              PMO
+            </label>
+            <select className={inputBox} value={form.pmo} onChange={(e) =>setForm({...form,pmo: e.target.value})}>
+              <option value="">Pmo </option>
               {options.pmo.map((o) => (
-            <option key={String(o.value)} value={String(o.value)}>
-              {o.label}
-            </option>
-          ))}
+                <option key={String(o.value)} value={String(o.value)}>
+                {o.label}
+              </option>
+            ))}
             </select>
           </div>
           <div className="grid grid-rows-3 gap-1 items-center">
@@ -431,7 +421,55 @@ export default function AddDemands1() {
           ))}
             </select>
           </div>
-
+{/*           demandLocation */}
+          <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Demand Location</span>
+            <select className={inputBox} value={form.demandLocation} onChange={(e) => setForm({...form,demandLocation: e.target.value})}>
+              <option value="">Select Demand Location</option>
+              {options.lob.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Band</span>
+            <select className={inputBox} value={form.band} onChange={(e) => setForm({...form,band: e.target.value})}>
+              <option value="">Select Band</option>
+              {options.lob.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+{/*priority */}
+          <div className="grid grid-rows-3 gap-1 items-center">
+            <span className={labelPill}>Priority</span>
+            <select className={inputBox} value={form.priority} onChange={(e) => setForm({...form,priority: e.target.value})}>
+              <option value="">Select Priority</option>
+              {options.lob.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Status */}
+          <div className="grid grid-rows-3 gap-0.5 items-center">
+            <label className={labelPill}>
+              Status
+            </label>
+             <select className={inputBox} value={form.status} onChange={(e) =>setForm({...form,status: e.target.value})}>
+              <option value="">Select Status</option>
+              {options.status.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>
+                {o.label}
+              </option>
+            ))}
+            </select>
+          </div>
           
           <div className="grid grid-rows-3 gap-0.5 items-center">
             <span className={labelPill}>Remark</span>
@@ -449,176 +487,6 @@ export default function AddDemands1() {
                 {(form.remark?.length || 0)}/250
               </span>
             </div>
-          </div>
-
-        
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              Product/Program Name
-            </label>
-            <input
-              className={inputBox}
-              name="prodProgramName"
-              value={form.prodProgramName}
-              onChange={handleChange}
-              placeholder="e.g., RP"
-            />
-          </div>
-
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-              <label className={labelPill}>
-                Experience
-              </label>
-              <input
-                className={inputBox}
-                name="experience"
-                value={form.experience}
-                onChange={handleChange}
-                placeholder="e.g., 5 years"
-              />
-          </div>
-
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-              <label className={labelPill}>
-                Priority
-              </label>
-              <input
-                className={inputBox}
-                name="priority"
-                value={form.priority}
-                onChange={handleChange}
-                placeholder="e.g., P1 / High"
-              />
-          </div>
-
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-              <label className={labelPill}>
-                Demand Location
-              </label>
-              <input
-                className={inputBox}
-                name="demandLocation"
-                value={form.demandLocation}
-                onChange={handleChange}
-                placeholder="City / Remote"
-              />
-          </div>
-
-
-        
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-              <label className={labelPill}>
-                Priority Comment
-              </label>
-              <input
-                className={inputBox}
-                name="priorityComment"
-                value={form.priorityComment}
-                onChange={handleChange}
-                placeholder="Reason for priority"
-              />
-          </div>      
-
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-              <label className={labelPill}>
-                Project Manager (PM)
-              </label>
-              <input
-                className={inputBox}
-                name="pm"
-                value={form.pm}
-                onChange={handleChange}
-                placeholder="PM name"
-              />
-          </div>
-
-          {/* Band */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              Band
-            </label>
-            <input
-              className={inputBox}
-              name="band"
-              value={form.band}
-              onChange={handleChange}
-              placeholder="e.g., B2"
-            />
-          </div>
-
-          {/* P1 Age */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              P1 Age
-            </label>
-            <input
-              className={inputBox}
-              name="p1Age"
-              value={form.p1Age}
-              onChange={handleChange}
-              placeholder="e.g., 12 days"
-            />
-          </div>
-
-          {/* Current Profile Shared */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              Current Profile Shared
-            </label>
-            <input
-              className={inputBox}
-              name="currentProfileShared"
-              type="number"
-              min={0}
-              value={form.currentProfileShared}
-              onChange={handleChange}
-              placeholder="0"
-            />
-          </div>
-
-          {/* External/Internal */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              External/Internal
-            </label>
-            <select className={inputBox} value={form.externalInternal} onChange={(e) =>setForm({...form,externalInternal: e.target.value})}>
-              <option value="">External/Internal</option>
-              {options.externalInternal.map((o) => (
-                <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-            </select>
-          </div>
-
-          {/* Status */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              Status
-            </label>
-             <select className={inputBox} value={form.status} onChange={(e) =>setForm({...form,status: e.target.value})}>
-              <option value="">Select Status</option>
-              {options.status.map((o) => (
-                <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-            </select>
-          </div>
-
-          {/* PMO SPOC */}
-          <div className="grid grid-rows-3 gap-0.5 items-center">
-            <label className={labelPill}>
-              PMO SPOC
-            </label>
-            <select className={inputBox} value={form.pmoSpoc} onChange={(e) =>setForm({...form,pmoSpoc: e.target.value})}>
-              <option value="">Pmo Spoc</option>
-              {options.pmoSpoc.map((o) => (
-                <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-            </select>
           </div>
         </div>
 
