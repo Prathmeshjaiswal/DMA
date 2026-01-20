@@ -5,6 +5,11 @@ import logo from "../assets/cfg3.png";
 import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
+import { logout } from "./api/logout";
+
+
+
+
 export default function NavBar() {
   const navigate = useNavigate();
   const { isAuthenticated, setIsAuthenticated } = useAuth();
@@ -12,16 +17,29 @@ export default function NavBar() {
   const [showProfile,setShowProfile]=useState(null);
 
   const userId = localStorage.getItem("userId");
-  // const email=localStorage.getItem("email");
+  
 
 
-  const handleLogout = () => {
- 
-    localStorage.clear();
+  
+const handleLogout = async () => {
+  try {
+    const res = await logout();      // call backend
+    if (res.success) {
+      message.success(res.message || "Logged out.");
+    } else {
+      message.info(res.message);
+    }
+  } catch (e) {
+    message.warning("Could not reach server. Logging out locally.");
+  } finally {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("roles");
+
     setIsAuthenticated(false);
     navigate("/Login");
-
   }
+};
 
   const links = [
     { label: "Demands", to: "/DashBoard" },
@@ -39,7 +57,10 @@ export default function NavBar() {
             src={logo}
             alt="LOGO"
             className="h-10 w-auto cursor-pointer"
-            onClick={() => navigate("/DashBoard")}
+            onClick={()=>{
+              if(isAuthenticated) navigate("/DashBoard");
+              else navigate("/Login");
+            }}
           />
           {/* Demand ONLY when authenticated */}
           {isAuthenticated && (
