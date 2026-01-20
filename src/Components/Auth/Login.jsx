@@ -7,7 +7,7 @@ import { login } from "../api/login";
 import { message } from "antd";
 import Register from "./Register.jsx"
 import Footer from ".././Footer.jsx"
-import { useAuth } from "../AuthProvider.jsx"; 
+import { useAuth } from "./AuthProvider.jsx"; 
 
 export default function Login() {
 //by simran
@@ -20,7 +20,7 @@ const {setIsAuthenticated}=useAuth();
   
   const [loading, setLoading] = useState(false);
   const [serverMsg, setServerMsg] = useState("");
-  const {setIsAuthenticated}=useAuth();
+  
   const navigate = useNavigate();
 
   // Generic change handler: relies on input name attributes

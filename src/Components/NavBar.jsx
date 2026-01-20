@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sliderbar";
 import logo from "../assets/cfg3.png";
-import { useAuth } from "./AuthProvider";
+import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
 export default function NavBar() {

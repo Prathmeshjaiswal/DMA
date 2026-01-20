@@ -1,76 +1,52 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import {useState} from "react";
 import NavBar from "../NavBar.jsx";
-export default function RDGTATeam() 
+export default function RDGTATeam() {
   const navigate = useNavigate();
-  const [selectedProfile, setSelectedProfile] = useState(null);
 
-
-  // drop profiles
-  // const [droppedProfiles, setDroppedProfiles] = useState([]);
-
-
-  // Demand-wise dropped profiles
-  const [demandProfiles, setDemandProfiles] = useState({
-    DEM001: [],
-    DEM002: [],
-    DEM003: [],
+const [form, setForm] = useState({
+    lob: "",
+    manager: "",
+    skillCluster: "",
+    primarySkill: "",
+    secondarySkill: "",
+    employeeId: "",
+    candidateName: "",
+    yearsOfExp: "",
+    location: "",
+    summary: "",
+    cv: null,
+    dateOfProfileShared: "",
   });
 
-
-  //remove profile
-  const removeProfileFromDemand = (demandId, profileId) => {
-    setDemandProfiles((prev) => ({
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    setForm((prev) => ({
       ...prev,
-      [demandId]: prev[demandId].filter(
-        (p) => p.id !== profileId
-      ),
+      [name]: files ? files[0] : value,
     }));
   };
 
-
-  const profiles = [
-    {
-      id: 1,
-      name: "Prathmesh",
-      skill: "Java, React",
-      experience: "3 Years",
-      location: "Pune",
-      email: "p@example.com",
-    },
-    {
-      id: 2,
-      name: "Simran",
-      skill: "Spring Boot, React",
-      experience: "2.5 Years",
-      location: "Mumbai",
-      email: "simran@example.com",
-    },
-  ];
-
-
-
-  const handleDrop = (e, demandId) => {
-    e.preventDefault();
-    const profile = JSON.parse(e.dataTransfer.getData("profile"));
-
-    setDemandProfiles((prev) => {
-      // prevent duplicates
-      if (prev[demandId].some((p) => p.id === profile.id)) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [demandId]: [...prev[demandId], profile],
-      };
-    });
+  const handleAddMore = () => {
+    alert("Add More clicked — implement dynamic row addition as needed.");
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Implement submit logic (API call etc.)
+    console.log("Form submitted:", form);
+    alert("Submitted! Check console for payload.");
+  };
+
+  const labelClass =
+    "text-sm font-medium text-gray-200 mb-1";
+  const fieldClass =
+    "w-full rounded-md bg-[#0c2f53] text-gray-100 placeholder-gray-400 border border-gray-600 focus:border-orange-400 focus:ring-2 focus:ring-orange-300 outline-none px-3 py-2 transition";
+
   return (
-    <>
+      <>
       <NavBar />
     <div className="min-h-screen bg-[#082340] text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -92,131 +68,153 @@ export default function RDGTATeam()
 {/*               ))} */}
 {/*             </select> */}
 
-        {/* Left Column - Demand ID */}
-        <div className="w-2/4 bg-gray-100 border-r p-4 overflow-y-auto">
-          <h2 className="font-bold mb-4">Demand ID</h2>
-          {Object.keys(demandProfiles).map((demandId) => (
-            <div
-              key={demandId}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, demandId)}
-              className="mb-4 bg-white p-3 rounded shadow border border-gray-300"
-            >
-              <p className="font-semibold mb-2">{demandId}</p>
+            <Field label="Primary Skills">
+              <input
+                name="primarySkill"
+                value={form.primarySkill}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="e.g., Mobile Testing"
+              />
+            </Field>
 
-              {demandProfiles[demandId].length === 0 && (
-                <p className="text-xs text-gray-400">
-                  Drag profiles here
+            <Field label="Secondary Skills">
+              <input
+                name="secondarySkill"
+                value={form.secondarySkill}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="e.g., API"
+              />
+            </Field>
+
+            <Field label="Employee ID">
+              <input
+                name="employeeId"
+                value={form.employeeId}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="Employee ID"
+              />
+            </Field>
+
+            <Field label="Name of the candidate">
+              <input
+                name="candidateName"
+                value={form.candidateName}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="Candidate Name"
+              />
+            </Field>
+
+            <Field label="Year of experience">
+              <input
+                type="number"
+                name="yearsOfExp"
+                value={form.yearsOfExp}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="Years"
+                min={0}
+              />
+            </Field>
+
+            <Field label="Location">
+              <input
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                className={fieldClass}
+                placeholder="City, Country"
+              />
+            </Field>
+
+            <Field label="Brief Summary of candidate">
+              <textarea
+                name="summary"
+                value={form.summary}
+                onChange={handleChange}
+                className={`${fieldClass} min-h-[96px]`}
+                placeholder="Write a concise summary..."
+              />
+            </Field>
+
+            <Field label="Attach CV">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                name="cv"
+                onChange={handleChange}
+                className="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4
+                           file:rounded-md file:border-0
+                           file:text-sm file:font-semibold
+                           file:bg-orange-600 file:text-white
+                           hover:file:bg-orange-500 transition"
+              />
+              {form.cv && (
+                <p className="mt-2 text-gray-300 text-xs">
+                  Selected: <span className="font-medium">{form.cv.name}</span>
                 </p>
               )}
-
-              {demandProfiles[demandId].map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between text-sm bg-gray-100 p-1 rounded mt-1"
-                >
-                  <span>{p.name}</span>
-
-                  <button
-                    className="text-black-500 hover:text-red-700 text-xs ml-2"
-                    onClick={() =>
-                      removeProfileFromDemand(demandId, p.id)
-                    }
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Right Column - Profile */}
-        <div className="w-2/4 p-6 relative">
-          <h2 className="font-bold mb-4">Profiles</h2>
-
-          {/* Profile list */}
-          <div className="flex flex-col gap-4">
-            {profiles.map((profile) => (
-              <div
-                key={profile.id}
-                draggable
-                onDragStart={(e) =>
-                  e.dataTransfer.setData(
-                    "profile",
-                    JSON.stringify(profile)
-                  )
-                }
-                onClick={() => setSelectedProfile(profile)}
-                className="bg-white p-4 rounded shadow cursor-pointer hover:bg-blue-50"
-              >
-                <p className="font-semibold">{profile.name}</p>
-                <p className="text-sm text-gray-600">{profile.skill}</p>
-              </div>
-            ))}
+            </Field>
           </div>
 
-
-
-
-          {/* Popup inside same container */}
-          {selectedProfile && (
-            <div className="absolute  right-0  w-2/3 bg-white border-l shadow-lg  p-6 transition-all">
-
-              {/* Close button - bottom right */}
-              <button
-                className="absolute bottom-4 right-4 text-gray-600 hover:text-red-500"
-                onClick={() => setSelectedProfile(null)}
-              >
-                Close
-              </button>
-
-              <h3 className="text-lg font-semibold mb-4">
-                {selectedProfile.name}
-              </h3>
-
-              <p><b>Skill:</b> {selectedProfile.skill}</p>
-              <p><b>Experience:</b> {selectedProfile.experience}</p>
-              <p><b>Location:</b> {selectedProfile.location}</p>
-              <p><b>Email:</b> {selectedProfile.email}</p>
+          {/* Right column - helper panel */}
+          <div className="space-y-4">
+            <div className="rounded-lg border border-gray-700 bg-[#0c2f53] p-4 shadow-lg">
+              <h3 className="text-lg font-semibold">Guidelines</h3>
+              <ul className="mt-2 list-disc list-inside text-gray-300 text-sm space-y-1">
+                <li>Keep summaries crisp (2–3 lines).</li>
+                <li>Use primary & secondary skills consistently.</li>
+                <li>Attach the latest CV in PDF or DOCX.</li>
+              </ul>
             </div>
-          )}
-        </div>
 
-
-
-
-        {/* BOTTOM RIGHT ACTION BUTTONS */}
-        <div className="fixed bottom-4 right-6 flex gap-3">
-          <button
-            className="px-6 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
-            onClick={() => console.log("Submit clicked")}
-          >
-            Submit
-          </button>
-
-          <button
-            className="px-6 py-2 bg-gray-200 text-gray-800 rounded shadow hover:bg-gray-300"
-            onClick={() => console.log("Cancel clicked")}
-          >
-            Cancel
-          </button>
-        </div>
-
-
+            <div className="rounded-lg border border-gray-700 bg-[#0c2f53] p-4 shadow-lg">
+              <h3 className="text-lg font-semibold">Status</h3>
+              <p className="text-gray-300 text-sm mt-1">
+                Fill in mandatory fields and click <span className="font-medium">Submit</span>.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddMore}
+                  className="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold py-2 rounded-md shadow transition"
+                >
+                  Add More
+                </button>
+                <button
+                  type="submit"
+                  className="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 rounded-md shadow transition"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
 
       </div>
-
-
-
-
-
-
-
-
-
+    </div>
     </>
   );
 }
 
+/** ---------- Helper Components ---------- */
+function Field({ label, children }) {
+  return (
+    <div className="group">
+      <div className="flex items-center gap-3">
+        <div
+          className="select-none min-w-[180px] rounded-md bg-gray-600/90 text-gray-100 px-4 py-2
+                     shadow-sm group-hover:shadow-md group-hover:bg-gray-500 transition"
+        >
+          <span className="text-sm font-semibold">{label}</span>
+        </div>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
 
+  );
+}
