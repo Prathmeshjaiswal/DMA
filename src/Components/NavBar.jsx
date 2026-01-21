@@ -34,7 +34,6 @@ const handleLogout = async () => {
   } finally {
     setIsAuthenticated(false);
             localStorage.removeItem("token");
-//             sessionStorage.removeItem("token");
             localStorage.removeItem("userId");
             localStorage.removeItem("roles");
     navigate('/DashBoard');
