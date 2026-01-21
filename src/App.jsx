@@ -18,6 +18,7 @@ import DemandSheet1 from './Components/DemandsManagement/DemandSheet/DemandSheet
 import AddDemands1 from './Components/DemandsManagement/AddNewDemand/AddDemands1.jsx'
 import ProtectedRoute from './Components/Auth/ProtectedRoute.jsx'
 import PublicRoute from './Components/Auth/PublicRoute.jsx'
+import RoleManagement from './Components/RoleManagement'
 
 
 
@@ -29,7 +30,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/Login"/>} />
             <Route path="/Login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/change" element={<ChangePassword />}/>   
+            <Route path="/change" element={<PublicRoute><ChangePassword /></PublicRoute>}/>
             {/* protected */}
             <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
             <Route path="/EditDemand" element={<ProtectedRoute><EditDemand /></ProtectedRoute>}/>
@@ -40,10 +41,11 @@ function App() {
             <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
             <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
             <Route path="/Register" element={<ProtectedRoute><Register/></ProtectedRoute>} />
-            <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} />
+{/*             <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} /> */}
             <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
             <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
              <Route path="/demandsheet1" element={<ProtectedRoute><DemandSheet1/></ProtectedRoute>}/>
+             <Route path="/rolemanagement" element={<ProtectedRoute><RoleManagement/></ProtectedRoute>}/>
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>

@@ -45,7 +45,7 @@ const {setIsAuthenticated}=useAuth();
           //by simran
           setIsAuthenticated(true);
 
-          message.success({ content: "Logged in successfully.", duration: 2 });
+//           message.success({ content: "Logged in successfully.", duration: 2 });
           // Navigate to dashboard
           navigate("/Dashboard");
         } else {

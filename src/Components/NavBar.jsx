@@ -17,27 +17,27 @@ export default function NavBar() {
   const [showProfile,setShowProfile]=useState(null);
 
   const userId = localStorage.getItem("userId");
-  
 
 
-  
+
+
 const handleLogout = async () => {
   try {
-    const res = await logout();      // call backend
+    const res = await logout();
     if (res.success) {
       message.success(res.message || "Logged out.");
     } else {
-      message.info(res.message);
+      message.success(res.message);
     }
   } catch (e) {
-    message.warning("Could not reach server. Logging out locally.");
+    message.error("Could not reach server. Logging out locally.");
   } finally {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("roles");
-
     setIsAuthenticated(false);
-    navigate("/Login");
+            localStorage.removeItem("token");
+//             sessionStorage.removeItem("token");
+            localStorage.removeItem("userId");
+            localStorage.removeItem("roles");
+    navigate('/DashBoard');
   }
 };
 
@@ -48,7 +48,7 @@ const handleLogout = async () => {
     { label: "TA", to: "/TATeam" },
     { label: "Reports", to: "/Report" },
   ];
- 
+
   return (
     <>
       <div className="fixed inset-x-0 top-0 z-50 bg-[#082340] text-white border-b border-white/10 shadow-md">
@@ -91,7 +91,7 @@ const handleLogout = async () => {
           {/* profile menu */}
           {isAuthenticated && (
             <ProfileMenu
-             
+
               onLogout={handleLogout}
                onProfile={()=>setShowProfile(true)}
             />

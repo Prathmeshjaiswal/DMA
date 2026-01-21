@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-
+//import api from './client.js'
 const api = axios.create({
   baseURL: 'http://localhost:8080',
   headers: { 'Content-Type': 'application/json' },
@@ -10,13 +10,15 @@ const api = axios.create({
 export const logout = async () => {
   const token = localStorage.getItem("token");
 
+
   if (!token) {
-    return { success: true, message: "Already logged out (no token found)." };
+    return { success: true
+    , message: "Already logged out (no token found)." };
   }
 
   try {
     const res = await api.post(
-      '/logout',
+      '/auth_user/logout',
       {},
       {
         headers: {

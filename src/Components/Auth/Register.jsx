@@ -1,72 +1,12 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { message, Spin, Button, Modal, Tree, Tag, Space } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { COLORS } from "./theme/colors";
 import { register } from "../api/register";
-import {getRolePermission} from "../api/register";
+import { getRolePermission } from "../api/register";
+import NavBar from "../NavBar.jsx";
 
 
-function PermissionsModal({ open, onCancel, onSave, initialChecked = [],treeData = [],allLeafKeys = [] }) {
-  const [checkedKeys, setCheckedKeys] = useState(initialChecked);
-  const [rolePermission, setRolePermission] = useState(null);
-
-// const [rolesList, setRolesList] = useState([]);
-// const [permissionsList, setPermissionsList] = useState([]);
-const [permModalOpen, setPermModalOpen] = useState(false);
-const [permModalPreset, setPermModalPreset] = useState([]);
-
-
-  useEffect(() => {
-    setCheckedKeys(initialChecked);
-  }, [initialChecked, open]);
-
-  const onCheck = (keysOrObj) => {
-    const keys = Array.isArray(keysOrObj) ? keysOrObj : keysOrObj?.checked || [];
-    setCheckedKeys(keys);
-  };
-
-
-  return (
-    <Modal
-      title="Select Permissions for Role"
-      open={open}            // AntD v5 uses `open`; if on v4, replace with `visible`
-      onCancel={onCancel}
-      onOk={() => onSave(checkedKeys)}
-      okText="Save"
-      cancelText="Cancel"
-      width={640}
-      destroyOnHidden
-    >
-      <div className="flex justify-between items-center mb-3">
-        <div className="text-sm text-gray-400">
-          Choose actions allowed for this role.
-        </div>
-        <Space>
-          <Button size="small" onClick={()=> setCheckedKeys(allLeafKeys)}>
-            Select All
-          </Button>
-          <Button size="small" onClick={()=>setCheckedKeys([])}>
-            Clear
-          </Button>
-        </Space>
-      </div>
-
-      <Tree
-        checkable
-        selectable={false}
-        defaultExpandAll
-        checkedKeys={checkedKeys}
-        onCheck={onCheck}
-        treeData={treeData}
-      />
-
-      <div className="mt-3 text-xs text-gray-500">
-        Tip: Select specific actions and permissions.
-      </div>
-    </Modal>
-  );
-}
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -76,34 +16,24 @@ export default function Register() {
     phoneNumber: "",
     contactNo: "",
     role: "",
-    permissions: [],
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState({ type: "", text: "" });
 
-  const [rolesList, setRolesList] = useState([]);
-  const [permissionsList, setPermissionsList] = useState([]);
-
   const [permModalOpen, setPermModalOpen] = useState(false);
   const [permModalPreset, setPermModalPreset] = useState([]);
-
 
   const labelPill =
     "rounded-md bg-gray-800 text-white px-4 py-1 text-sm font-medium border border-[#52624E]";
   const inputBox =
     " rounded-md border border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
+
       useEffect(() => {
         (async () => {
           try {
             const res = await getRolePermission();
-
-        const roles = Array.isArray(res.data?.rolesList) ? res.data.rolesList : [];
-        const perms = Array.isArray(res.data?.permissionsList) ? res.data.permissionsList : [];
-
-        setRolesList(roles);
-        setPermissionsList(perms);
 
           } catch (e) {
         console.error(e);
@@ -118,13 +48,14 @@ export default function Register() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const onRoleChange = (e) => {
-    const selectedRole = e.target.value;
-    setForm((prev) => ({ ...prev, role:selectedRole }));
-    const preset = selectedRole?.toUpperCase() === "ADMIN" ? allLeafKeys : [];
-        setPermModalPreset(preset);
-        setPermModalOpen(true);
-      };
+  // When role changes -> open modal with default permissions for that role
+//   const onRoleChange = (e) => {
+//     const role = e.target.value;
+//     const defaults = ROLE_DEFAULTS[role] || [];
+//     setForm((prev) => ({ ...prev, role }));
+//     setPermModalPreset(defaults);
+//     setPermModalOpen(true);
+//   };
 
   const handlePermSave = (keys) => {
     setForm((prev) => ({ ...prev, permissions: keys }));
@@ -135,8 +66,6 @@ export default function Register() {
     setPermModalOpen(false);
   };
 
-
-
   const handleAddMore = () => {
     setForm({
       userId: "",
@@ -145,52 +74,8 @@ export default function Register() {
       contactNo: "",
       phoneNumber: "",
       role: "",
-      permissions: [],
     });
   };
-
-const toKey = (s = "") => s.trim().toLowerCase().replace(/\s+/g, "-")
-
-  const splitCSV = (csv = "") =>
-    String(csv)
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-
-
-const permissionTreeData = useMemo(() => {
-    return (permissionsList || []).map((mod) => {
-      const moduleTitle = mod.module;
-      const moduleKey = toKey(moduleTitle);
-      const actions = splitCSV(mod.permissions);
-
-     return {
-        title: moduleTitle,
-        key: moduleKey,
-        children: actions.map((act) => ({
-          title: act,
-          key: `${moduleKey}:${toKey(act)}`,
-        })),
-      };
-    });
-  }, [permissionsList]);
-
-
-  const allLeafKeys = useMemo(() => {
-    return permissionTreeData.flatMap((m) => (m.children || []).map((c) => c.key));
-  }, [permissionTreeData]);
-
-
-  // For showing tags as "Module • Action"
-  const keyToLabel = useMemo(() => {
-    const map = {};
-    permissionTreeData.forEach((m) => {
-      (m.children || []).forEach((c) => {
-        map[c.key] = `${m.title} • ${c.title}`;
-      });
-    });
-    return map;
-  }, [permissionTreeData]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -200,9 +85,9 @@ const permissionTreeData = useMemo(() => {
       const payload = {
         userId: form.userId,
         emailId: form.emailId,
-        phoneNumber: `${form.countryCode}${form.phoneNumber}`,
+        countryCode:form.countryCode,
+        phoneNumber: form.phoneNumber,
         role: form.role,
-        permissions: form.permissions, // ⬅️ send permissions to backend
       };
       // console.log("Register payload:", payload);
 
@@ -274,25 +159,26 @@ const permissionTreeData = useMemo(() => {
   };
 
   return (
+      <><NavBar />
     <div
-      className="mt-10 flex flex-col"
+      className="flex flex-col"
       style={{ backgroundColor: COLORS.white, color: COLORS.white }}
     >
       <main className="max-w-xl mx-auto w-full px-4 inline-block flex-1">
         <div
-          className="rounded-xl p-6"
+          className="rounded-xl px-6 shadow-lg"
           style={{
             backgroundColor: COLORS.navyTint,
             border: `1px solid ${COLORS.white10}`,
             boxShadow: "0 16px 32px rgba(0,0,0,0.35)",
           }}
         >
-          <h2 className="text-2xl font-semibold color-white">Create User Account</h2>
+          <h2 className="text-2xl font-semibold">Create User Account</h2>
 
           <form className="mt-6 space-y-4" onSubmit={onSubmit}>
             <div>
               <input
-                className="w-full rounded-lg px-3 py-2 focus:outline-none text-white focus:ring-2 bg-sky-800 bg-opacity-5"
+                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
                 name="userId"
                 value={form.userId}
                 onChange={onChange}
@@ -304,7 +190,7 @@ const permissionTreeData = useMemo(() => {
             <div>
               <input
                 type="email"
-                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-800 bg-opacity-5"
+                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
                 name="emailId"
                 value={form.emailId}
                 onChange={onChange}
@@ -319,26 +205,26 @@ const permissionTreeData = useMemo(() => {
                   name="countryCode"
                   value={form.countryCode}
                   onChange={onChange}
-                  className="w-24 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-800 bg-opacity-5"
+                  className="w-24 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
                   required
                   aria-label="Country code"
                 >
-                  <option value="+91" className="bg-sky-800">
+                  <option value="+91" className="bg-sky-900">
                     🇮🇳 +91
                   </option>
-                  <option value="+44" className="bg-sky-800">
+                  <option value="+44" className="bg-sky-900">
                     🇬🇧 +44
                   </option>
-                  <option value="+48" className="bg-sky-800">
+                  <option value="+48" className="bg-sky-900">
                     🇵🇱 +48
                   </option>
-                  <option value="+52" className="bg-sky-800">
+                  <option value="+52" className="bg-sky-900">
                     mx +48
                   </option>
                 </select>
 
                 <input
-                  className="w-102 rounded-lg px-1 py-2 focus:outline-none focus:ring-2 bg-sky-800 bg-opacity-5"
+                  className="w-102 rounded-lg px-1 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
                   name="phoneNumber"
                   value={form.phoneNumber}
                   onChange={onChange}
@@ -351,35 +237,34 @@ const permissionTreeData = useMemo(() => {
 
             <div className="grid grid-rows-2 gap-1 items-center">
               <select
-                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-800 bg-opacity-5"
-                onChange={onRoleChange}
+                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                name="role"
+                onChange={onChange}
                 value={form.role}
                 required
               >
                 <option value="" disabled>
                   Select Role
                 </option>
-
-                {rolesList.map((r) => (
-                  <option key={r.id} value={r.role}>
-                    {r.role}
-                  </option>
-                ))}
-
+                <option value="ADMIN">ADMIN</option>
+                <option value="PMO">PMO</option>
+                <option value="DM">DM</option>
+                <option value="RDG/TA">RDG/TA</option>
+                <option value="HBU">HBU</option>
               </select>
 
               {/* Show selected permissions as tags */}
-             {form.permissions?.length > 0 && (
+              {form.permissions?.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-{/*                   {form.permissions.map((k) => ( */}
-{/*                     <Tag key={k} color="geekblue"> */}
-{/*                       {keyToLabel[k] || k} */}
-{/*                     </Tag> */}
-{/*                   ))} */}
+                  {form.permissions.map((k) => (
+                    <Tag key={k} color="geekblue">
+                      {k}
+                    </Tag>
+                  ))}
                   <Button
                     size="small"
                     onClick={() => setPermModalOpen(true)}
-                    className="ml-2 w-30"
+                    className="ml-2"
                   >
                     Edit Permissions
                   </Button>
@@ -410,17 +295,8 @@ const permissionTreeData = useMemo(() => {
         </div>
       </main>
 
-      {/* Permissions Modal */}
-      <PermissionsModal
-        open={permModalOpen}
-        onCancel={handlePermCancel}
-        onSave={handlePermSave}
-        initialChecked={permModalPreset}
-        treeData={permissionTreeData}
-        allLeafKeys={allLeafKeys}
-
-      />
     </div>
+    </>
   );
 }
 
