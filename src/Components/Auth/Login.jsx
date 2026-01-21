@@ -47,7 +47,7 @@ const {setIsAuthenticated}=useAuth();
 
 //           message.success({ content: "Logged in successfully.", duration: 2 });
           // Navigate to dashboard
-          navigate("/Dashboard");
+          navigate("/DashBoard");
         } else {
           setServerMsg(resp?.message || "Login failed.");
         }
