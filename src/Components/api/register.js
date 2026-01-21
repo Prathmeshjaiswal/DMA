@@ -18,8 +18,10 @@ export const getRolePermission = async () => {
   const res = await api.get('/auth_user/register');
   console.log('[getRolePermission] response status:', res.status);
   return res.data;
+}
+
+export const fetchUsers = async () => {
+  const res = await api.get('/auth_user/users'); // Assuming the endpoint is /auth_user/users
+  console.log('[fetchUsers] response status:', res.status);
+  return res.data;
 };
-//export const getDropDownData = async () => {
-//  const res = await api.get('/addNewDemand/home', {
-//    headers: { Accept: 'application/json' },
-//  });
