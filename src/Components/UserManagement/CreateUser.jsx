@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { message, Spin, Button, Modal, Tree, Tag, Space, Select } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
-import { COLORS } from "./theme/colors";
-import { register } from "../api/register";
-import { getRolePermission } from "../api/register";
+import { COLORS } from "../Auth/theme/colors.js";
+import { createUser,getRolePermission } from "../api/createUser.js";
 import NavBar from "../NavBar.jsx";
 
 
-export default function Register() {
+export default function CreateUser() {
+
+
   const [form, setForm] = useState({
     userId: "",
     emailId: "",
     countryCode: "+91",
     phoneNumber: "",
-    contactNo: "",
+    // contactNo: "",
     role: "",
 
     //by simran
@@ -23,21 +24,12 @@ export default function Register() {
   });
 
 
-
-
   const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState({ type: "", text: "" });
-
-  const [permModalOpen, setPermModalOpen] = useState(false);
-  const [permModalPreset, setPermModalPreset] = useState([]);
-
   const [roles, setRoles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
 
-  const labelPill =
-    "rounded-md bg-gray-800 text-white px-4 py-1 text-sm font-medium border border-[#52624E]";
-  const inputBox =
-    " rounded-md border border-[#52624E] px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const [msg, setMsg] = useState({ type: "", text: "" });
+  const [permModalOpen, setPermModalOpen] = useState(false);
+  const [permissions, setPermissions] = useState([]);
 
 
   useEffect(() => {
@@ -49,7 +41,7 @@ export default function Register() {
           setPermissions(res.data.permissionsList || []);
         }
       } catch (e) {
-        console.error(e);
+        // console.error(e);
         message.error(e ? e : "Failed to load roles & permissions")
 
       }
@@ -68,7 +60,7 @@ export default function Register() {
       userId: "",
       emailId: "",
       countryCode: "+91",
-      contactNo: "",
+      // contactNo: "",
       phoneNumber: "",
       role: "",
       //by simran
@@ -82,6 +74,7 @@ export default function Register() {
     setMsg({ type: "", text: "" });
     try {
       setSubmitting(true);
+
       const payload = {
         userId: form.userId,
         emailId: form.emailId,
@@ -93,9 +86,6 @@ export default function Register() {
 
       const data = await register(payload);
       console.log("data", data);
-
-
-
 
 
 
@@ -175,7 +165,7 @@ export default function Register() {
 
 
 
-        // 🔧 PERSIST TO LOCALSTORAGE FOR USER MANAGEMENT VIEW
+        // PERSIST TO LOCALSTORAGE FOR USER MANAGEMENT VIEW
         // 1) Append to "users" list (flat array used by your table)
         const existingUsers = JSON.parse(localStorage.getItem("users")) || [];
 
@@ -196,11 +186,7 @@ export default function Register() {
         };
         localStorage.setItem("userUiDetailsMap", JSON.stringify(uiDetailsMap));
 
-
-
-
-
-        return;
+      return;
       } else {
         setMsg({
           type: "error",
@@ -219,6 +205,8 @@ export default function Register() {
       setSubmitting(false);
     }
   };
+
+  
 
   return (
     <><NavBar />

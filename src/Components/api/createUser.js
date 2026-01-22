@@ -2,7 +2,7 @@ import axios from 'axios';
 import api from './client.js';
 
 
-export const register = async(payload) => {
+export const createUser = async(payload) => {
     
 console.log('[register] payload:', payload);
   const res = await api.post('/auth_user/register', payload);

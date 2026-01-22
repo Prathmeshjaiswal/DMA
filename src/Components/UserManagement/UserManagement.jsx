@@ -1,7 +1,7 @@
 import React, { useEffect, useState ,useMemo} from "react";
 import { Button, Empty,  Modal, Space, Table, Tag, Switch, Tooltip,message } from "antd";
 import { useNavigate } from "react-router-dom";
-import Layout from "../Components/Layout"
+import Layout from "../Layout"
 
 
 import {
@@ -237,7 +237,7 @@ const StatusSwitch = ({ value, onChange }) => (
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={() => navigate("/Register")}
+                onClick={() => navigate("/createuser")}
               >
                 Add User
               </Button>
@@ -261,7 +261,7 @@ const StatusSwitch = ({ value, onChange }) => (
                 style={{ border: "1px dashed #e5e7eb", borderRadius: 12 }}
               >
                 <Empty description="No users yet">
-                  <Button type="primary" onClick={() => navigate("/Register")}>
+                  <Button type="primary" onClick={() => navigate("/createuser")}>
                     Add User
                   </Button>
                 </Empty>
