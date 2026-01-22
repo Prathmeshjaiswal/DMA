@@ -20,8 +20,8 @@ export const getRolePermission = async () => {
   return res.data;
 }
 
-export const fetchUsers = async () => {
-  const res = await api.get('/auth_user/users'); // Assuming the endpoint is /auth_user/users
-  console.log('[fetchUsers] response status:', res.status);
-  return res.data;
-};
+// export const fetchUsers = async () => {
+//   const res = await api.get('/auth_user/users'); // Assuming the endpoint is /auth_user/users
+//   console.log('[fetchUsers] response status:', res.status);
+//   return res.data;
+// };
