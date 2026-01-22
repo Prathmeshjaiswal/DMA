@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState ,useMemo} from "react";
 import { Button, Empty,  Modal, Space, Table, Tag, Switch, Tooltip,message } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -42,17 +41,15 @@ export default function UserManagement() {
   };
 
 
+
   
+
 const readUsers = () => {
-    const raw = JSON.parse(localStorage.getItem("users")) || [];
-    const migrated = migrateOldUsersIfAny(raw);
-    // Save back if migration changed shape
     localStorage.setItem("users", JSON.stringify(migrated));
     return migrated;
   };
 
 
-  
  useEffect(() => {
     setLoading(true);
     try {
