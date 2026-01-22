@@ -12,6 +12,22 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-}, (error) => Promise.reject(error));
+});
+
+//update by simran
+// Response interceptor to handle expired token
+api.interceptors.response.use(
+  (response) => response, // return response normally if ok
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or unauthorized
+      localStorage.clear(); // clear token & user info
+      window.location.href = "/login"; // redirect to login
+      alert("Session expired. Please login again.");
+    }
+    return Promise.reject(error);
+  }
+);
+
 
 export default api;
