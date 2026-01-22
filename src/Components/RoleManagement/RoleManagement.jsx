@@ -58,7 +58,7 @@ export default function RoleManagement() {
 
   const [roles, setRoles] = useState(() => {
     try {
-      const raw = localStorage.getItem("roles");
+      const raw = localStorage.getItem("role");
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -83,9 +83,9 @@ export default function RoleManagement() {
 //   }, []);
 
   // Persist roles to localStorage
-  useEffect(() => {
-    localStorage.setItem("roles", JSON.stringify(roles));
-  }, [roles]);
+  // useEffect(() => {
+  //   localStorage.setItem("roles", JSON.stringify(roles));
+  // }, [roles]);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRole, setViewRole] = useState(null);

@@ -41,7 +41,7 @@ const {setIsAuthenticated}=useAuth();
           localStorage.setItem("token", resp.data.token);
           localStorage.setItem("userId", resp.data.userId);
           localStorage.setItem("username", "prathmesh");
-          localStorage.setItem("roles", JSON.stringify(resp.data.roles));
+          localStorage.setItem("roles", JSON.stringify(resp.data.role));
 
           //by simran
           setIsAuthenticated(true);
@@ -67,6 +67,7 @@ const {setIsAuthenticated}=useAuth();
   };
 
   return (
+    <>
     <div
       className="flex flex-col items-center justify-center "
       style={{ backgroundColor: COLORS.white }}
@@ -159,5 +160,6 @@ const {setIsAuthenticated}=useAuth();
 
 {/* <Footer /> */}
     </div>
+    </>
   );
 }

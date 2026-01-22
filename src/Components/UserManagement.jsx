@@ -2,7 +2,7 @@ import React, { useEffect, useState ,useMemo} from "react";
 import { Button, Empty,  Modal, Space, Table, Tag, Switch, Tooltip,message } from "antd";
 import { useNavigate } from "react-router-dom";
 import Layout from "../Components/Layout"
-// import { fetchUsers } from "./api/register";
+
 
 import {
   EyeOutlined,
@@ -45,8 +45,23 @@ export default function UserManagement() {
   
 
 const readUsers = () => {
+    
+try {
+    const raw = localStorage.getItem("users");
+    const parsed = raw ? JSON.parse(raw) : [];
+    const migrated = Array.isArray(parsed) ? migrateOldUsersIfAny(parsed) : [];
+    // Persist normalized/migrated value
     localStorage.setItem("users", JSON.stringify(migrated));
     return migrated;
+  }
+catch (e) {
+    // If JSON is corrupted or anything else fails, reset and return []
+    console.error("Failed to parse users from localStorage:", e);
+    localStorage.removeItem("users");
+    return [];
+  }
+
+
   };
 
 
@@ -253,7 +268,7 @@ const StatusSwitch = ({ value, onChange }) => (
               </div>
             ) : (
               <Table
-                rowKey="empId"
+                rowKey="userId"
                 columns={columns}
                 dataSource={users}
                 loading={loading}

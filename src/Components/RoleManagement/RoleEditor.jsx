@@ -69,14 +69,14 @@ export default function RoleEditor() {
   const selectAll = () => setCheckedKeys(ALL_LEAF_KEYS);
   const clearAll = () => setCheckedKeys([]);
 
-  const existingNames = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("roles");
-      return raw ? JSON.parse(raw).map((r) => r.name) : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  // const existingNames = useMemo(() => {
+  //   try {
+  //     const raw = localStorage.getItem("roles");
+  //     return raw ? JSON.parse(raw).map((r) => r.name) : [];
+  //   } catch {
+  //     return [];
+  //   }
+  // }, []);
 
 //   const isDuplicateName = useMemo(() => {
 //     const trimmed = name.trim().toUpperCase();
