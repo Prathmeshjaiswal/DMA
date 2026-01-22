@@ -40,6 +40,7 @@ const {setIsAuthenticated}=useAuth();
       if (resp?.success) {
           localStorage.setItem("token", resp.data.token);
           localStorage.setItem("userId", resp.data.userId);
+          localStorage.setItem("username", "prathmesh");
           localStorage.setItem("roles", JSON.stringify(resp.data.roles));
 
           //by simran

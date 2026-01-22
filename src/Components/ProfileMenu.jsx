@@ -43,7 +43,7 @@ export default function ProfileMenu({ onProfile, onLogout }) {
             {open && (
                 <div className="absolute right-0 top-11 w-44 bg-white border rounded shadow z-50 text-sm">
                      <button
-                         onClick={() => {navigate("/Register")}}
+                         onClick={() => {navigate("/UserManagement")}}
                          className="w-full px-4 py-2 text-left hover:bg-gray-100 text-green-600 font-medium"
                      >
                          User Management
