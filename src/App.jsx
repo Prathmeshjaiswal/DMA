@@ -19,6 +19,7 @@ import AddDemands1 from './Components/DemandsManagement/AddNewDemand/AddDemands1
 import ProtectedRoute from './Components/Auth/ProtectedRoute.jsx'
 import PublicRoute from './Components/Auth/PublicRoute.jsx'
 import RoleManagement from './Components/RoleManagement'
+import UserManagement from './Components/userManagement.jsx'
 
 
 
@@ -46,6 +47,7 @@ function App() {
             <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
              <Route path="/demandsheet1" element={<ProtectedRoute><DemandSheet1/></ProtectedRoute>}/>
              <Route path="/rolemanagement" element={<ProtectedRoute><RoleManagement/></ProtectedRoute>}/>
+             <Route path="/UserManagement" element={<ProtectedRoute><UserManagement/></ProtectedRoute>}/>
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>
