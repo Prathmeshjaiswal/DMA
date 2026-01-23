@@ -41,3 +41,21 @@
 .read-the-docs {
   color: #888;
 }
+
+
+
+/* Hide scrollbar but allow targeted usage via class */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome/Safari/Edge */
+}
+
+/* If you want to completely prevent page scrolling on this screen,
+   you can also add this (optional):
+html, body {
+  overflow: hidden;
+}
+*/

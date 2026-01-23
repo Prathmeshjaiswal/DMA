@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { message, Spin, Button, Modal, Tree, Tag, Space, Select } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { COLORS } from "../Auth/theme/colors.js";
-import { createUser,getRolePermission } from "../api/createUser.js";
+import { createUser, getRolePermission } from "../api/createUser.js";
 import NavBar from "../NavBar.jsx";
 
 
@@ -21,7 +21,56 @@ export default function CreateUser() {
     empName: "",
     location: "",
     // createdOn:"",
+
+    department: "",        // e.g. HBU / LOB
+    subDepartment: "",     // depends on department
+
   });
+
+
+
+  // Department → Sub-department mapping
+  const DEPARTMENT_OPTIONS = [
+    { value: "HBU", label: "HBU" },
+    { value: "LOB", label: "LOB" },
+    // add more departments here if needed
+  ];
+
+  const SUB_DEPARTMENT_MAP = {
+    HBU: [
+      "ADM",
+      "ADMS",
+      "AI",
+      "AI/ML",
+      "CIMS",
+      "Cybersecurity",
+      "DAS",
+      "Data",
+      "Data & AI",
+      "DIS",
+      "Engineering",
+      "Experiance",
+      "DPA",
+      "Intelligence Automation",
+      "QE",
+      "Salesforce",
+      "Security Service",
+    ],
+    LOB: [
+      "CIB",
+      "HBEU Technology",
+      "CTO",
+      "Cybersecurity",
+      "DAO",
+      "Enterprise Technology",
+      "GDT",
+      "MSS",
+      "WSIT",
+      "WPB",
+      "SSIT",
+    ]
+  };
+
 
 
   const [submitting, setSubmitting] = useState(false);
@@ -66,8 +115,32 @@ export default function CreateUser() {
       //by simran
       empName: "",
       location: "",
+
+
+      department: "",
+      subDepartment: "",
+
     });
   };
+
+
+  const handleDepartmentChange = (e) => {
+    const value = e.target.value;
+    setForm(prev => ({
+      ...prev,
+      department: value,
+      subDepartment: "", // reset when department changes
+    }));
+  };
+
+  const handleSubDepartmentChange = (e) => {
+    const value = e.target.value;
+    setForm(prev => ({ ...prev, subDepartment: value }));
+  };
+
+
+
+
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -84,7 +157,7 @@ export default function CreateUser() {
       };
 
 
-      const data = await register(payload);
+      const data = await createUser(payload);
       console.log("data", data);
 
 
@@ -137,7 +210,7 @@ export default function CreateUser() {
 
         const createdOn = new Date().toISOString();
 
-        // 🔧 COMBINED OBJECT = backend payload + UI fields (no password)
+        //COMBINED OBJECT = backend payload + UI fields (no password)
         const combinedUser = {
           userId: form.userId,         // backend
           emailId: form.emailId,       // backend
@@ -148,6 +221,10 @@ export default function CreateUser() {
           // UI extras:
           empName: form.empName,      // username displayed in UI
           location: form.location,     // UI
+
+          department: form.department,        // NEW
+          subDepartment: form.subDepartment,  // NEW
+
           createdOn,                   // UI
           active: true,                // default active in UI
           // (optional) include any IDs returned by backend, e.g. data.data.userId
@@ -156,7 +233,7 @@ export default function CreateUser() {
 
 
 
-        // 🔧 CONSOLE OUTPUT (as you requested)
+        //CONSOLE OUTPUT (as you requested)
         console.groupCollapsed(" Registered User (Combined)");
         console.table([combinedUser]);
         console.groupEnd();
@@ -186,7 +263,7 @@ export default function CreateUser() {
         };
         localStorage.setItem("userUiDetailsMap", JSON.stringify(uiDetailsMap));
 
-      return;
+        return;
       } else {
         setMsg({
           type: "error",
@@ -206,184 +283,196 @@ export default function CreateUser() {
     }
   };
 
+
+
   
 
   return (
-    <><NavBar />
-      <div
-        className="flex flex-col"
-        style={{ backgroundColor: COLORS.white, color: COLORS.white }}
-      >
-        <main className="max-w-xl mx-auto w-full px-4 inline-block flex-1">
-          <div
-            className="rounded-xl px-6 shadow-lg"
-            style={{
-              backgroundColor: COLORS.navyTint,
-              border: `1px solid ${COLORS.white10}`,
-              boxShadow: "0 16px 32px rgba(0,0,0,0.35)",
-            }}
-          >
-            <h2 className="text-2xl font-semibold">Create User Account</h2>
+    <>
+      <NavBar />
 
-            <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-              <div>
+      {/* Page bg + center container */}
+      <div className="min-h-[calc(100vh-64px)] bg-gray-50 mt-[-50px]">
+        <main className="mx-auto w-full max-w-[520px] md:max-w-[640px] px-4 py-6">
+          <div className="rounded-2xl bg-white shadow-md border border-gray-100 overflow-hidden">
+            {/* Sticky card header (optional) */}
+            <div className="px-5 md:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <div className="text-center">
+                
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 ">
+                    Create User Account
+                  </h2>
+                
+              </div>
+            </div>
+
+            {/* Full-height form content (no overflow, no maxHeight) */}
+
+            <form className="px-5 md:px-6 py-5" onSubmit={onSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4">
+
+                {/* Employee ID */}
                 <input
-                  className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   name="userId"
                   value={form.userId}
                   onChange={onChange}
                   placeholder="Employee ID"
                   required
                 />
-              </div>
 
-              {/* by simran */}
-              <div>
+                {/* Employee Name */}
                 <input
-                  className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   name="empName"
                   value={form.empName}
                   onChange={onChange}
                   placeholder="Employee Name"
                   required
                 />
-              </div>
 
-
-              <div>
+                {/* Email */}
                 <input
                   type="email"
-                  className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   name="emailId"
                   value={form.emailId}
                   onChange={onChange}
                   placeholder="Email ID"
                   required
                 />
-              </div>
 
-              <div className="w-full grid grid-cols-1">
-                <div className="flex gap-4">
-                  <select
-                    name="countryCode"
-                    value={form.countryCode}
-                    onChange={onChange}
-                    className="w-24 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
-                    required
-                    aria-label="Country code"
-                  >
-                    <option value="+91" className="bg-sky-900">
-                      🇮🇳 +91
-                    </option>
-                    <option value="+44" className="bg-sky-900">
-                      🇬🇧 +44
-                    </option>
-                    <option value="+48" className="bg-sky-900">
-                      🇵🇱 +48
-                    </option>
-                    <option value="+52" className="bg-sky-900">
-                      mx +48
-                    </option>
-                  </select>
-
-                  <input
-                    className="w-102 rounded-lg px-1 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
-                    name="phoneNumber"
-                    value={form.phoneNumber}
-                    onChange={onChange}
-                    placeholder="Contact number"
-                    inputMode="numeric"
-                    required
-                  />
-                </div>
-
-
-                {/* <div>
-              
-            </div> */}
-              </div>
-
-
-              <div className="grid grid-rows-2 gap-1 items-center">
-                <select className="w-full rounded w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                {/* Location */}
+                <select
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   name="location"
                   value={form.location}
                   onChange={onChange}
                   required
                 >
-                  <option value="" disabled>
-                    Select Location
-                  </option>
+                  <option value="" disabled>Select Location</option>
                   <option value="MUMBAI">Mumbai</option>
                   <option value="PUNE">Pune</option>
                   <option value="BANGALORE">Bangalore</option>
-                  <option value="HYDERABAD">Hyberabad</option>
-
-
+                  <option value="HYDERABAD">Hyderabad</option>
                 </select>
+
+                {/* Contact No (full row) */}
+                <div className="flex gap-3 md:col-span-2">
+                  <select
+                    name="countryCode"
+                    value={form.countryCode}
+                    onChange={onChange}
+                    className="w-[92px] rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                   text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                    required
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+48">🇵🇱 +48</option>
+                    <option value="+52">🇲🇽 +52</option>
+                  </select>
+
+                  <input
+                    className="flex-1 rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                   focus:outline-none focus:ring-2 focus:ring-blue-700"
+                    name="phoneNumber"
+                    value={form.phoneNumber}
+                    onChange={onChange}
+                    placeholder="Contact Number"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+
+                {/* Department */}
                 <select
-                  className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 bg-sky-900 bg-opacity-5"
+                  name="department"
+                  value={form.department}
+                  onChange={handleDepartmentChange}
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                  required
+                >
+                  <option value="" disabled>Select Department</option>
+                  {DEPARTMENT_OPTIONS.map((dep) => (
+                    <option key={dep.value} value={dep.value}>{dep.label}</option>
+                  ))}
+                </select>
+
+                {/* Sub-department */}
+                <select
+                  name="subDepartment"
+                  value={form.subDepartment}
+                  onChange={handleSubDepartmentChange}
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:opacity-60"
+                  required
+                  disabled={!form.department}
+                >
+                  <option value="" disabled>
+                    {form.department ? "Select Sub-department" : "Select Department first"}
+                  </option>
+                  {(SUB_DEPARTMENT_MAP[form.department] || []).map((sd) => (
+                    <option key={sd} value={sd}>{sd}</option>
+                  ))}
+                </select>
+
+                {/* Role (full width) */}
+                <select
+                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
+                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 md:col-span-2"
                   name="role"
                   onChange={onChange}
                   value={form.role}
                   required
                 >
-                  <option value="" disabled>
-                    Select Role
-                  </option>
+                  <option value="" disabled>Select Role</option>
                   {roles.map((role) => (
-                    <option key={role.id} value={role.role}>
-                      {role.role}
-                    </option>
+                    <option key={role.id} value={role.role}>{role.role}</option>
                   ))}
                 </select>
 
-                {/* Show selected permissions as tags */}
-                {form.permissions?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {form.permissions.map((k) => (
-                      <Tag key={k} color="geekblue">
-                        {k}
-                      </Tag>
-                    ))}
-                    <Button
-                      size="small"
-                      onClick={() => setPermModalOpen(true)}
-                      className="ml-2"
-                    >
-                      Edit Permissions
-                    </Button>
-                  </div>
-                )}
               </div>
 
-              <div className="flex justify-center">
+              {/* Buttons */}
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleAddMore}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  + Create another user
+                </button>
+
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg font-medium transition-transform hover:scale-[1.02]"
-                  style={{
-                    backgroundColor: COLORS.orange,
-                    color: COLORS.white,
-                    opacity: submitting ? 0.7 : 1,
-                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg 
+                 font-medium text-white bg-indigo-600 hover:bg-indigo-700 
+                 focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                 disabled:opacity-70"
                 >
-                  {submitting && <Spin />}
+                  {submitting && <Spin size="small" />}
                   {submitting ? "Submitting..." : "Submit"}
                 </button>
               </div>
-
-              <button className="" type="button" onClick={handleAddMore}>
-                Create Another User
-              </button>
             </form>
+
           </div>
         </main>
-
       </div>
     </>
   );
+
 }
+
+
+
 
 
 

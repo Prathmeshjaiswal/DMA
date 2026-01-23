@@ -5,7 +5,8 @@ import logo from "../assets/cfg3.png";
 import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
-import { logout } from "./api/logout";
+// import { logout } from "./api/logout";
+import Logout from "../Components/Auth/Logout"
 
 
 
@@ -18,27 +19,28 @@ export default function NavBar() {
 
   const userId = localStorage.getItem("userId");
 
+  const handleLogout= Logout();
 
 
 
-const handleLogout = async () => {
-  try {
-    const res = await logout();
-    if (res.success) {
-      message.success(res.message || "Logged out.");
-    } else {
-      message.success(res.message);
-    }
-  } catch (e) {
-    message.error("Could not reach server. Logging out locally.");
-  } finally {
-    setIsAuthenticated(false);
-            localStorage.removeItem("token");
-            localStorage.removeItem("userId");
-            localStorage.removeItem("roles");
-    navigate('/DashBoard');
-  }
-};
+// const handleLogout = async () => {
+//   try {
+//     const res = await logout();
+//     if (res.success) {
+//       message.success(res.message || "Logged out.");
+//     } else {
+//       message.success(res.message);
+//     }
+//   } catch (e) {
+//     message.error("Could not reach server. Logging out locally.");
+//   } finally {
+//     setIsAuthenticated(false);
+//             localStorage.removeItem("token");
+//             localStorage.removeItem("userId");
+//             localStorage.removeItem("roles");
+//     navigate('/DashBoard');
+//   }
+// };
 
 
   const links = [

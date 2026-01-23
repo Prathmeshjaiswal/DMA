@@ -1,9 +1,7 @@
-import React, { useEffect, useState ,useMemo} from "react";
-import { Button, Empty,  Modal, Space, Table, Tag, Switch, Tooltip,message } from "antd";
+import React, { useEffect, useState, useMemo } from "react";
+import { Button, Empty, Modal, Space, Table, Tag, Switch, Tooltip, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import Layout from "../Layout"
-
-
 import {
   EyeOutlined,
   EditOutlined,
@@ -20,12 +18,20 @@ export default function UserManagement() {
 
 
 
-   // Optional: one-time migration if you previously stored empId/empName
+  // Optional: one-time migration if you previously stored empId/empName
   const migrateOldUsersIfAny = (list) => {
     return list.map((u) => {
       // If it's new shape already, return as is
-      if (u.userId) return u;
+      if (u.userId) {
+        return {
+          ...u,
+          department: u.department ?? "—",
+          subDepartment: u.subDepartment ?? "—",
+        };
+      }
+
       // Convert older shape to new
+
       return {
         userId: u.empId ?? `U_${Date.now()}`, // ensure some id
         empName: u.empName ?? "—",
@@ -36,36 +42,40 @@ export default function UserManagement() {
         createdOn: u.createdOn ?? new Date().toISOString(),
         active: typeof u.active === "boolean" ? u.active : true,
         countryCode: u.countryCode ?? "+91",
+
+        department: u.department ?? "—",
+        subDepartment: u.subDepartment ?? "—",
+
       };
     });
   };
 
 
 
-  
 
-const readUsers = () => {
-    
-try {
-    const raw = localStorage.getItem("users");
-    const parsed = raw ? JSON.parse(raw) : [];
-    const migrated = Array.isArray(parsed) ? migrateOldUsersIfAny(parsed) : [];
-    // Persist normalized/migrated value
-    localStorage.setItem("users", JSON.stringify(migrated));
-    return migrated;
-  }
-catch (e) {
-    // If JSON is corrupted or anything else fails, reset and return []
-    console.error("Failed to parse users from localStorage:", e);
-    localStorage.removeItem("users");
-    return [];
-  }
+
+  const readUsers = () => {
+
+    try {
+      const raw = localStorage.getItem("users");
+      const parsed = raw ? JSON.parse(raw) : [];
+      const migrated = Array.isArray(parsed) ? migrateOldUsersIfAny(parsed) : [];
+      // Persist normalized/migrated value
+      localStorage.setItem("users", JSON.stringify(migrated));
+      return migrated;
+    }
+    catch (e) {
+      // If JSON is corrupted or anything else fails, reset and return []
+      console.error("Failed to parse users from localStorage:", e);
+      localStorage.removeItem("users");
+      return [];
+    }
 
 
   };
 
 
- useEffect(() => {
+  useEffect(() => {
     setLoading(true);
     try {
       const list = readUsers();
@@ -78,9 +88,9 @@ catch (e) {
   }, []);
 
 
-  
 
-  
+
+
 
   const saveUsers = (next) => {
     setUsers(next);
@@ -90,9 +100,9 @@ catch (e) {
 
   const [viewUser, setViewUser] = useState(null);
 
-   // Toggle status handler (UI only; wire to API if needed)
- 
- // Toggle status (persists to localStorage)
+  // Toggle status handler (UI only; wire to API if needed)
+
+  // Toggle status (persists to localStorage)
   const handleStatusToggle = (record, checked) => {
     const next = users.map((u) =>
       u.userId === record.userId ? { ...u, active: checked } : u
@@ -103,8 +113,8 @@ catch (e) {
 
 
   // Styled switch to resemble your blue toggle with a checkmark
-  
-const StatusSwitch = ({ value, onChange }) => (
+
+  const StatusSwitch = ({ value, onChange }) => (
     <Switch
       checked={value}
       onChange={onChange}
@@ -116,33 +126,69 @@ const StatusSwitch = ({ value, onChange }) => (
 
   const columns = useMemo(
     () => [
+
       {
         title: "User Name",
         dataIndex: "empName",
         key: "empName",
-        render: (name) => <span className="font-medium">{name}</span>,
+        render: (_, record) => {
+          const name = record.empName || "—";
+          const id = record.userId || record.empId || "";
+          return (
+
+            <div className="leading-tight">
+              <div className="font-medium text-gray-900">{name}</div>
+              {id ? (
+                <div style={{ color: "#7d7d7d", fontSize: 12 }}>({id})</div>
+              ) : null}
+            </div>
+          );
+        },
       },
-      
- {
+
+      // {
+      //   title: "User Name",
+      //   dataIndex: "empName",
+      //   key: "empName",
+      //   render: (name) => <span className="font-medium">{name}</span>,
+      // },
+
+      {
         title: "Role Name",
         dataIndex: "role",
         key: "role",
         render: (role) => <span>{role}</span>,
       },
 
-    //   {
-    //     title: "Created By",
-    //     dataIndex: "createdByName",
-    //     key: "createdByName",
-    //     render: (name, record) => (
-    //       <div className="leading-tight">
-    //         <div style={{ textTransform: "lowercase" }}>{name}</div>
-    //         {record.createdById ? (
-    //           <div style={{ color: "#7d7d7d", fontSize: 12 }}>({record.createdById})</div>
-    //         ) : null}
-    //       </div>
-    //     ),
-    //   },
+      {
+        title: "Department",
+        dataIndex: "department",
+        key: "department",
+        render: (d) => d || "—",
+      },
+
+
+      {
+        title: "Sub Department",
+        dataIndex: "subDepartment",
+        key: "subDepartment",
+        render: (sd) => sd || "—",
+      },
+
+
+      //   {
+      //     title: "Created By",
+      //     dataIndex: "createdByName",
+      //     key: "createdByName",
+      //     render: (name, record) => (
+      //       <div className="leading-tight">
+      //         <div style={{ textTransform: "lowercase" }}>{name}</div>
+      //         {record.createdById ? (
+      //           <div style={{ color: "#7d7d7d", fontSize: 12 }}>({record.createdById})</div>
+      //         ) : null}
+      //       </div>
+      //     ),
+      //   },
       {
         title: "Created At",
         dataIndex: "createdOn",
@@ -218,18 +264,16 @@ const StatusSwitch = ({ value, onChange }) => (
 
   return (
     <>
-    <Layout>
-    <div className="p-4">
+      <Layout>
+        <div className="p-4 mt-[-60px]">
           {/* PAGE HEADER */}
           <div
             className="mb-4 flex items-center justify-between"
-            
+
           >
             <div >
-             <h1 className="text-lg font-semibold">User Management</h1>
-              {/* <div style={{ color: "#6b7280" }}>
-                Create roles, manage their status, and view assigned permissions.
-              </div> */}
+              <h1 className="text-lg font-bold">User Management</h1>
+
             </div>
 
             {/* Right-aligned Add button like your design */}
@@ -261,7 +305,7 @@ const StatusSwitch = ({ value, onChange }) => (
                 style={{ border: "1px dashed #e5e7eb", borderRadius: 12 }}
               >
                 <Empty description="No users yet">
-                  <Button type="primary" onClick={() => navigate("/createuser")}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate("/createuser")}>
                     Add User
                   </Button>
                 </Empty>
@@ -273,6 +317,7 @@ const StatusSwitch = ({ value, onChange }) => (
                 dataSource={users}
                 loading={loading}
                 pagination={false}
+                size="small"
                 className="bg-white"
                 style={{
                   borderRadius: 12,
@@ -305,6 +350,14 @@ const StatusSwitch = ({ value, onChange }) => (
                 <p>
                   <b>Role:</b> {viewUser.role}
                 </p>
+
+                <p>
+                  <b>Department:</b> {viewUser.department || "—"}
+                </p>
+                <p>
+                  <b>Sub Department:</b> {viewUser.subDepartment || "—"}
+                </p>
+
                 <p>
                   <b>Status:</b> {viewUser.active ? "Active" : "Inactive"}
                 </p>
@@ -313,6 +366,6 @@ const StatusSwitch = ({ value, onChange }) => (
           </Modal>
         </div>
       </Layout>
-</>
+    </>
   );
 }

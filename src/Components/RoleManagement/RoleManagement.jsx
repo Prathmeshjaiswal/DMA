@@ -5,7 +5,7 @@ import {EditOutlined,EyeOutlined,CheckOutlined,CloseOutlined,} from "@ant-design
 import { useNavigate } from "react-router-dom";
 import Layout from "../Layout.jsx";
  import Footer from "../Footer.jsx";
-import { PERMISSIONS_TREE, ALL_LEAF_KEYS } from "./permissions";
+import { PERMISSIONS_TREE, ALL_LEAF_KEYS } from "./permissions.js";
 
 
 const formatDateTime = (iso) => {

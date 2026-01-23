@@ -5,8 +5,8 @@ import { COLORS } from "./theme/colors";
 import NavBar from "../NavBar";
 import { login } from "../api/login";
 import { message } from "antd";
-import CreateUser from "../UserManagement/CreateUser.jsx";
-import Footer from ".././Footer.jsx"
+// import CreateUser from "../UserManagement/CreateUser.jsx";
+// import Footer from ".././Footer.jsx"
 import { useAuth } from "./AuthProvider.jsx"; 
 
 export default function Login() {
