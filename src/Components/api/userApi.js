@@ -1,12 +1,11 @@
-import axios from 'axios';
 import api from './client.js';
 
 
 export const createUser = async(payload) => {
     
-console.log('[register] payload:', payload);
+console.log('[createUser] payload:', payload);
   const res = await api.post('/auth_user/register', payload);
-  console.log('[register] response status:', res.status);
+  console.log('[createUser] response status:', res.status, res.data);
   return res.data;
 }
 

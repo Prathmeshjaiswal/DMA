@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { message, Spin, Button, Modal, Tree, Tag, Space, Select } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import { COLORS } from "../Auth/theme/colors.js";
-import { createUser, getRolePermission } from "../api/createUser.js";
+import { createUser, getRolePermission } from "../api/userApi.js";
 import NavBar from "../NavBar.jsx";
 
 
@@ -14,7 +14,6 @@ export default function CreateUser() {
     emailId: "",
     countryCode: "+91",
     phoneNumber: "",
-    // contactNo: "",
     role: "",
 
     //by simran
@@ -470,6 +469,7 @@ export default function CreateUser() {
   );
 
 }
+
 
 
 
