@@ -294,6 +294,7 @@ export default function RoleEditor() {
   const selectAll = () => setCheckedKeys(allLeafKeys);
   const clearAll = () => setCheckedKeys([]);
 
+
   const canSave = name.trim().length > 0 && !saving;
 
   // Helper: keep IDs numeric if numeric, else strings
@@ -318,6 +319,16 @@ export default function RoleEditor() {
       childModule,
     }));
   };
+
+  // const existingNames = useMemo(() => {
+  //   try {
+  //     const raw = localStorage.getItem("roles");
+  //     return raw ? JSON.parse(raw).map((r) => r.name) : [];
+  //   } catch {
+  //     return [];
+  //   }
+  // }, []);
+
 
   // Save (create or edit)
   const handleSave = async () => {

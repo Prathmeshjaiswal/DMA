@@ -7,6 +7,7 @@ export const COLORS = {
   white: "#FFFFFF",
   white10: "rgba(255,255,255,0.10)",
   backdrop: "rgba(0,0,0,0.40)",
+   navy1: "#5f95ce",
 };
 
 export default COLORS;

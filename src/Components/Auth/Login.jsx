@@ -5,8 +5,8 @@ import { COLORS } from "./theme/colors";
 import NavBar from "../NavBar";
 import { login } from "../api/login";
 import { message } from "antd";
-import Register from "./Register.jsx"
-import Footer from ".././Footer.jsx"
+// import CreateUser from "../UserManagement/CreateUser.jsx";
+// import Footer from ".././Footer.jsx"
 import { useAuth } from "./AuthProvider.jsx"; 
 
 export default function Login() {
@@ -48,7 +48,7 @@ const {setIsAuthenticated}=useAuth();
 
 //           message.success({ content: "Logged in successfully.", duration: 2 });
           // Navigate to dashboard
-          navigate("/Dashboard");
+          navigate("/DashBoard");
         } else {
           setServerMsg(resp?.message || "Login failed.");
         }
@@ -67,6 +67,7 @@ const {setIsAuthenticated}=useAuth();
   };
 
   return (
+    <>
     <div
       className="flex flex-col items-center justify-center "
       style={{ backgroundColor: COLORS.white }}
@@ -159,5 +160,6 @@ const {setIsAuthenticated}=useAuth();
 
 {/* <Footer /> */}
     </div>
+    </>
   );
 }

@@ -10,7 +10,7 @@ import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
 import DashBoard from "./Components/DemandsManagement/DashBoard.jsx"
 import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Register from "./Components/Auth/Register.jsx"
+import CreateUser from "./Components/UserManagement/CreateUser.jsx"
 import ChangePassword from "./Components/Auth/ChangePassword.jsx"
 import SetNewPassword from './Components/Auth/SetNewPassword.jsx'
 import AddDemands2 from './Components/DemandsManagement/AddNewDemand/AddDemands2.jsx'
@@ -19,9 +19,8 @@ import AddDemands1 from './Components/DemandsManagement/AddNewDemand/AddDemands1
 import ProtectedRoute from './Components/Auth/ProtectedRoute.jsx'
 import PublicRoute from './Components/Auth/PublicRoute.jsx'
 import RoleManagement from './Components/RoleManagement/RoleManagement.jsx'
-import UserManagement from './Components/UserManagement.jsx'
+import UserManagement from './Components/UserManagement/UserManagement.jsx'
 import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
-
 
 
 
@@ -43,16 +42,15 @@ function App() {
             <Route path="/Report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
             <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
             <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
-            <Route path="/Register" element={<ProtectedRoute><Register/></ProtectedRoute>} />
+            <Route path="/createuser" element={<ProtectedRoute><CreateUser/></ProtectedRoute>} />
 {/*             <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} /> */}
             <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
             <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
              <Route path="/demandsheet1" element={<ProtectedRoute><DemandSheet1/></ProtectedRoute>}/>
              <Route path="/rolemanagement" element={<ProtectedRoute><RoleManagement/></ProtectedRoute>}/>
              <Route path="/UserManagement" element={<ProtectedRoute><UserManagement/></ProtectedRoute>}/>
-             <Route path="/roleeditor" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
+              <Route path="/roleeditor" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
              <Route path="/roleeditor/:id" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
-
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>
