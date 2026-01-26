@@ -15,94 +15,145 @@ export default function UserManagement() {
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [viewUser, setViewUser] = useState(null);
 
 
 
-  // Optional: one-time migration if you previously stored empId/empName
-  const migrateOldUsersIfAny = (list) => {
-    return list.map((u) => {
-      // If it's new shape already, return as is
-      if (u.userId) {
-        return {
-          ...u,
-          department: u.department ?? "—",
-          subDepartment: u.subDepartment ?? "—",
-        };
-      }
+  // // Optional: one-time migration if you previously stored empId/empName
+  // const migrateOldUsersIfAny = (list) => {
+  //   return list.map((u) => {
+  //     // If it's new shape already, return as is
+  //     if (u.userId) {
+  //       return {
+  //         ...u,
+  //         department: u.department ?? "—",
+  //         subDepartment: u.subDepartment ?? "—",
+  //       };
+  //     }
 
-      // Convert older shape to new
+  //     // Convert older shape to new
 
-      return {
-        userId: u.empId ?? `U_${Date.now()}`, // ensure some id
-        empName: u.empName ?? "—",
-        role: u.role ?? "—",
-        emailId: u.empEmail ?? "",
-        phoneNumber: u.empPhone ?? "",
-        location: u.location ?? "",
-        createdOn: u.createdOn ?? new Date().toISOString(),
-        active: typeof u.active === "boolean" ? u.active : true,
-        countryCode: u.countryCode ?? "+91",
+  //     return {
+  //       userId: u.empId ?? `U_${Date.now()}`, // ensure some id
+  //       empName: u.empName ?? "—",
+  //       role: u.role ?? "—",
+  //       emailId: u.empEmail ?? "",
+  //       phoneNumber: u.empPhone ?? "",
+  //       location: u.location ?? "",
+  //       createdOn: u.createdOn ?? new Date().toISOString(),
+  //       active: typeof u.active === "boolean" ? u.active : true,
+  //       countryCode: u.countryCode ?? "+91",
 
-        department: u.department ?? "—",
-        subDepartment: u.subDepartment ?? "—",
+  //       department: u.department ?? "—",
+  //       subDepartment: u.subDepartment ?? "—",
 
-      };
-    });
-  };
+  //     };
+  //   });
+  // };
 
 
+
+
+
+  // const readUsers = () => {
+
+  //   try {
+  //     const raw = localStorage.getItem("users");
+  //     const parsed = raw ? JSON.parse(raw) : [];
+  //     const migrated = Array.isArray(parsed) ? migrateOldUsersIfAny(parsed) : [];
+  //     // Persist normalized/migrated value
+  //     localStorage.setItem("users", JSON.stringify(migrated));
+  //     return migrated;
+  //   }
+  //   catch (e) {
+  //     // If JSON is corrupted or anything else fails, reset and return []
+  //     console.error("Failed to parse users from localStorage:", e);
+  //     localStorage.removeItem("users");
+  //     return [];
+  //   }
+
+
+  // };
+
+
+  // useEffect(() => {
+  //   setLoading(true);
+  //   try {
+  //     const list = readUsers();
+  //     setUsers(list);
+  //   } catch (e) {
+  //     message.error("Failed to load users from local storage");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+
+
+
+
+
+  // const saveUsers = (next) => {
+  //   setUsers(next);
+  //   localStorage.setItem("users", JSON.stringify(next));
+  // };
 
 
 
   const readUsers = () => {
-
     try {
       const raw = localStorage.getItem("users");
-      const parsed = raw ? JSON.parse(raw) : [];
-      const migrated = Array.isArray(parsed) ? migrateOldUsersIfAny(parsed) : [];
-      // Persist normalized/migrated value
-      localStorage.setItem("users", JSON.stringify(migrated));
-      return migrated;
-    }
-    catch (e) {
-      // If JSON is corrupted or anything else fails, reset and return []
-      console.error("Failed to parse users from localStorage:", e);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      console.error("Failed to read users", e);
       localStorage.removeItem("users");
       return [];
     }
-
-
   };
-
-
+ 
   useEffect(() => {
     setLoading(true);
     try {
-      const list = readUsers();
-      setUsers(list);
-    } catch (e) {
-      message.error("Failed to load users from local storage");
+      setUsers(readUsers());
+    } catch {
+      message.error("Failed to load users");
     } finally {
       setLoading(false);
     }
   }, []);
-
-
-
-
-
-
+ 
   const saveUsers = (next) => {
     setUsers(next);
     localStorage.setItem("users", JSON.stringify(next));
   };
-
-
-  const [viewUser, setViewUser] = useState(null);
+ 
+ 
 
   // Toggle status handler (UI only; wire to API if needed)
 
   // Toggle status (persists to localStorage)
+  // const handleStatusToggle = (record, checked) => {
+  //   const next = users.map((u) =>
+  //     u.userId === record.userId ? { ...u, active: checked } : u
+  //   );
+  //   saveUsers(next);
+  //   message.success(`User ${checked ? "activated" : "deactivated"}`);
+  // };
+
+
+  // // Styled switch to resemble your blue toggle with a checkmark
+
+  // const StatusSwitch = ({ value, onChange }) => (
+  //   <Switch
+  //     checked={value}
+  //     onChange={onChange}
+  //     checkedChildren={<CheckOutlined />}
+  //     unCheckedChildren={null}
+  //     style={{ backgroundColor: value ? "#1677ff" : "#e5e7eb" }}
+  //   />
+  // );
+
+
   const handleStatusToggle = (record, checked) => {
     const next = users.map((u) =>
       u.userId === record.userId ? { ...u, active: checked } : u
@@ -110,16 +161,12 @@ export default function UserManagement() {
     saveUsers(next);
     message.success(`User ${checked ? "activated" : "deactivated"}`);
   };
-
-
-  // Styled switch to resemble your blue toggle with a checkmark
-
+ 
   const StatusSwitch = ({ value, onChange }) => (
     <Switch
       checked={value}
       onChange={onChange}
       checkedChildren={<CheckOutlined />}
-      unCheckedChildren={null}
       style={{ backgroundColor: value ? "#1677ff" : "#e5e7eb" }}
     />
   );
@@ -133,7 +180,7 @@ export default function UserManagement() {
         key: "empName",
         render: (_, record) => {
           const name = record.empName || "—";
-          const id = record.userId || record.empId || "";
+          const id = record.userId || "";
           return (
 
             <div className="leading-tight">
@@ -146,12 +193,6 @@ export default function UserManagement() {
         },
       },
 
-      // {
-      //   title: "User Name",
-      //   dataIndex: "empName",
-      //   key: "empName",
-      //   render: (name) => <span className="font-medium">{name}</span>,
-      // },
 
       {
         title: "Role Name",
@@ -170,8 +211,8 @@ export default function UserManagement() {
 
       {
         title: "Sub Department",
-        dataIndex: "subDepartment",
-        key: "subDepartment",
+        dataIndex: "subDepartments",
+        key: "subDepartments",
         render: (sd) => sd || "—",
       },
 
@@ -336,16 +377,16 @@ export default function UserManagement() {
             {viewUser && (
               <div className="space-y-1">
                 <p>
-                  <b>Employee ID:</b> {viewUser.empId}
+                  <b>Employee ID:</b> {viewUser.userId}
                 </p>
                 <p>
                   <b>Name:</b> {viewUser.empName}
                 </p>
                 <p>
-                  <b>Phone:</b> {viewUser.empPhone}
+                  <b>Phone:</b> {viewUser.phoneNumber}
                 </p>
                 <p>
-                  <b>Email:</b> {viewUser.empEmail}
+                  <b>Email:</b> {viewUser.emailId}
                 </p>
                 <p>
                   <b>Role:</b> {viewUser.role}
