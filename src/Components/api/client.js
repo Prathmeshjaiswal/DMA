@@ -39,10 +39,12 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or unauthorized
-      localStorage.clear(); // clear token & user info
+      // clear token & user info
       window.location.href = "/login"; // redirect to login
       alert("Session expired. Please login again.");
+      localStorage.clear();
     }
+
     return Promise.reject(error);
   }
 );

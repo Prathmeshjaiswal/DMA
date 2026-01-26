@@ -1,15 +1,12 @@
-
 import axios from 'axios';
-//import api from './client.js'
-const api = axios.create({
-  baseURL: 'http://localhost:8080',
-  headers: { 'Content-Type': 'application/json' },
-});
+import api from './client.js'
+//const api = axios.create({
+//  baseURL: 'http://localhost:8080',
+//  headers: { 'Content-Type': 'application/json' },
+//});
 
-// POST /logout with Authorization header
 export const logout = async () => {
   const token = localStorage.getItem("token");
-
 
   if (!token) {
     return { success: true
@@ -20,14 +17,9 @@ export const logout = async () => {
     const res = await api.post(
       '/auth_user/logout',
       {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
     );
-
-    return res.data; // backend returns { success: true, message: "Logged out" }
+    localStorage.clear();
+    return res.data;
   } catch (err) {
     return {
       success: false,

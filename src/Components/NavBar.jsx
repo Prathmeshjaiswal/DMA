@@ -15,7 +15,6 @@ export default function NavBar() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showProfile,setShowProfile]=useState(null);
-
   const userId = localStorage.getItem("userId");
 
 
@@ -31,12 +30,9 @@ const handleLogout = async () => {
     }
   } catch (e) {
     message.error("Could not reach server. Logging out locally.");
+    localStorage.clear();
   } finally {
     setIsAuthenticated(false);
-            localStorage.removeItem("token");
-//             sessionStorage.removeItem("token");
-            localStorage.removeItem("userId");
-            localStorage.removeItem("roles");
     navigate('/DashBoard');
   }
 };
@@ -110,9 +106,7 @@ const handleLogout = async () => {
       />
 
 
-      <div className="h-11" />
-
-      {/* Sidebar ONLY when authenticated */}
+      <div className="" />
       {isAuthenticated && (
         <Sidebar
           isOpen={isOpen}

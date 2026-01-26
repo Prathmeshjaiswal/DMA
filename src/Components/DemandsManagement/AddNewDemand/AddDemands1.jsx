@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef ,useEffect,useMemo} from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import NavBar from "../../NavBar.jsx"
+import Layout from "../../Layout.jsx"
 import Select, { components } from "react-select";
 import {message,Spin} from "antd";
 import DatePicker from "react-datepicker";
@@ -149,8 +149,8 @@ export default function AddDemands1() {
 
   return (
     <>
-      <NavBar />
-      <form onSubmit={handleSubmit} className="bg-white pt-1">
+    <Layout>
+      <form onSubmit={handleSubmit} className="bg-white py-10">
         <div className="flex justify-center px-45 mb-5">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
@@ -503,9 +503,7 @@ export default function AddDemands1() {
 
         </button>
       </form>
-      <footer className="mt-6 text-center text-sm text-black">
-        © Coforge, 2026 | Confidential
-      </footer>
+</Layout>
     </>
   );
 };
