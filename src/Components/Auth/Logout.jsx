@@ -14,11 +14,7 @@ const Logout = () => {
     } catch (e) {
       message.error("Server not reachable. Logging out locally.");
     } finally {
-      //  local cleanup
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("roles");
- 
+        localStorage.clear();
       setIsAuthenticated(false);
       navigate("/Login", { replace: true });
     }

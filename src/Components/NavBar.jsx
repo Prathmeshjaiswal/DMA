@@ -5,7 +5,9 @@ import logo from "../assets/cfg3.png";
 import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
-import { logout } from "./api/logout";
+// import { logout } from "./api/logout";
+import Logout from "../Components/Auth/Logout"
+
 
 
 
@@ -20,22 +22,7 @@ export default function NavBar() {
 
 
 
-const handleLogout = async () => {
-  try {
-    const res = await logout();
-    if (res.success) {
-      message.success(res.message || "Logged out.");
-    } else {
-      message.success(res.message);
-    }
-  } catch (e) {
-    message.error("Could not reach server. Logging out locally.");
-    localStorage.clear();
-  } finally {
-    setIsAuthenticated(false);
-    navigate('/DashBoard');
-  }
-};
+ const handleLogout= Logout();
 
   const links = [
     { label: "Demands", to: "/DashBoard" },
