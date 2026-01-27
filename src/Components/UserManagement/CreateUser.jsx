@@ -60,8 +60,6 @@ export default function CreateUser() {
    setCountries(data.countryCodes || []);
         setLocations(data.locations || []);
         setDepartments(data.departments || []);
-        
-   // FIX: normalize grouped subDepartments to a flat list with departmentId
         const normalizedSubDepts = normalizeSubDepartments(
           data.subDepartments,
           data.departments

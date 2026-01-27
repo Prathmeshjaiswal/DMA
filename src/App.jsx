@@ -21,6 +21,7 @@ import PublicRoute from './Components/Auth/PublicRoute.jsx'
 import RoleManagement from './Components/RoleManagement/RoleManagement.jsx'
 import UserManagement from './Components/UserManagement/UserManagement.jsx'
 import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
+import EditUser from './Components/UserManagement/EditUser.jsx'
 
 
 
@@ -51,6 +52,8 @@ function App() {
              <Route path="/UserManagement" element={<ProtectedRoute><UserManagement/></ProtectedRoute>}/>
               <Route path="/roleeditor" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
              <Route path="/roleeditor/:id" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
+              <Route path="/edituser/:id" element={<ProtectedRoute><EditUser/></ProtectedRoute>} />
+             
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>

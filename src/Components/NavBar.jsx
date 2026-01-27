@@ -23,25 +23,6 @@ export default function NavBar() {
 
 
 
-// const handleLogout = async () => {
-//   try {
-//     const res = await logout();
-//     if (res.success) {
-//       message.success(res.message || "Logged out.");
-//     } else {
-//       message.success(res.message);
-//     }
-//   } catch (e) {
-//     message.error("Could not reach server. Logging out locally.");
-//   } finally {
-//     setIsAuthenticated(false);
-//             localStorage.removeItem("token");
-//             localStorage.removeItem("userId");
-//             localStorage.removeItem("roles");
-//     navigate('/DashBoard');
-//   }
-// };
-
 
   const links = [
     { label: "Demands", to: "/DashBoard" },
