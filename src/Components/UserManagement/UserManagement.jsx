@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Button, Empty, Modal, Space, Table, Tag, Switch, Tooltip, message,Pagination } from "antd";
-import { useNavigate,useLocation } from "react-router-dom";
+import { Button, Empty, Modal, Space, Table, Tag, Switch, Tooltip, message, Pagination } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../Layout"
 import {
   EyeOutlined,
@@ -14,18 +14,18 @@ import { getAllDropdowns, getAllUsers, updateUserStatus } from "../api/masterApi
 
 export default function UserManagement() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const locationHook = useLocation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewUser, setViewUser] = useState(null);
-    const [deptMap, setDeptMap] = useState({});
+  const [deptMap, setDeptMap] = useState({});
   const [roleMap, setRoleMap] = useState({});
   const [subDeptMap, setSubDeptMap] = useState({});
   const [mastersLoaded, setMastersLoaded] = useState(false);
 
 
 
-   const [page, setPage] = useState(1);
+  const [page, setPage] = useState(1);
   const [pageSize /*, setPageSize*/] = useState(5)
 
 
@@ -35,7 +35,7 @@ export default function UserManagement() {
       : {};
 
 
-const flattenSubDepartments = (subDepartmentsObjOrArray) => {
+  const flattenSubDepartments = (subDepartmentsObjOrArray) => {
     if (Array.isArray(subDepartmentsObjOrArray)) {
       return buildMap(subDepartmentsObjOrArray, "id", "name");
     }
@@ -58,11 +58,11 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
     try {
       const body = await getAllDropdowns(); // envelope
       const data = body?.data ?? body; // be robust
- 
+
       setRoleMap(buildMap(data?.roles, "id", "role"));
       setDeptMap(buildMap(data?.departments, "id", "name"));
       setSubDeptMap(flattenSubDepartments(data?.subDepartments));
- 
+
       setMastersLoaded(true);
     } catch (e) {
       console.error("Failed to load dropdowns:", e?.response ?? e);
@@ -74,30 +74,30 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
 
 
 
-    const fetchUsers = async () => {
+  const fetchUsers = async () => {
     try {
       setLoading(true);
-      const body = await getAllUsers(); 
- 
+      const body = await getAllUsers();
+
       // Typically from BaseController.success -> body.data is an array
       const payload =
         body?.data ??
         body?.users ??
         body?.content ??
         (Array.isArray(body) ? body : null);
- 
+
       const raw = Array.isArray(payload) ? payload : payload ? [payload] : [];
-      console.log(" RAW USERS FROM BACKEND:", raw);  
- 
+      console.log(" RAW USERS FROM BACKEND:", raw);
+
       const mapped = raw.map((u) => {
- 
+
         const subDeptId =
           u.subdepartmentId ??
           u.subDepartmentId ??
-          u.subdepartment?.id ??   
+          u.subdepartment?.id ??
           null;
- 
- 
+
+
         // Normalize active to boolean (support 1/0 or true/false)
         const active =
           typeof u.active === "boolean"
@@ -105,14 +105,15 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
             : typeof u.isActive === "boolean"
               ? u.isActive
               : u.active === 1 || u.isActive === 1;
- 
+
         return {
           id: u.id,
           userId: u.userId ?? u.id ?? "—",
           empName: u.name ?? u.empName ?? "—",
           emailId: u.emailId ?? u.email ?? "—",
           phoneNumber: u.phoneNumber ?? u.mobile ?? u.phone ?? "—",
- 
+          location: u.location?.name ?? u.locationName ?? u.locationId ?? "—",
+
           // Translate IDs -> names; fallback to ID or "—"
           role: roleMap[u.roleId] ?? u.role?.role ?? u.roleName ?? u.roleId ?? "—",
           department:
@@ -123,17 +124,19 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
             "—",
           subDepartment:
             subDeptMap[subDeptId] ??
-            u.subdepartment?.name ??    
+            u.subdepartment?.name ??
             u.subDepartment?.name ??
             u.subDeptName ??
             "—",
- 
- 
+
+
+
+
           active,
           createdOn: u.createdOn ?? u.createdAt ?? null,
         };
       });
- 
+
       setUsers(mapped);
     } catch (e) {
       console.error("getAllUsers failed:", e?.response ?? e);
@@ -142,34 +145,34 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
       setLoading(false);
     }
   };
- 
+
   /* ---------- Effects ---------- */
   useEffect(() => {
     fetchMasters();
   }, []);
- 
+
   // Fetch users after masters are ready; refetch when navigating back
   useEffect(() => {
     if (!mastersLoaded) return;
     fetchUsers();
 
-  }, [mastersLoaded, location.key]);
- 
- 
- 
- // Reset to first page if users change (e.g., refresh / filter)
+  }, [mastersLoaded, locationHook.key]);
+
+
+
+  // Reset to first page if users change (e.g., refresh / filter)
   useEffect(() => {
     setPage(1);
   }, [users.length]);
- 
- 
-    const handleStatusToggle = async (record, checked) => {
+
+
+  const handleStatusToggle = async (record, checked) => {
     const prevUsers = users;
     // Optimistic UI
     setUsers((prev) =>
       prev.map((u) => (u.userId === record.userId ? { ...u, active: checked } : u))
     );
- 
+
     try {
       await updateUserStatus(record.userId, checked);
       message.success(`User ${checked ? "activated" : "deactivated"}`);
@@ -182,7 +185,7 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
       setUsers(prevUsers);
     }
   };
- 
+
   const StatusSwitch = ({ value, onChange }) => (
     <Switch
       checked={value}
@@ -191,9 +194,17 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
       style={{ backgroundColor: value ? "#1677ff" : "#e5e7eb" }}
     />
   );
- 
 
-   const columns = useMemo(
+
+
+  /* ---------- Pagination (client-side) ---------- */
+  const pagedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return users.slice(start, start + pageSize);
+  }, [users, page, pageSize]);
+
+
+  const columns = useMemo(
     () => [
       {
         title: "User Name",
@@ -332,9 +343,9 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
               </div>
             ) : (
               <Table
-                rowKey="userId"
+                rowKey={(r) => r.id}
                 columns={columns}
-                dataSource={users}
+                dataSource={pagedUsers}
                 loading={loading}
                 pagination={false}
                 size="small"
@@ -346,22 +357,20 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
             )}
           </div>
 
-                 
-{users.length > 0 && (
-          <Pagination
-            current={page}
-            total={users.length}
-            pageSize={pageSize}
-            onChange={(p) => setPage(p)}
-            // onShowSizeChange={(p, size) => { setPage(p); setPageSize(size); }}
-            // showSizeChanger
-            style={{
-              marginTop: 16,
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          />
-)}
+
+          {users.length > 0 && (
+            <Pagination
+              current={page}
+              total={users.length}
+              pageSize={pageSize}
+              onChange={(p) => setPage(p)}
+              style={{
+                marginTop: 16,
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            />
+          )}
 
           {/* VIEW MODAL */}
           <Modal
@@ -383,9 +392,13 @@ const flattenSubDepartments = (subDepartmentsObjOrArray) => {
                 </p>
                 <p>
                   <b>Email:</b> {viewUser.emailId}
+
                 </p>
                 <p>
                   <b>Role:</b> {viewUser.role}
+                </p>
+                <p>
+                  <b>Location:</b> {viewUser.location}
                 </p>
 
                 <p>
