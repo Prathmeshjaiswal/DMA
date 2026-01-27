@@ -6,6 +6,26 @@ import NavBar from "../NavBar.jsx";
 import { createUser } from "../api/userApi.js";
 import { getAllDropdowns } from "../api/masterApi.js";
 
+
+function normalizeSubDepartments(subDepartmentsByName, departments) {
+  const nameToId = new Map((departments || []).map((d) => [d.name, d.id]));
+  const flat = [];
+
+  Object.entries(subDepartmentsByName || {}).forEach(([deptName, items]) => {
+    const deptId = nameToId.get(deptName);
+    (items || []).forEach((sd) => {
+      flat.push({
+        ...sd,
+        // Prefer mapped id; fallback to nested department object if present
+        departmentId: deptId ?? sd.department?.id ?? null,
+      });
+    });
+  });
+
+  return flat;
+}
+
+
 export default function CreateUser() {
   const [form, setForm] = useState({
     userId: "",
@@ -21,7 +41,7 @@ export default function CreateUser() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const [countries, setCountries] = useState([]);
+  const [countryCodes, setCountries] = useState([]);
   const [locations, setLocations] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subDepartments, setSubDepartments] = useState([]);
@@ -34,11 +54,20 @@ export default function CreateUser() {
       try {
         const res = await getAllDropdowns();
         const data = res.data;
+        console.log("Dropdowns:", data);
 
-        setCountries(data.countries || []);
+       
+   setCountries(data.countryCodes || []);
         setLocations(data.locations || []);
         setDepartments(data.departments || []);
-        setSubDepartments(data.subDepartments || []);
+        
+   // FIX: normalize grouped subDepartments to a flat list with departmentId
+        const normalizedSubDepts = normalizeSubDepartments(
+          data.subDepartments,
+          data.departments
+        );
+        setSubDepartments(normalizedSubDepts);
+
         setRoles(data.roles || []);
       } catch {
         message.error("Failed to load dropdown data");
@@ -46,28 +75,43 @@ export default function CreateUser() {
     })();
   }, []);
 
+  
   /* ---------- COMMON CHANGE ---------- */
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
   };
+  
 
   /* ---------- DEPT → SUB-DEPT ---------- */
-  const handleDepartmentChange = (e) => {
+   const handleDepartmentChange = (e) => {
     const departmentId = Number(e.target.value);
-
+ 
     setForm((p) => ({
       ...p,
       departmentId,
       subdepartmentId: "",
     }));
-
+ 
     const filtered = subDepartments.filter(
-      (sd) =>Number( sd.departmentId) ===Number( departmentId)
+      (sd) => Number(sd.departmentId) === departmentId
     );
     setFilteredSubDepartments(filtered);
   };
+  
+ // Keep filtered sub-departments in sync if options load later
+  useEffect(() => {
+    if (!form.departmentId) {
+      setFilteredSubDepartments([]);
+      return;
+    }
+    const filtered = subDepartments.filter(
+      (sd) => Number(sd.departmentId) === Number(form.departmentId)
+    );
+    setFilteredSubDepartments(filtered);
+  }, [form.departmentId, subDepartments]);
 
+ 
   const handleAddMore = () => {
     setForm({
       userId: "",
@@ -82,82 +126,7 @@ export default function CreateUser() {
     });
     setFilteredSubDepartments([]);
   };
-
-  // /* ---------------- SUBMIT ---------------- */
-  // const onSubmit = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     setSubmitting(true);
-
-  //     const payload = {
-  //       userId: form.userId,
-  //       name: form.name,
-  //       emailId: form.emailId,
-  //       countryId: form.countryId,
-  //       phoneNumber: form.phoneNumber,
-  //       roleId: form.roleId,
-  //       locationId: form.locationId,
-  //       departmentId: form.departmentId,
-  //       subdepartmentId: form.subdepartmentId,
-
-
-  //     };
-
-  //     const data = await createUser(payload);
-
-  //     if (data?.success) {
-  //       const hide = message.success({
-  //         duration: 0,
-  //         content: (
-  //           <div className="flex items-center justify-between gap-4">
-  //             <span>
-  //               Temporary password:
-  //               <strong className="ml-2 font-mono">
-  //                 {data.data.tempPassword}
-  //               </strong>
-  //             </span>
-  //             <Button
-  //               size="small"
-  //               type="text"
-  //               icon={<CloseOutlined />}
-  //               onClick={() => hide()}
-  //             />
-  //           </div>
-  //         ),
-  //       });
-
-  //       const createdOn = new Date().toISOString();
-
-  //       const combinedUser = {
-  //         ...form,
-  //         createdOn,
-  //         active: true,
-  //       };
-
-  //       const existingUsers =
-  //         JSON.parse(localStorage.getItem("users")) || [];
-
-  //       const filtered = existingUsers.filter(
-  //         (u) => u.userId !== combinedUser.userId
-  //       );
-
-  //       localStorage.setItem(
-  //         "users",
-  //         JSON.stringify([...filtered, combinedUser])
-  //       );
-  //     } else {
-  //       message.error(data?.message || "Create user failed");
-  //     }
-  //   } catch (err) {
-  //     message.error(
-  //       err?.response?.data?.message || "Create user failed"
-  //     );
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
-
-
+ 
  
   /* ---------- SUBMIT ---------- */
   const onSubmit = async (e) => {
@@ -193,7 +162,7 @@ export default function CreateUser() {
             <span>
               Temporary password:
               <strong className="ml-2 font-mono">
-                {res.data.tempPassword}
+                {res?.data?.tempPassword}
               </strong>
             </span>
             <Button
@@ -206,7 +175,7 @@ export default function CreateUser() {
         ),
       });
     } catch (err) {
-      message.error(err?.response?.data?.message || "Create user failed");
+      message.error(err?.response?.dropdowns?.message || "Create user failed");
     } finally {
       setSubmitting(false);
     }
@@ -282,7 +251,10 @@ export default function CreateUser() {
                     className="w-[92px] rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                   text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
                     name="countryId" value={form.countryId} onChange={onChange}>
-                    <option value="+91">+91</option>
+                    <option value="" disabled>Select</option>
+                    {countryCodes.map((c)=>(
+                      <option key={c.id} value={c.id}>{c.callingCode}</option>  
+                    ))}
                   </select>
 
                   <input
@@ -308,13 +280,13 @@ export default function CreateUser() {
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:opacity-60"
                   value={form.subdepartmentId}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, subdepartmentId: e.target.value }))
+                    setForm((p) => ({ ...p, subdepartmentId:e.target.value === "" ? "" : Number(e.target.value), }))
                   }
                   disabled={!form.departmentId}
                   required
                 >
                   <option value="" disabled>Select Sub-department</option>
-                  {subDepartments.map((sd) => (
+                  {filteredSubDepartments.map((sd) => (
                     <option key={sd.id} value={sd.id}>{sd.name}</option>
                   ))}
                 </select>
