@@ -11,6 +11,39 @@ import {
 import { getAllDropdowns, getAllUsers, updateUserStatus } from "../api/masterApi";
 
 
+/* ---------- Utilities ---------- */
+const toTime = (iso) => {
+  if (!iso) return NaN;
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? NaN : t;
+};
+
+
+const essentiallySameTime = (a, b, toleranceMs = 5000) => {
+  const ta = toTime(a);
+  const tb = toTime(b);
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return false;
+  return Math.abs(ta - tb) <= toleranceMs;
+};
+
+
+
+/* ---------- Utilities ---------- */
+const formatDateTime = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+
+
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -26,7 +59,11 @@ export default function UserManagement() {
 
 
   const [page, setPage] = useState(1);
-  const [pageSize /*, setPageSize*/] = useState(5)
+  const [pageSize /*, setPageSize*/] = useState(10)
+
+
+  // Sort state (since we use external Pagination)
+  const [sorterInfo, setSorterInfo] = useState({ field: null, order: null });
 
 
   const buildMap = (arr, idKey = "id", nameKey = "name") =>
@@ -106,6 +143,19 @@ export default function UserManagement() {
               ? u.isActive
               : u.active === 1 || u.isActive === 1;
 
+
+
+        const createdOn = u.createdOn ?? u.createdAt ?? null;
+        const updatedAtRaw = u.updatedAt ?? u.updatedOn ?? null;
+
+
+
+        const displayUpdatedAt =
+          updatedAtRaw && !essentiallySameTime(updatedAtRaw, createdOn)
+            ? updatedAtRaw
+            : null;
+
+
         return {
           id: u.id,
           userId: u.userId ?? u.id ?? "—",
@@ -130,10 +180,11 @@ export default function UserManagement() {
             "—",
 
 
-
-
           active,
-          createdOn: u.createdOn ?? u.createdAt ?? null,
+          createdOn,
+          updatedAt: updatedAtRaw,       // keep the raw for sorting
+          displayUpdatedAt,
+
         };
       });
 
@@ -150,6 +201,16 @@ export default function UserManagement() {
   useEffect(() => {
     fetchMasters();
   }, []);
+
+
+  useEffect(() => {
+    if (users.length > 0 && !sorterInfo.field) {
+      setSorterInfo({ field: "createdOn", order: "descend" });
+    }
+  }, [users, sorterInfo.field]);
+
+
+
 
   // Fetch users after masters are ready; refetch when navigating back
   useEffect(() => {
@@ -197,11 +258,49 @@ export default function UserManagement() {
 
 
 
-  /* ---------- Pagination (client-side) ---------- */
+  /* ---------- sorter and Pagination (client-side) ---------- */
+
+  const handleTableChange = (_pagination, _filters, sorter) => {
+    const s = Array.isArray(sorter) ? sorter[0] : sorter;
+    setSorterInfo({
+      field: s?.field ?? s?.columnKey ?? null,
+      order: s?.order ?? null,
+    });
+  };
+
+
+
+  const sortedUsers = useMemo(() => {
+    const list = [...users];
+    const { field, order } = sorterInfo || {};
+    if (!field || !order) return list;
+
+    const getTime = (v) => {
+      const t = v ? new Date(v).getTime() : 0;
+      return Number.isNaN(t) ? 0 : t;
+    };
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (field === "createdOn" || field === "updatedAt") {
+        cmp = getTime(a[field]) - getTime(b[field]);
+      } else {
+        // Fallback string sorter
+        const av = a[field] ?? "";
+        const bv = b[field] ?? "";
+        cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+      }
+      return order === "ascend" ? cmp : -cmp;
+    });
+
+    return list;
+  }, [users, sorterInfo]);
+
+
   const pagedUsers = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return users.slice(start, start + pageSize);
-  }, [users, page, pageSize]);
+    return sortedUsers.slice(start, start + pageSize);
+  }, [sortedUsers, page, pageSize]);
 
 
   const columns = useMemo(
@@ -224,23 +323,70 @@ export default function UserManagement() {
       { title: "Department", dataIndex: "department", key: "department" },
       // IMPORTANT: this must match the mapped key "subDepartment"
       { title: "Sub Department", dataIndex: "subDepartment", key: "subDepartment" },
+      // {
+      //   title: "Created At",
+      //   dataIndex: "createdOn",
+      //   key: "createdOn",
+      //   render: (d) => {
+      //     if (!d || d === "—") return "—";
+      //     const dt = new Date(d);
+      //     if (isNaN(dt)) return "—";
+      //     return dt.toLocaleString(undefined, {
+      //       year: "numeric",
+      //       month: "short",
+      //       day: "2-digit",
+      //       hour: "2-digit",
+      //       minute: "2-digit",
+      //     });
+      //   },
+      // },
+
+
       {
         title: "Created At",
         dataIndex: "createdOn",
         key: "createdOn",
-        render: (d) => {
-          if (!d || d === "—") return "—";
-          const dt = new Date(d);
-          if (isNaN(dt)) return "—";
-          return dt.toLocaleString(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        },
+        width: 200,
+        render: (value) => <span className="text-gray-700">{formatDateTime(value)}</span>,
+        sorter: (a, b) =>
+          new Date(a.createdOn || 0).getTime() - new Date(b.createdOn || 0).getTime(),
+        sortOrder: sorterInfo.field === "createdOn" ? sorterInfo.order : null,
+        sortDirections: ["ascend", "descend", "ascend"],
       },
+
+
+      //  {
+      //         title: "Updated At",
+      //         dataIndex: "updatedAt",
+      //         key: "updatedAt",
+      //         width: 180,
+      //         render: (value) => <span className="text-gray-700">{formatDateTime(value)}</span>,
+      //         sorter: (a, b) =>
+      //           new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime(),
+      //         sortOrder: sorterInfo.field === "updatedAt" ? sorterInfo.order : null,
+      //         sortDirections: ["ascend", "descend", "ascend"],
+      //       },
+
+
+
+      {
+        title: "Updated At",
+        dataIndex: "displayUpdatedAt", // use display field in the table for rendering
+        key: "updatedAt",              // keep key as updatedAt so sorterInfo.field aligns
+        width: 180,
+        render: (value) => <span className="text-gray-700">{formatDateTime(value)}</span>,
+
+        // sorter compares raw updatedAt (not display), so ordering is correct
+        sorter: (a, b) =>
+          new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime(),
+        sortOrder: sorterInfo.field === "updatedAt" ? sorterInfo.order : null,
+        sortDirections: ["ascend", "descend", "ascend"],
+      },
+
+
+
+
+
       {
         title: "Status",
         dataIndex: "active",
@@ -288,7 +434,7 @@ export default function UserManagement() {
         ),
       },
     ],
-    [users]
+    [users, sorterInfo]
   );
 
 
@@ -350,6 +496,7 @@ export default function UserManagement() {
                 pagination={false}
                 size="small"
                 className="bg-white"
+                onChange={handleTableChange}
                 style={{
                   borderRadius: 12,
                 }}
@@ -361,7 +508,7 @@ export default function UserManagement() {
           {users.length > 0 && (
             <Pagination
               current={page}
-              total={users.length}
+              total={sortedUsers.length}
               pageSize={pageSize}
               onChange={(p) => setPage(p)}
               style={{

@@ -44,4 +44,3 @@ export const ALL_LEAF_KEYS = PERMISSIONS_TREE.flatMap((module) =>
   (module.children || []).map((child) => child.key)
 );
 
-
