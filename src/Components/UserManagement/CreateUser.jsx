@@ -5,6 +5,7 @@ import NavBar from "../NavBar.jsx";
 
 import { createUser } from "../api/userApi.js";
 import { getAllDropdowns } from "../api/masterApi.js";
+import { useNavigate } from "react-router-dom";
 
 
 function normalizeSubDepartments(subDepartmentsByName, departments) {
@@ -26,7 +27,71 @@ function normalizeSubDepartments(subDepartmentsByName, departments) {
 }
 
 
+
+function onlyDigits(s = "") {
+  return (s || "").replace(/\D+/g, "");
+}
+
+
+
+function getPhoneRegexByCallingCode(callingCode) {
+  switch (callingCode) {
+    case "+91": // India: 10 digits, starts 6–9
+      return /^[6-9]\d{9}$/;
+
+    case "+1": // United States (NANP): 10 digits; area & central office cannot start 0/1
+      return /^(?:[2-9]\d{2}[2-9]\d{6})$/;
+
+    case "+44": // United Kingdom: pragmatic — allow 9–10 digits (no trunk '0')
+      // If you want mobiles only: use /^7\d{9}$/
+      return /^(?:\d{9}|\d{10})$/;
+
+    case "+61": // Australia: 9 digits; mobiles 4XXXXXXXX; landlines 2/3/7/8XXXXXXXX
+      return /^(?:[23478]\d{8})$/;
+
+    default:
+      // Reject all for unsupported codes
+      return /^$/;
+  }
+}
+
+
+
+function validatePhoneByCountry(rawPhone, callingCode) {
+  const nsn = onlyDigits(rawPhone); // national significant number
+  const re = getPhoneRegexByCallingCode(callingCode);
+
+  if (!re.test(nsn)) {
+    const reasons = {
+      "+91":
+        "For India (+91), enter 10 digits starting with 6-9 (e.g., 98XXXXXXXX).",
+      "+1":
+        "For United States (+1), enter a 10-digit number; area code and central office cannot start with 0 or 1 (e.g., 4155550123).",
+
+      "+44":
+        "For United Kingdom (+44), enter 9-10 digits (no leading trunk '0'; e.g., 7XXXXXXXXX for mobiles).",
+      "+61":
+        "For Australia (+61), enter 9 digits: mobiles start with 4; landlines start with 2/3/7/8 (e.g., 412345678 or 291234567).",
+    };
+    return {
+      ok: false,
+      reason:
+        reasons[callingCode] ||
+        "Invalid phone format for the selected country.",
+    };
+
+  }
+  return { ok: true };
+}
+
+
+
 export default function CreateUser() {
+
+
+  const navigate = useNavigate();
+
+  
   const [form, setForm] = useState({
     userId: "",
     name: "",
@@ -48,6 +113,10 @@ export default function CreateUser() {
   const [roles, setRoles] = useState([]);
   const [filteredSubDepartments, setFilteredSubDepartments] = useState([]);
 
+  const [phoneError, setPhoneError] = useState(""); // UPDATED: holds error message
+  const [phoneTouched, setPhoneTouched] = useState(false); // UPDATED: to show red only after interaction
+
+
   /* ---------- LOAD ALL DROPDOWNS ---------- */
   useEffect(() => {
     (async () => {
@@ -56,8 +125,8 @@ export default function CreateUser() {
         const data = res.data;
         console.log("Dropdowns:", data);
 
-       
-   setCountries(data.countryCodes || []);
+
+        setCountries(data.countryCodes || []);
         setLocations(data.locations || []);
         setDepartments(data.departments || []);
         const normalizedSubDepts = normalizeSubDepartments(
@@ -73,31 +142,31 @@ export default function CreateUser() {
     })();
   }, []);
 
-  
+
   /* ---------- COMMON CHANGE ---------- */
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
   };
-  
+
 
   /* ---------- DEPT → SUB-DEPT ---------- */
-   const handleDepartmentChange = (e) => {
+  const handleDepartmentChange = (e) => {
     const departmentId = Number(e.target.value);
- 
+
     setForm((p) => ({
       ...p,
       departmentId,
       subdepartmentId: "",
     }));
- 
+
     const filtered = subDepartments.filter(
       (sd) => Number(sd.departmentId) === departmentId
     );
     setFilteredSubDepartments(filtered);
   };
-  
- // Keep filtered sub-departments in sync if options load later
+
+  // Keep filtered sub-departments in sync if options load later
   useEffect(() => {
     if (!form.departmentId) {
       setFilteredSubDepartments([]);
@@ -109,7 +178,7 @@ export default function CreateUser() {
     setFilteredSubDepartments(filtered);
   }, [form.departmentId, subDepartments]);
 
- 
+
   const handleAddMore = () => {
     setForm({
       userId: "",
@@ -123,20 +192,61 @@ export default function CreateUser() {
       subdepartmentId: "",
     });
     setFilteredSubDepartments([]);
+
+    setPhoneError(""); // UPDATED: reset phone error
+    setPhoneTouched(false);
+
   };
- 
- 
+
+  
+const handleCancel = () => {            // UPDATED
+    navigate("/UserManagement");          // UPDATED (use your route name)
+  };                                      // UPDATED
+
+
+
   /* ---------- SUBMIT ---------- */
   const onSubmit = async (e) => {
     e.preventDefault();
-    
-// Basic guard
+
+    // Basic guard
     if (!form.departmentId || !form.subdepartmentId) {
       message.warning("Please select Department and Sub-department");
       return;
     }
 
- 
+
+
+    const selectedCountry = countryCodes.find(
+      (c) => String(c.id) === String(form.countryId)
+    );
+
+
+    if (!selectedCountry?.callingCode) {
+      setPhoneError("Please select a valid country code."); // UPDATED
+      setPhoneTouched(true); // UPDATED
+      return;
+    }
+
+
+
+    const phoneCheck = validatePhoneByCountry(
+      form.phoneNumber,
+      selectedCountry.callingCode
+    );
+    if (!phoneCheck.ok) {
+
+      setPhoneError(phoneCheck.reason); // UPDATED
+      setPhoneTouched(true); // UPDATED 
+      return;
+    }
+
+
+    setPhoneError(""); // UPDATED
+
+
+
+
     const payload = {
       userId: form.userId,
       name: form.name,
@@ -148,11 +258,11 @@ export default function CreateUser() {
       departmentId: Number(form.departmentId),
       subdepartmentId: Number(form.subdepartmentId),
     };
- 
+
     try {
       setSubmitting(true);
       const res = await createUser(payload);
- 
+
       const hide = message.success({
         duration: 0,
         content: (
@@ -179,6 +289,13 @@ export default function CreateUser() {
     }
   };
 
+
+  const phoneRingBase =
+    "rounded-lg px-3 py-2 bg-gray-50 ring-1 focus:outline-none"; // UPDATED
+  const phoneRingColor =
+    phoneTouched && phoneError
+      ? "ring-red-500 focus:ring-2 focus:ring-red-600" // UPDATED: invalid state (red)
+      : "ring-gray-200 focus:ring-2 focus:ring-blue-700"; // UPDATED: normal (blue on focus)
 
 
 
@@ -237,7 +354,7 @@ export default function CreateUser() {
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   name="locationId" value={form.locationId} onChange={onChange} required>
-                  <option value="" disabled>Select Location</option>
+                  <option value="" disabled> Location</option>
                   {locations.map((l) => (
                     <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
@@ -249,24 +366,73 @@ export default function CreateUser() {
                     className="w-[92px] rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                   text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
                     name="countryId" value={form.countryId} onChange={onChange}>
-                    <option value="" disabled>Select</option>
-                    {countryCodes.map((c)=>(
-                      <option key={c.id} value={c.id}>{c.callingCode}</option>  
+                    <option value="" disabled>+91</option>
+                    {countryCodes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.callingCode}</option>
                     ))}
                   </select>
 
-                  <input
-                    className="flex-1 rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
-                  focus:outline-none focus:ring-2 focus:ring-blue-700"
-                    name="phoneNumber" value={form.phoneNumber} onChange={onChange} placeholder="Contact Number" required />
+
+                  <div className="flex-1">
+                    <input
+                      className={`w-full ${phoneRingBase} ${phoneRingColor}`} // UPDATED
+                      name="phoneNumber"
+                      value={form.phoneNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D+/g, ""); // UPDATED
+                        setForm((p) => ({ ...p, phoneNumber: val }));
+                        setPhoneTouched(true); // UPDATED: mark as interacted
+                        // Live validation if country is selected
+                        const selectedCountry = countryCodes.find(
+
+
+                          (c) => String(c.id) === String(form.countryId)
+                        );
+                        if (selectedCountry?.callingCode && val) {
+                          const res = validatePhoneByCountry(
+                            val,
+                            selectedCountry.callingCode
+                          );
+                          setPhoneError(res.ok ? "" : res.reason);
+                        } else {
+                          setPhoneError(""); // reset when country not selected or empty input
+                        }
+                      }}
+
+                      onBlur={() => {
+                        setPhoneTouched(true); // UPDATED
+                        const selectedCountry = countryCodes.find(
+                          (c) => String(c.id) === String(form.countryId)
+                        );
+                        if (!selectedCountry?.callingCode || !form.phoneNumber) {
+                          return;
+                        }
+                        const res = validatePhoneByCountry(
+                          form.phoneNumber,
+                          selectedCountry.callingCode
+                        );
+
+                        if (!res.ok) {
+                          setPhoneError(res.reason); // UPDATED
+                        }
+                      }}
+                      placeholder="Contact Number"
+                      required
+                    />
+                    {/* UPDATED: helper text under input (optional) */}
+                    {phoneTouched && phoneError && (
+                      <p className="mt-1 text-sm text-red-600">{phoneError}</p>
+                    )}
+
+                  </div>
                 </div>
 
-                {/* Department */}
+                  {/* Department */}
                 <select
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
                   value={form.departmentId} onChange={handleDepartmentChange} required>
-                  <option value="" disabled>Select Department</option>
+                  <option value="" disabled>Business Unit</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
@@ -278,12 +444,12 @@ export default function CreateUser() {
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:opacity-60"
                   value={form.subdepartmentId}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, subdepartmentId:e.target.value === "" ? "" : Number(e.target.value), }))
+                    setForm((p) => ({ ...p, subdepartmentId: e.target.value === "" ? "" : Number(e.target.value), }))
                   }
                   disabled={!form.departmentId}
                   required
                 >
-                  <option value="" disabled>Select Sub-department</option>
+                  <option value="" disabled>Business Function</option>
                   {filteredSubDepartments.map((sd) => (
                     <option key={sd.id} value={sd.id}>{sd.name}</option>
                   ))}
@@ -298,7 +464,7 @@ export default function CreateUser() {
                   onChange={onChange}
                   required
                 >
-                  <option value="" disabled>Select Role</option>
+                  <option value="" disabled>Role</option>
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>{r.role}</option>
                   ))}
@@ -308,15 +474,27 @@ export default function CreateUser() {
 
               {/* Buttons */}
               <div className="mt-6 flex items-center justify-between">
-                <button type="button" onClick={handleAddMore} className="text-sm text-gray-600 hover:text-gray-800">
-                  + Create another user
+                <button type="button" onClick={handleAddMore} className="text-l text-gray-600 hover:text-gray-800">
+                  Reset
                 </button>
+                
+<div className="flex items-center gap-2"> {/* UPDATED */}
+                  <button
+                    type="button"
+                    onClick={handleCancel}                 // UPDATED
+                    className="px-3 py-2 rounded-lg text-gray-700 hover:text-gray-900 
+                               bg-transparent border-0"       // UPDATED: no colour
+                  >
+                    Cancel
+                  </button>
+
                 <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg              
                 font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-50 disabled:opacity-70"
                 >
                   {submitting && <Spin size="small" />}
                   {submitting ? "Submitting..." : "Submit"}
                 </button>
+              </div>
               </div>
             </form>
 
