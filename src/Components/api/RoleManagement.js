@@ -28,3 +28,21 @@ export const getroles = async() => {
   console.log('GetRoles response status:', res.status);
   return res.data;
 }
+
+export const updateRoleStatus = async (roleId, active) => {
+  console.log('[updateRoleStatus] roleId:', roleId, 'active:', active);
+  // Backend method updateStatus(Long userId, boolean active) should map to this endpoint.
+  // Controller: @PatchMapping("/roles/status/{id}") expects a DTO with `isActive`.
+    try {
+      // Send both field names to be tolerant of backend naming conventions
+      const payload = { isActive: !!active, active: !!active };
+      console.log('[updateRoleStatus] payload ->', payload);
+      // Controller lives under `/user_management` class-level mapping
+      const res = await api.patch(`/user_management/roles/status/${roleId}`, payload);
+      console.log('updateRoleStatus response status:', res.status);
+      return res.data;
+    } catch (err) {
+      console.error('[updateRoleStatus] error response:', err?.response?.status, err?.response?.data);
+      throw err;
+    }
+}
