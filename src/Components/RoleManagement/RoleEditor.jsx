@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Space, Tree, Tag, message, Input, Spin } from "antd";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -75,6 +74,7 @@ export default function RoleEditor() {
         const res = await getpermissions();
         // IMPORTANT: many backends respond as { success, message, data: [...] }
         const modules = asArray(res?.data?.data ?? res?.data ?? res);
+        console.log(modules);
 
         const moduleKeys = [];
         const childKeys  = [];
@@ -102,17 +102,17 @@ export default function RoleEditor() {
             _childIdToModuleId.set(String(childId), moduleId);
 
             const aNodes = asArray(child.actions).map((ac) => {
-              const aId  = num(ac.id);
+              const aId  = num(ac.actionId);
               const aKey = `a:${childId}:${aId}`;
               actionKeys.push(aKey);
               _actionKeyToChildKey.set(aKey, childKey);
               return {
                 id: aId,
                 key: aKey,
-                name: String(ac.action), // store the action friendly name
+                name: String(ac.actionName), // store the action friendly name
                 node: {
                   key: aKey,
-                  title: <Tag color="geekblue">{ac.action}</Tag>,
+                  title: <Tag color="geekblue">{ac.actionName}</Tag>,
                   isLeaf: true,
                   selectable: false,
                 }
@@ -124,7 +124,7 @@ export default function RoleEditor() {
 
             return {
               key: childKey,
-              title: child.childModule,
+              title: child.childModuleName,
               selectable: false,
               children: aNodes.map((x) => x.node),
             };
@@ -141,7 +141,8 @@ export default function RoleEditor() {
         if (!alive) return;
 
         setTreeData(nodes);
-        setDefaultExpandedModuleKeys(moduleKeys);
+        // Expand all modules and child nodes by default so the tree is fully open
+        setDefaultExpandedModuleKeys([...moduleKeys, ...childKeys]);
         setAllModuleKeys(moduleKeys);
         setAllChildKeys(childKeys);
         setAllActionKeys(actionKeys);
@@ -161,14 +162,17 @@ export default function RoleEditor() {
               moduleKeys,
               childKeys,
               actionKeys,
-              _childKeyToActionKeys,
-              _actionKeyToChildKey,
-              _childKeyToModuleKey
+              childKeyToActionKeys: _childKeyToActionKeys,
+              actionKeyToChildKey: _actionKeyToChildKey,
+              childKeyToModuleKey: _childKeyToModuleKey,
+              childKeyToActionList: _childKeyToActionList,
             }
           );
           setCheckedKeys(Array.from(fullTreeKeys));
           setCheckedChildKeys(Array.from(childOnly));
           setCheckedActionKeys(Array.from(actionOnly));
+          // Ensure all nodes are expanded so prechecked items are visible
+          setDefaultExpandedModuleKeys([...moduleKeys, ...childKeys]);
         }
       } catch (e) {
         console.error("Permissions fetch error:", e);
@@ -187,7 +191,7 @@ export default function RoleEditor() {
   /* ---------- Prefill computation ---------- */
   const computePrecheckedKeys = (
     role,
-    { moduleKeys, childKeys, actionKeys, _childKeyToActionKeys, _actionKeyToChildKey, _childKeyToModuleKey }
+    { moduleKeys, childKeys, actionKeys, childKeyToActionKeys, actionKeyToChildKey, childKeyToModuleKey, childKeyToActionList }
   ) => {
     const fullSet = new Set();
     const childOnly = new Set();
@@ -223,45 +227,60 @@ export default function RoleEditor() {
       return { fullTreeKeys: fullSet, childOnly, actionOnly };
     }
 
-    // B) Else prefill from your payload shape:
-    // role.moduleChildModule = [{ module, childModule: [{ id, action:{ name: boolean } }] }]
+    // B) Else prefill from your payload shape.
+    // Support multiple backend shapes:
+    // 1) legacy: role.moduleChildModule = [{ module, childModule: [{ id, action:{ name: boolean } }] }]
+    // 2) current: role.moduleChildModule = [{ moduleId, childModules: [{ childModuleId, actionIds: [id,...] }] }]
     const mcm = asArray(role.moduleChildModule || []);
     mcm.forEach((m) => {
-      const modId = num(m.module);
+      const modId = num(m.moduleId ?? m.module);
       const mk = `m:${modId}`;
       if (moduleKeys.includes(mk)) fullSet.add(mk);
 
-      asArray(m.childModule).forEach((c) => {
-        const childId = num(c.id);
+      const children = asArray(m.childModules ?? m.childModule ?? []);
+      children.forEach((c) => {
+        const childId = num(c.childModuleId ?? c.id);
         const ck = `c:${childId}`;
+
+        // Case A: backend provided actionIds (array of ids)
+        if (Array.isArray(c.actionIds)) {
+          const ids = c.actionIds.map((x) => Number(x)).filter(Number.isFinite);
+          const actionList = (childKeyToActionList?.get(ck) || []);
+          const selectedKeys = actionList.filter((a) => ids.includes(Number(a.id))).map((a) => a.key);
+
+          selectedKeys.forEach((ak) => { actionOnly.add(ak); fullSet.add(ak); });
+
+          const allKeys = (childKeyToActionKeys?.get(ck) || []);
+          const allSelected = allKeys.length > 0 && selectedKeys.length === allKeys.length;
+          if (allSelected) {
+            childOnly.add(ck);
+            fullSet.add(ck);
+            const pmk = childKeyToModuleKey.get(ck);
+            if (pmk) fullSet.add(pmk);
+          } else if (selectedKeys.length > 0) {
+            const pmk = childKeyToModuleKey.get(ck);
+            if (pmk) fullSet.add(pmk);
+          }
+
+          return; // next child
+        }
+
+        // Case B: legacy shape with action object keyed by name
         const actsMap = c.action || {};
-        const trueActionNames = Object.entries(actsMap)
-          .filter(([, val]) => !!val)
-          .map(([name]) => String(name));
+        const trueActionNames = Object.entries(actsMap).filter(([, val]) => !!val).map(([name]) => String(name));
+        const actionList = (childKeyToActionList?.get(ck) || []);
+        const selectedKeys = actionList.filter((a) => trueActionNames.includes(a.name)).map((a) => a.key);
 
-        // Map action names back to action keys/ids
-        const actionList = childKeyToActionList.get(ck) || [];
-        const selectedKeys = actionList
-          .filter((a) => trueActionNames.includes(a.name))
-          .map((a) => a.key);
+        selectedKeys.forEach((ak) => { actionOnly.add(ak); fullSet.add(ak); });
 
-        // Mark actions checked
-        selectedKeys.forEach((ak) => {
-          actionOnly.add(ak);
-          fullSet.add(ak);
-        });
-
-        // If "all actions" true → check child as well
-        const allKeys = (childKeyToActionKeys.get(ck) || []);
+        const allKeys = (childKeyToActionKeys?.get(ck) || []);
         const allSelected = allKeys.length > 0 && selectedKeys.length === allKeys.length;
         if (allSelected) {
           childOnly.add(ck);
           fullSet.add(ck);
-          // ensure parent module checked too:
           const pmk = childKeyToModuleKey.get(ck);
           if (pmk) fullSet.add(pmk);
         } else if (selectedKeys.length > 0) {
-          // partial → ensure parent module is half/checked by cascading
           const pmk = childKeyToModuleKey.get(ck);
           if (pmk) fullSet.add(pmk);
         }
@@ -300,11 +319,11 @@ export default function RoleEditor() {
   /* ---------- Build YOUR payload shape ---------- */
   // moduleChildModule = [
   //   {
-  //     module: <number>,
-  //     childModule: [
+  //     moduleId: <number>,
+  //     childModules: [
   //       {
-  //         id: <number>,
-  //         action: { "<actionName>": true, ... }   // ONLY selected actions set to true
+  //         childModuleId: <number>,
+  //         actionIds: [<id>, <id>, ...]   // ONLY selected action IDs
   //       }
   //     ]
   //   }
@@ -321,7 +340,7 @@ export default function RoleEditor() {
     });
 
     // group by module id (number)
-    const byModule = new Map(); // moduleId -> [{ id, action }]
+    const byModule = new Map(); // moduleId -> [{ childModuleId, actionIds }]
     includeChildren.forEach((ck) => {
       const moduleId = childKeyToModuleId.get(ck);
       if (moduleId == null) return;
@@ -330,34 +349,40 @@ export default function RoleEditor() {
 
       // determine which actions are selected for this child
       const allActions = childKeyToActionList.get(ck) || [];
-      const actionsObj = {};
+      const actionIds = [];
 
       if (childSet.has(ck)) {
-        // child checked → all actions true
+        // child checked → all actions included
         allActions.forEach((a) => {
-          actionsObj[a.name] = true;
+          actionIds.push(a.id);
         });
       } else {
         // partial: only selected actions
         allActions.forEach((a) => {
           const aKey = `a:${childId}:${a.id}`;
           if (actionSet.has(aKey)) {
-            actionsObj[a.name] = true;
+            actionIds.push(a.id);
           }
         });
       }
 
-      const entry = { id: childId, action: actionsObj };
+      const entry = { childModuleId: childId, actionIds };
 
       if (!byModule.has(moduleId)) byModule.set(moduleId, []);
       byModule.get(moduleId).push(entry);
     });
 
-    // to array, with your field names
-    return Array.from(byModule.entries()).map(([moduleId, childArr]) => ({
-      module: Number(moduleId),
-      childModule: childArr
-    }));
+    // to array, with your field names (match backend: moduleId, childModules)
+    // Filter out children with no actions (backend rejects empty actionIds)
+    const result = Array.from(byModule.entries())
+      .map(([moduleId, childArr]) => ({
+        moduleId: Number(moduleId),
+        childModules: childArr.filter((c) => c.actionIds.length > 0)
+      }))
+      .filter((m) => m.childModules.length > 0); // only include modules with children
+    
+    console.log("[buildModuleChildActionPayload result]", JSON.stringify(result, null, 2));
+    return result;
   };
 
   /* ---------- Save ---------- */
@@ -384,7 +409,10 @@ export default function RoleEditor() {
     };
 
     // debug preview
-    // console.log("[payload]", JSON.stringify(payload, null, 2));
+    console.log("[payload]", JSON.stringify(payload, null, 2));
+    console.log("[checkedChildKeys]", checkedChildKeys);
+    console.log("[checkedActionKeys]", checkedActionKeys);
+    console.log("[childKeyToModuleId map]", childKeyToModuleId);
 
     setSaving(true);
     try {
@@ -426,9 +454,9 @@ export default function RoleEditor() {
   return (
     <>
       <Layout>
-        <div className="px-4 py-10 mx-auto w-full max-w-6xl">
+        <div className="px-4 py-10 mx-auto w-full max-w-6xl mt-[-80px]">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-semibold text-slate-900 m-0">
+            <h1 className="text-base font-bold text-xl text-slate-900 m-0">
               {isEdit ? "Edit Role" : "Add Role"}
             </h1>
           </div>
@@ -507,445 +535,4 @@ export default function RoleEditor() {
 
 
 
-
-
-// import React, { useEffect, useMemo, useState } from "react";
-// import { Button, Space, Tree, Tag, message, Input, Spin } from "antd";
-// import { useNavigate, useParams, useLocation } from "react-router-dom";
-// import Layout from "../Layout.jsx";
-// import { createrole, editrole, getpermissions } from "../api/RoleManagement.js";
-//
-// const asArray = (x) => (Array.isArray(x) ? x : x && typeof x === "object" ? Object.values(x) : []);
-//
-// /**
-//  * Build a safe set from any iterable
-//  */
-// const toSet = (arr) => new Set(asArray(arr).map((k) => String(k)));
-//
-// /**
-//  * Antd Tree requires **unique keys**.
-//  * We'll use:
-//  *  - Module: `${moduleId}`
-//  *  - Child:  `${childModuleId}`
-//  *  - Action: `act:${childModuleId}:${actionId}`    <-- ensures uniqueness across children
-//  */
-// export default function RoleEditor() {
-//   const navigate = useNavigate();
-//   const { id } = useParams();
-//   const location = useLocation();
-//   const isEdit = Boolean(id);
-//
-//   // --- Role from navigation state (used for edit prefills) ---
-//   const initialRole = useMemo(() => {
-//     if (!isEdit) return null;
-//     return location.state?.role || null;
-//   }, [isEdit, location.state]);
-//
-//   // --- RoleId for PUT path param ---
-//   const RoleId = useMemo(() => {
-//     const role = location.state?.role;
-//     return role?.id ?? role?.roleId ?? role?._id ?? id ?? null;
-//   }, [location.state, id]);
-//
-//   const [name, setName] = useState(initialRole?.role || initialRole?.name || "");
-//
-//   // ===== Tree state =====
-//   const [treeData, setTreeData] = useState([]);
-//   const [defaultExpandedModuleKeys, setDefaultExpandedModuleKeys] = useState([]); // expand modules only
-//   const [allModuleKeys, setAllModuleKeys] = useState([]);
-//   const [allChildModuleKeys, setAllChildModuleKeys] = useState([]);
-//   const [allActionKeys, setAllActionKeys] = useState([]);
-//
-//   // Useful maps for cascade + payload
-//   const [childToModule, setChildToModule] = useState(new Map());             // childId -> moduleId
-//   const [actionsByChild, setActionsByChild] = useState(new Map());           // childId -> [actionKey]
-//   const [actionKeyToChild, setActionKeyToChild] = useState(new Map());       // actionKey -> childId
-//
-//   // Checked state for Tree
-//   const [checkedKeys, setCheckedKeys] = useState([]);           // full set for Antd (includes modules/children/actions)
-//   const [checkedChildKeys, setCheckedChildKeys] = useState([]); // only childModule IDs (payload grouping)
-//   const [checkedActionKeys, setCheckedActionKeys] = useState([]); // only action keys (if you want to save actions too)
-//
-//   const [loadingTree, setLoadingTree] = useState(false);
-//   const [treeError, setTreeError] = useState("");
-//   const [saving, setSaving] = useState(false);
-//
-//   // ===== Load permissions and build 3-level Tree =====
-//   useEffect(() => {
-//     let alive = true;
-//
-//     const load = async () => {
-//       setLoadingTree(true);
-//       setTreeError("");
-//       try {
-//         const res = await getpermissions();
-//         // Your backend often returns { success, message, data: [...] }
-//         const modules = asArray(res?.data?.data ?? res?.data ?? res);
-//
-//         const moduleKeys = [];
-//         const childKeys = [];
-//         const actionKeys = [];
-//
-//         const _childToModule = new Map();
-//         const _actionsByChild = new Map();
-//         const _actionKeyToChild = new Map();
-//
-//         const nodes = modules.map((mod) => {
-//           const moduleKey = String(mod.moduleId);
-//           moduleKeys.push(moduleKey);
-//
-//           const childNodes = asArray(mod.childModules).map((child) => {
-//             const childKey = String(child.childModuleId);
-//             childKeys.push(childKey);
-//             _childToModule.set(childKey, moduleKey);
-//
-//             const aNodes = asArray(child.actions).map((ac) => {
-//               const aKey = `act:${childKey}:${ac.id}`;
-//               actionKeys.push(aKey);
-//               _actionKeyToChild.set(aKey, childKey);
-//               return {
-//                 key: aKey,
-//                 title: <Tag color="geekblue">{ac.action}</Tag>,
-//                 isLeaf: true,
-//                 selectable: false,
-//               };
-//             });
-//             _actionsByChild.set(childKey, aNodes.map((n) => n.key));
-//
-//             return {
-//               key: childKey,
-//               title: child.childModule,
-//               selectable: false,
-//               children: aNodes, // ensures child is expandable; keep collapsed by default
-//             };
-//           });
-//
-//           return {
-//             key: moduleKey,
-//             title: mod.moduleName,
-//             selectable: false,
-//             children: childNodes,
-//           };
-//         });
-//
-//         if (!alive) return;
-//
-//         setTreeData(nodes);
-//         setDefaultExpandedModuleKeys(moduleKeys); // expand only modules by default
-//         setAllModuleKeys(moduleKeys);
-//         setAllChildModuleKeys(childKeys);
-//         setAllActionKeys(actionKeys);
-//         setChildToModule(_childToModule);
-//         setActionsByChild(_actionsByChild);
-//         setActionKeyToChild(_actionKeyToChild);
-//
-//         // ===== Prefill checks in EDIT mode =====
-//         if (isEdit && initialRole) {
-//           const { keysForTree, childOnlyKeys, actionOnlyKeys } = computePrecheckedKeys(
-//             initialRole,
-//             { moduleKeys, childKeys, actionKeys, _childToModule, _actionsByChild, _actionKeyToChild }
-//           );
-//           setCheckedKeys(Array.from(keysForTree));
-//           setCheckedChildKeys(Array.from(childOnlyKeys));
-//           setCheckedActionKeys(Array.from(actionOnlyKeys));
-//         }
-//       } catch (e) {
-//         console.error("Permissions fetch error:", e);
-//         setTreeError(e?.message || "Failed to load permissions.");
-//         message.error("Failed to load permissions.");
-//       } finally {
-//         if (alive) setLoadingTree(false);
-//       }
-//     };
-//
-//     load();
-//     return () => {
-//       alive = false;
-//     };
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [isEdit, initialRole?.moduleChildModule]);
-//
-//   /**
-//    * Compute prechecked keys from an initial role object.
-//    * We support multiple shapes to be robust:
-//    *  - role.checkedKeys: full list of previously checked keys (modules/children/actions)
-//    *  - role.moduleChildActions: [{ childModuleId, actions:[id,...] }]
-//    *  - role.moduleChildModule:  [{ module|moduleId, childModule|childModules:[id,...] }]
-//    */
-//   const computePrecheckedKeys = (
-//     role,
-//     { moduleKeys, childKeys, actionKeys, _childToModule, _actionsByChild, _actionKeyToChild }
-//   ) => {
-//     const treeKeySet = new Set([...moduleKeys, ...childKeys, ...actionKeys]);
-//
-//     // Case A: Full checked keys provided by backend
-//     const savedChecked = toSet(role.checkedKeys || role.checked_keys);
-//     if (savedChecked.size > 0) {
-//       // filter to current tree keys only
-//       const valid = new Set([...savedChecked].filter((k) => treeKeySet.has(k)));
-//       // derive child-only and action-only for payload UI
-//       const childOnly = new Set([...valid].filter((k) => childKeys.includes(k)));
-//       const actionOnly = new Set([...valid].filter((k) => k.startsWith("act:")));
-//       return { keysForTree: valid, childOnlyKeys: childOnly, actionOnlyKeys: actionOnly };
-//     }
-//
-//     // Case B: Selected actions saved structurally
-//     // e.g., role.moduleChildActions = [ { childModuleId, actions:[id...] }, ... ]
-//     const actionStruct = asArray(role.moduleChildActions || role.childActions || []);
-//     const pickedActionKeys = [];
-//     actionStruct.forEach((row) => {
-//       const childId = String(row.childModuleId ?? row.childId ?? row.child);
-//       asArray(row.actions).forEach((aid) => {
-//         const key = `act:${childId}:${aid}`;
-//         pickedActionKeys.push(key);
-//       });
-//     });
-//
-//     // Case C: Selected childModules saved structurally
-//     // e.g., role.moduleChildModule = [ { module|moduleId, childModule|childModules:[ids...] }, ... ]
-//     const childStruct = asArray(role.moduleChildModule || []);
-//     const pickedChildKeys = [];
-//     childStruct.forEach((row) => {
-//       const raw = asArray(row.childModules ?? row.childModule);
-//       raw.forEach((cid) => pickedChildKeys.push(String(cid)));
-//     });
-//
-//     // Build cascaded set for the tree: include parents and actions for children, and parent children for actions
-//     const keysForTree = new Set();
-//     // include modules for any child/action
-//     pickedChildKeys.forEach((ck) => {
-//       keysForTree.add(ck);
-//       const mod = _childToModule.get(ck);
-//       if (mod) keysForTree.add(mod);
-//       const acts = _actionsByChild.get(ck) || [];
-//       acts.forEach((ak) => keysForTree.add(ak));
-//     });
-//     pickedActionKeys.forEach((ak) => {
-//       if (actionKeys.includes(ak)) {
-//         keysForTree.add(ak);
-//         const childId = _actionKeyToChild.get(ak);
-//         if (childId) {
-//           keysForTree.add(childId);
-//           const mod = _childToModule.get(childId);
-//           if (mod) keysForTree.add(mod);
-//         }
-//       }
-//     });
-//
-//     return {
-//       keysForTree,
-//       childOnlyKeys: new Set(pickedChildKeys.filter((k) => childKeys.includes(k))),
-//       actionOnlyKeys: new Set(pickedActionKeys.filter((k) => actionKeys.includes(k))),
-//     };
-//   };
-//
-//   // ===== Tree handlers =====
-//   const onCheck = (keysOrObj, info) => {
-//     // Without checkStrictly, Antd passes array of checked keys as first arg
-//     const fullChecked = Array.isArray(keysOrObj) ? keysOrObj : keysOrObj?.checked || [];
-//     const normalized = fullChecked.map((k) => String(k));
-//
-//     // Extract childModules and actions for payload
-//     const childOnly = normalized.filter((k) => allChildModuleKeys.includes(k));
-//     const actionOnly = normalized.filter((k) => k.startsWith("act:"));
-//
-//     setCheckedKeys(normalized);
-//     setCheckedChildKeys(childOnly);
-//     setCheckedActionKeys(actionOnly);
-//   };
-//
-//   const selectAll = () => {
-//     // All: modules + children + actions
-//     const union = [...allModuleKeys, ...allChildModuleKeys, ...allActionKeys];
-//     setCheckedKeys(union);
-//     setCheckedChildKeys(allChildModuleKeys);
-//     setCheckedActionKeys(allActionKeys);
-//   };
-//
-//   const clearAll = () => {
-//     setCheckedKeys([]);
-//     setCheckedChildKeys([]);
-//     setCheckedActionKeys([]);
-//   };
-//
-//   const canSave = name.trim().length > 0 && !saving;
-//
-//   // Keep IDs numeric if numeric
-//   const numify = (k) => {
-//     const n = Number(k);
-//     return Number.isFinite(n) ? n : k;
-//   };
-//
-//   /**
-//    * Build legacy payload (still required by your backend):
-//    *   [{ module, childModule: number[] }]
-//    */
-//   const buildModuleChildPayload = (childKeysOnly) => {
-//     const byModule = new Map(); // moduleId -> childId[]
-//     for (const childKey of childKeysOnly) {
-//       const parentKey = childToModule.get(String(childKey));
-//       if (!parentKey) continue;
-//       const moduleId = numify(parentKey);
-//       const childId = numify(childKey);
-//       if (!byModule.has(moduleId)) byModule.set(moduleId, []);
-//       byModule.get(moduleId).push(childId);
-//     }
-//     return Array.from(byModule.entries()).map(([module, childModule]) => ({
-//       module,
-//       childModule,
-//     }));
-//   };
-//
-//   /**
-//    * (Optional) Build an actions payload for the backend (if/when you support saving actions)
-//    *   [{ childModuleId, actions: number[] }]
-//    */
-//   const buildChildActionsPayload = (actionKeysOnly) => {
-//     const byChild = new Map(); // childId -> [actionId...]
-//     for (const aKey of actionKeysOnly) {
-//       // aKey format: act:<childId>:<actionId>
-//       const parts = String(aKey).split(":");
-//       if (parts.length === 3 && parts[0] === "act") {
-//         const childId = numify(parts[1]);
-//         const actionId = numify(parts[2]);
-//         if (!byChild.has(childId)) byChild.set(childId, []);
-//         byChild.get(childId).push(actionId);
-//       }
-//     }
-//     return Array.from(byChild.entries()).map(([childModuleId, actions]) => ({
-//       childModuleId,
-//       actions,
-//     }));
-//   };
-//
-//   // ===== Save (create or edit) =====
-//   const handleSave = async () => {
-//     const trimmedName = name.trim().toUpperCase();
-//
-//     // Always provide legacy child payload (your backend expects this)
-//     const moduleChildModule = buildModuleChildPayload(checkedChildKeys);
-//
-//     // Add full checked keys so edit can restore EXACTLY what user picked (modules/children/actions)
-//     // Backend may ignore unknown fields; it's still useful for round-tripping UI state.
-//     const payload = {
-//       role: trimmedName,
-//       moduleChildModule,
-//       checkedKeys,                  // <-- for perfect prefill on edit
-//       // Uncomment if/when backend supports actions persistence:
-//       // moduleChildActions: buildChildActionsPayload(checkedActionKeys),
-//     };
-//
-//     setSaving(true);
-//     try {
-//       if (isEdit) {
-//         if (!RoleId) {
-//           message.error("Editable role id not found.");
-//           setSaving(false);
-//           return;
-//         }
-//         await editrole(RoleId, payload);
-//         message.success("Role updated.");
-//       } else {
-//         await createrole(payload);
-//         message.success("Role created.");
-//       }
-//       navigate("/rolemanagement", { replace: true });
-//     } catch (e) {
-//       console.error("Save role error:", e);
-//       const msg = e?.response?.data?.message || e?.message || "Failed to save role.";
-//       message.error(msg);
-//     } finally {
-//       setSaving(false);
-//     }
-//   };
-//
-//   const handleCancel = () => navigate("/rolemanagement");
-//
-//   return (
-//     <>
-//       <Layout>
-//         <div className="px-4 py-10 mx-auto w-full max-w-6xl">
-//           <div className="flex items-center justify-between">
-//             <h1 className="text-base font-semibold text-slate-900 m-0">
-//               {isEdit ? "Edit Role" : "Add Role"}
-//             </h1>
-//           </div>
-//
-//           <div className="mt-1 flex items-center gap-3">
-//             <label className="text-sm font-medium text-slate-700 w-24">Role Name</label>
-//             <Input
-//               value={name}
-//               onChange={(e) => setName(e.target.value)}
-//               onBlur={() => setName((v) => v.toUpperCase().trim())}
-//               placeholder="ADMIN, PMO, DM"
-//               className="focus:!ring-2 focus:!ring-blue-200 focus:!border-blue-500 transition"
-//               style={{ width: 288 }}
-//               disabled={saving}
-//             />
-//           </div>
-//
-//           <div className="mt-3 grid grid-cols-1">
-//             <div className="rounded-md border border-slate-200 bg-white">
-//               <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
-//                 <div className="text-sm text-slate-600">Select permissions</div>
-//                 <Space size="small">
-//                   <Button
-//                     size="small"
-//                     onClick={selectAll}
-//                     disabled={saving || loadingTree || !!treeError}
-//                   >
-//                     Select All
-//                   </Button>
-//                   <Button
-//                     size="small"
-//                     onClick={clearAll}
-//                     disabled={saving || loadingTree}
-//                   >
-//                     Clear
-//                   </Button>
-//                 </Space>
-//               </div>
-//
-//               <div className="flex flex-col px-3 py-2" style={{ minHeight: 200 }}>
-//                 {loadingTree ? (
-//                   <div className="flex items-center justify-center py-6">
-//                     <Spin tip="Loading permissions..." />
-//                   </div>
-//                 ) : treeError ? (
-//                   <div className="text-red-600 text-sm py-3">{treeError}</div>
-//                 ) : (
-//                   <Tree
-//                     checkable
-//                     // Keep cascade ON (do NOT use checkStrictly)
-//                     selectable={false}
-//                     // Expand only modules by default; childModules collapsed (actions hidden initially)
-//                     defaultExpandedKeys={defaultExpandedModuleKeys}
-//                     checkedKeys={checkedKeys}
-//                     onCheck={onCheck}
-//                     treeData={treeData}
-//                     disabled={saving}
-//                   />
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-//
-//           <div className="mt-3 border-t border-slate-200 pt-2 flex justify-end gap-2">
-//             <Button onClick={handleCancel} disabled={saving}>
-//               Cancel
-//             </Button>
-//             <Button
-//               type="primary"
-//               onClick={handleSave}
-//               disabled={!name.trim() || loadingTree || !!treeError}
-//               loading={saving}
-//             >
-//               {isEdit ? "Save Changes" : "Create Role"}
-//             </Button>
-//           </div>
-//         </div>
-//       </Layout>
-//     </>
-//   );
-// }
-//
+ 
