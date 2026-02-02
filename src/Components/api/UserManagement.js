@@ -15,6 +15,9 @@ export const getAllEditDropdowns = async () => {
 
 export const getAllUsers =async ()=>{
   const res= await api.get("/user_management/users");
+  
+
+
   return res.data;
 }
 
