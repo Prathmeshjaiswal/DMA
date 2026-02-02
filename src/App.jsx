@@ -23,42 +23,126 @@ import UserManagement from './Components/UserManagement/UserManagement.jsx'
 import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
 import EditUser from './Components/UserManagement/EditUser.jsx'
 
-
-
+// ⬇️ NEW: route-level permission guard
+import RequirePermission from './Components/Auth/RequirePermission.jsx'
 
 function App() {
   return (
     <>
-    <Router>
-          <Routes>
-            <Route path="/" element={<Navigate to="/Login"/>} />
-            <Route path="/Login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/change" element={<PublicRoute><ChangePassword /></PublicRoute>}/>
-            {/* protected */}
-            <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
-            <Route path="/EditDemand" element={<ProtectedRoute><EditDemand /></ProtectedRoute>}/>
-            <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} />
-            <Route path="/ProfileTracker" element={<ProtectedRoute><ProfileTracker /></ProtectedRoute>} />
-            <Route path="/RDGTATeam" element={<ProtectedRoute><RDGTATeam /></ProtectedRoute>} />
-            <Route path="/Report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-            <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
-            <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
-            <Route path="/createuser" element={<ProtectedRoute><CreateUser/></ProtectedRoute>} />
-{/*             <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} /> */}
-            <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
-            <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
-             <Route path="/demandsheet1" element={<ProtectedRoute><DemandSheet1/></ProtectedRoute>}/>
-             <Route path="/rolemanagement" element={<ProtectedRoute><RoleManagement/></ProtectedRoute>}/>
-             <Route path="/UserManagement" element={<ProtectedRoute><UserManagement/></ProtectedRoute>}/>
-              <Route path="/roleeditor" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
-             <Route path="/roleeditor/:id" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
-              <Route path="/edituser/:id" element={<ProtectedRoute><EditUser/></ProtectedRoute>} />
-             
-            <Route path="*" element={<h2>Page Not Found</h2>} />
-          </Routes>
-        </Router>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Navigate to="/Login"/>} />
+          <Route path="/Login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/change" element={<PublicRoute><ChangePassword /></PublicRoute>}/>
+
+          {/* protected */}
+          <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
+          <Route path="/EditDemand" element={<ProtectedRoute><EditDemand /></ProtectedRoute>}/>
+          <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} />
+          <Route path="/ProfileTracker" element={<ProtectedRoute><ProfileTracker /></ProtectedRoute>} />
+          <Route path="/RDGTATeam" element={<ProtectedRoute><RDGTATeam /></ProtectedRoute>} />
+
+          {/* Reports: need DashBoard → Reports. If page only renders reports listing, child-level is enough.
+             If the page performs downloads, add action="Download Reports". */}
+          <Route
+            path="/Report"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="DashBoard" child="Reports">
+                  <Report />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
+          <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
+
+          {/* User Management: you DON'T have this in your example; this will 403/unauthorized */}
+          <Route
+            path="/UserManagement"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="User Management" child="Users Sheet">
+                  <UserManagement />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* CreateUser requires the "Create User" action; keep list page guard above */}
+          <Route
+            path="/createuser"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="User Management" child="Users Sheet" action="Create User">
+                  <CreateUser />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* EditUser requires the "Edit User" action */}
+          <Route
+            path="/edituser/:id"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="User Management" child="Users Sheet" action="Edit User">
+                  <EditUser />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Role Management list: requires Roles Sheet */}
+          <Route
+            path="/rolemanagement"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="Role Management" child="Roles Sheet">
+                  <RoleManagement />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* RoleEditor (create) → "Create Role" */}
+          <Route
+            path="/roleeditor"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="Role Management" child="Roles Sheet" action="Create Role">
+                  <RoleEditor />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* RoleEditor (edit) → "Edit Role" */}
+          <Route
+            path="/roleeditor/:id"
+            element={
+              <ProtectedRoute>
+                <RequirePermission module="Role Management" child="Roles Sheet" action="Edit Role">
+                  <RoleEditor />
+                </RequirePermission>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Other demand-related routes remain auth-only for now */}
+          <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
+          <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
+          
+          <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/>
+
+
+
+          <Route path="*" element={<h2>Page Not Found</h2>} />
+        </Routes>
+      </Router>
       <div>
-            </div>
+      </div>
     </>
   )
 }
