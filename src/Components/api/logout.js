@@ -15,7 +15,7 @@ export const logout = async () => {
     const res = await api.post("/auth_user/logout");
     return {
       success: true,
-      message: res?.data?.message || "Logout successful",
+      // message: res?.data?.message || "Logout successful",
     };
   } catch (err) {
     return {
