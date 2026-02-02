@@ -1,17 +1,33 @@
 import api from "./client.js"
 
-export const getCountries=()=>
-    api.get("/master/countries");
 
-export const getLocations=()=>
-    api.get("/master/locations");
+// LOAD ALL DROPDOWNS AT ONCE (CREATE USER PAGE)
+export const getAllDropdowns = async () => {
+  const res = await api.get("/user_management/all");
+  return res.data;
+};
+ 
+// OPTIONAL: for edit user page
+export const getAllEditDropdowns = async () => {
+  const res = await api.get("/user_management/editall");
+  return res.data;
+};
 
-export const getDepartments=()=>
-    api.get("/master/departments");
+export const getAllUsers =async ()=>{
+  const res= await api.get("/user_management/users");
+  return res.data;
+}
 
-export const getSubDepartments=(departmentId) =>
-    api.get(`/master/subdepartments?departmentId=${departmentId}`);
+export const updateUserById = async (id, payload) => {
+  const res = await api.put(`/user_management/users/${id}`, payload);
+  return res.data;
+};
 
-export const getRoles=()=>
-    api.get("/master/roles");
-    
+
+export const updateUserStatus = async (userId, active) => {
+  const res = await api.patch(
+    `/user_management/users/${encodeURIComponent(userId)}/status`,
+    { active } // boolean
+  );
+  return res.data;
+};

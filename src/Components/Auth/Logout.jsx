@@ -10,7 +10,7 @@ const Logout = () => {
   const handleLogout = async () => {
     try {
       const res = await logout();
-      message.success(res.message);
+//       message.success(res.message);
     } catch (e) {
       message.error("Server not reachable. Logging out locally.");
     } finally {

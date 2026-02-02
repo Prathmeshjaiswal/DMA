@@ -14,26 +14,90 @@ export const submitStep1 = async (form1Data) => {
 };
 
 
-export const submitStep2 = async ({ addNewDemandDTO, file = null }) => {
-  const formData = new FormData();
-  if (file) {
-    formData.append('file', file);
+//export const submitStep2 = async ({ addNewDemandDTO, file = null }) => {
+//  const formData = new FormData();
+//  if (file) {
+//    formData.append('file', file);
+//  }
+//
+//  const dtoBlob = new Blob([JSON.stringify(addNewDemandDTO)], {
+//    type: 'application/json',
+//  });
+//  formData.append('addNewDemandDTO', dtoBlob);
+//
+//  const res = await api.post('/addNewDemand/step2', formData, {
+//    headers: { 'Content-Type': undefined },
+//
+//  });
+//
+//  console.log('[submitStep2] response status:', res.status);
+//  return res.data;
+//};
+
+
+
+export const submitStep2 = async (payload) => {
+  let formData;
+
+  if (payload instanceof FormData) {
+    // Caller already prepared FormData (advanced use case)
+    formData = payload;
+  } else {
+    const {
+      addNewDemandDTO,
+      file = null,          // legacy single file
+      files = [],           // preferred: multiple files
+      filesMeta = null,     // optional mapping: [{ index, demandId }]
+    } = payload || {};
+
+    if (!addNewDemandDTO) {
+      throw new Error('addNewDemandDTO is required');
+    }
+
+    formData = new FormData();
+
+    // ---- Files ----
+    // Legacy single file (append to both 'file' and 'files' for compatibility)
+    if (file) {
+      formData.append('file', file);
+      formData.append('files', file, file.name);
+    }
+
+    // Multiple files (append each under 'files')
+    if (Array.isArray(files) && files.length) {
+      files.forEach((f) => {
+        if (f) formData.append('files', f, f.name);
+      });
+    }
+
+    // ---- DTO as JSON Blob ----
+    formData.append(
+      'addNewDemandDTO',
+      new Blob([JSON.stringify(addNewDemandDTO)], { type: 'application/json' })
+    );
+
+    // ---- filesMeta (index → demandId) ----
+    let meta = filesMeta;
+    if (!meta && Array.isArray(addNewDemandDTO?.demandRRDTOList)) {
+      meta = addNewDemandDTO.demandRRDTOList.map((item, index) => ({
+        index,
+        demandId: item?.demandId,
+      }));
+    }
+    if (meta) {
+      formData.append('filesMeta', typeof meta === 'string' ? meta : JSON.stringify(meta));
+    }
   }
 
-  const dtoBlob = new Blob([JSON.stringify(addNewDemandDTO)], {
-    type: 'application/json',
-  });
-  formData.append('addNewDemandDTO', dtoBlob);
-
-  const res = await api.post('/addNewDemand/step2', formData, {    
-    headers: { 'Content-Type': undefined },
-
+  // Let the browser/axios set the correct multipart boundary automatically.
+  const res = await api.post('/addNewDemand/step2', formData, {
+    headers: {
+      // 'Content-Type': 'multipart/form-data'  // not needed; browser sets boundary
+    },
   });
 
-  console.log('[submitStep2] response status:', res.status);
-  return res.data; 
+  return res;
 };
-
 
 
 export const getDropDownData = async () => {

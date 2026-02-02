@@ -1,107 +1,79 @@
-import React, { useState } from "react";
+// NavBar.jsx
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "./Sliderbar";
 import logo from "../assets/cfg3.png";
 import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
-// import { logout } from "./api/logout";
-import Logout from "../Components/Auth/Logout"
+import Logout from "../Components/Auth/Logout";
 
-
-
-
-
-export default function NavBar() {
+export default function NavBar({
+  sidebarOpen,          // controlled by Layout
+  onToggleSidebar,      // controlled by Layout
+  onCloseSidebar,       // optional, if you want to close from NavBar
+  showProfile,          // controlled by parent (Layout)
+  setShowProfile,       // controlled by parent (Layout)
+}) {
   const navigate = useNavigate();
-  const { isAuthenticated, setIsAuthenticated } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [showProfile,setShowProfile]=useState(null);
-  const userId = localStorage.getItem("userId");
-
-
-
-
- const handleLogout= Logout();
-
-  const links = [
-    { label: "Demands", to: "/DashBoard" },
-    { label: "Track", to: "/ProfileTracker" },
-    { label: "RDG", to: "/RDGTeam" },
-    { label: "TA", to: "/TATeam" },
-    { label: "Reports", to: "/Report" },
-  ];
+  const { isAuthenticated } = useAuth();
+  const handleLogout = Logout();
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-50 bg-[#082340] text-white border-b border-white/10 shadow-md">
+      <div className="fixed inset-x-0 top-0 z-40 bg-[#082340] text-white border-b border-white/10 shadow-md">
         <div className="flex items-center px-3 py-3 gap-3">
+          {/* Hamburger (only when authenticated) */}
+          {isAuthenticated ? (
+            <button
+              onClick={onToggleSidebar}
+              aria-label="Toggle Sidebar"
+              className="inline-flex flex-col items-center justify-center w-10 h-10 rounded hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+            >
+              <span className=" w-6 h-0.5 bg-white "></span>
+              <span className=" w-6 h-0.5 bg-white mt-1"></span>
+              <span className=" w-6 h-0.5 bg-white mt-1"></span>
+            </button>
+          ) : (
+            <div className="w-10 h-10" />
+          )}
+
+          {/* Logo */}
           <img
             src={logo}
             alt="LOGO"
             className="h-10 w-auto cursor-pointer"
-            onClick={()=>{
-              if(isAuthenticated) navigate("/DashBoard");
+            onClick={() => {
+              if (isAuthenticated) navigate("/DashBoard");
               else navigate("/Login");
             }}
           />
-          {/* Demand ONLY when authenticated */}
-          {isAuthenticated && (
-            <button
-              onClick={() => setIsOpen(true)}
-              className="px-3 py-1 rounded bg-[#F15B40] text-white hover:brightness-110"
-            >
-              Demand
-            </button>
-          )}
 
+          {/* Title */}
           <header className="flex-1 text-center">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
               HSBC Demand Management System
             </h1>
           </header>
-          {/* Logout ONLY when authenticated */}
-          {/* {isAuthenticated && (
-            <button
-              onClick={handleLogout}
-              className="font-bold text-xl hover:brightness-110"
-            >
-              Logout
-            </button>
 
-          )} */}
-
-          {/* profile menu */}
-          {isAuthenticated && (
+          {/* Profile menu (only when authenticated) */}
+          {isAuthenticated ? (
             <ProfileMenu
-
               onLogout={handleLogout}
-               onProfile={()=>setShowProfile(true)}
+              onProfile={() => setShowProfile?.(true)}
             />
+          ) : (
+            <div className="w-10 h-10" />
           )}
-
-
-
         </div>
       </div>
-      <div className="h-14"/>
+      {/* navbar spacer */}
+      <div className="h-14" />
 
-      {/* profile */}
+      {/* Profile modal */}
       <ProfileModel
-      isOpen={showProfile}
-      onClose={()=>setShowProfile(false)}
+        isOpen={!!showProfile}
+        onClose={() => setShowProfile?.(false)}
       />
-
-
-      <div className="" />
-      {isAuthenticated && (
-        <Sidebar
-          isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
-          links={links}
-        />
-      )}
     </>
   );
 }
- 

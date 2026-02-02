@@ -21,6 +21,7 @@ import PublicRoute from './Components/Auth/PublicRoute.jsx'
 import RoleManagement from './Components/RoleManagement/RoleManagement.jsx'
 import UserManagement from './Components/UserManagement/UserManagement.jsx'
 import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
+import EditUser from './Components/UserManagement/EditUser.jsx'
 
 
 
@@ -42,8 +43,8 @@ function App() {
             <Route path="/Report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
             <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
             <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
-{/*             <Route path="/createuser" element={<ProtectedRoute><CreateUser/></ProtectedRoute>} /> */}
-<Route path="/createuser" element={<PublicRoute><CreateUser/></PublicRoute>} />
+            <Route path="/createuser" element={<ProtectedRoute><CreateUser/></ProtectedRoute>} />
+{/* <Route path="/createuser" element={<PublicRoute><CreateUser/></PublicRoute>} /> */}
 {/*             <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} /> */}
             <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
             <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
@@ -52,6 +53,8 @@ function App() {
              <Route path="/UserManagement" element={<ProtectedRoute><UserManagement/></ProtectedRoute>}/>
               <Route path="/roleeditor" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
              <Route path="/roleeditor/:id" element={<ProtectedRoute><RoleEditor /></ProtectedRoute>} />
+              <Route path="/edituser/:id" element={<ProtectedRoute><EditUser/></ProtectedRoute>} />
+             
             <Route path="*" element={<h2>Page Not Found</h2>} />
           </Routes>
         </Router>

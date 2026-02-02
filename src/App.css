@@ -53,6 +53,8 @@
   display: none;             /* Chrome/Safari/Edge */
 }
 
+
+/* stronger than AntD defaults */
 /* If you want to completely prevent page scrolling on this screen,
    you can also add this (optional):
 html, body {
