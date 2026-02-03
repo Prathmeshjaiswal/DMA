@@ -1,4 +1,4 @@
-import axios from 'axios';
+
 import api from './client.js';
 
 export const createrole = async(payload) => {
@@ -12,6 +12,16 @@ export const createrole = async(payload) => {
 export const editrole = async(roleId,payload) => {
 console.log('[editRole] payload:', payload);
   const res = await api.put(`/user_management/${roleId}`, payload);
+  
+  console.log('[editRole] response status:', res.status);
+  console.log('[editRole] response headers:', res.headers);
+  console.log('[editRole] response data:', res.data); // 👈 log the body
+
+  // If backend sends 204 No Content, res.data will be undefined.
+  if (res.status === 204 || typeof res.data === 'undefined' || res.data === null) {
+    return { success: true, message: 'No content', data: null };
+  }
+
   console.log('editRole response status:', res.status);
   return res.data;
 }
@@ -27,4 +37,22 @@ export const getroles = async() => {
   const res = await api.get('/user_management/getallroles');
   console.log('GetRoles response status:', res.status);
   return res.data;
+}
+
+export const updateRoleStatus = async (roleId, active) => {
+  console.log('[updateRoleStatus] roleId:', roleId, 'active:', active);
+  // Backend method updateStatus(Long userId, boolean active) should map to this endpoint.
+  // Controller: @PatchMapping("/roles/status/{id}") expects a DTO with `isActive`.
+    try {
+      // Send both field names to be tolerant of backend naming conventions
+      const payload = { isActive: !!active, active: !!active };
+      console.log('[updateRoleStatus] payload ->', payload);
+      // Controller lives under `/user_management` class-level mapping
+      const res = await api.patch(`/user_management/roles/status/${roleId}`, payload);
+      console.log('updateRoleStatus response status:', res.status);
+      return res.data;
+    } catch (err) {
+      console.error('[updateRoleStatus] error response:', err?.response?.status, err?.response?.data);
+      throw err;
+    }
 }

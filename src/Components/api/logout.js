@@ -16,6 +16,7 @@ export const logout = async () => {
     );
     localStorage.clear();
     return res.data;
+
   } catch (err) {
     return {
       success: false,

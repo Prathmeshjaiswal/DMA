@@ -44,7 +44,6 @@ function App() {
             <Route path="/HBU" element={<ProtectedRoute><HBU /></ProtectedRoute>} />
             <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
             <Route path="/createuser" element={<ProtectedRoute><CreateUser/></ProtectedRoute>} />
-{/* <Route path="/createuser" element={<PublicRoute><CreateUser/></PublicRoute>} /> */}
 {/*             <Route path="/setnewpassword" element={<ProtectedRoute><SetNewPassword /></ProtectedRoute>} /> */}
             <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
             <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>

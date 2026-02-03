@@ -1,15 +1,15 @@
-// Sidebar.jsx
-import React, { useEffect } from "react";
+// src/Components/Sidebar.jsx
+import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { CloseOutlined } from "@ant-design/icons"; // 👈 ADD THIS
+import { CloseOutlined } from "@ant-design/icons";
+import { usePermissions } from "../Components/Auth/PermissionProvider";
 
-export default function Sliderbar({
-  isOpen,
-  onClose,
-  width = 256,
-}) {
+/** Sliderbar: Slide-in sidebar that shows menu items gated by permissions. */
+export default function Sliderbar({ isOpen, onClose, width = 256 }) {
   const navigate = useNavigate();
+  const { hasChild } = usePermissions();
 
+  /** COLORS: Centralized theme tokens for consistent styling. */
   const COLORS = {
     navy: "#082340",
     navyTint: "#0D3559",
@@ -18,20 +18,46 @@ export default function Sliderbar({
     white10: "rgba(255,255,255,0.10)",
   };
 
+  /** Effect: Close sidebar on ESC key. */
   useEffect(() => {
     const handler = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const MENU = [
-    { label: "Demands", onClick: () => navigate("/demandsheet1") },
-    { label: "Track", onClick: () => navigate("/ProfileTracker") },
-    { label: "RDG/TA", onClick: () => navigate("/RDGTATeam") },
-    { label: "HBU", onClick: () => navigate("/HBU") },
-    { label: "Reports", onClick: () => navigate("/Report") },
-  ];
+  /** Permission gates: Determine which groups/items should be visible. */
+  const allowDashboardShortcuts = hasChild("DashBoard", "DashBoard");
+  const allowReports = hasChild("DashBoard", "Reports");
 
+  /** MENU: Build visible menu items based on current permissions. */
+  const MENU = useMemo(
+    () =>
+      [
+        allowDashboardShortcuts && {
+          label: "Demands",
+          onClick: () => navigate("/demandsheet1"),
+        },
+        allowDashboardShortcuts && {
+          label: "Track",
+          onClick: () => navigate("/ProfileTracker"),
+        },
+        allowDashboardShortcuts && {
+          label: "RDG/TA",
+          onClick: () => navigate("/RDGTATeam"),
+        },
+        allowDashboardShortcuts && {
+          label: "HBU",
+          onClick: () => navigate("/HBU"),
+        },
+        allowReports && {
+          label: "Reports",
+          onClick: () => navigate("/Report"),
+        },
+      ].filter(Boolean),
+    [allowDashboardShortcuts, allowReports, navigate]
+  );
+
+  /** Render: Off-canvas sidebar with header, close button, and gated menu. */
   return (
     <aside
       className={`

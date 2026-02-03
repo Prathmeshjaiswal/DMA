@@ -6,17 +6,44 @@ import { useAuth } from "./Auth/AuthProvider";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModel from "./ProfileModel";
 import Logout from "../Components/Auth/Logout";
+import { usePermissions } from "./Auth/PermissionProvider";
 
+/** NavBar: Top bar with sidebar toggle, logo, title, and profile menu; builds permission-gated links (not rendered here). */
 export default function NavBar({
-  sidebarOpen,          // controlled by Layout
-  onToggleSidebar,      // controlled by Layout
-  onCloseSidebar,       // optional, if you want to close from NavBar
-  showProfile,          // controlled by parent (Layout)
-  setShowProfile,       // controlled by parent (Layout)
+  sidebarOpen,        // controlled by Layout
+  onToggleSidebar,    // controlled by Layout
+  onCloseSidebar,     // optional, if you want to close from NavBar
+  showProfile,        // controlled by parent (Layout)
+  setShowProfile,     // controlled by parent (Layout)
 }) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const handleLogout = Logout();
+
+  const { hasChild } = usePermissions();
+
+  const showDashboardShortcuts = hasChild("DashBoard", "DashBoard");
+  const showReports = hasChild("DashBoard", "Reports");
+
+  const links = [
+    // Only show Demands if DashBoard child is granted
+    showDashboardShortcuts ? { label: "Demands", to: "/demandsheet1" } : null,
+
+    // Reports only if granted
+    showReports ? { label: "Reports", to: "/Report" } : null,
+
+    // Only show Reports if user has DashBoard → Reports
+    hasChild("DashBoard", "Reports") ? { label: "Reports", to: "/Report" } : null,
+
+    // Only show Users if user has User Management → Users Sheet
+    hasChild("User Management", "Users Sheet")
+      ? { label: "Users", to: "/UserManagement" }
+      : null,
+
+    showDashboardShortcuts ? { label: "Track", to: "/ProfileTracker" } : null,
+    showDashboardShortcuts ? { label: "RDG", to: "/RDGTeam" } : null,
+    showDashboardShortcuts ? { label: "TA", to: "/TATeam" } : null,
+  ].filter(Boolean);
 
   return (
     <>
@@ -66,6 +93,7 @@ export default function NavBar({
           )}
         </div>
       </div>
+
       {/* navbar spacer */}
       <div className="h-14" />
 
