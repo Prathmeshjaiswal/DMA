@@ -12,6 +12,16 @@ export const createrole = async(payload) => {
 export const editrole = async(roleId,payload) => {
 console.log('[editRole] payload:', payload);
   const res = await api.put(`/user_management/${roleId}`, payload);
+  
+  console.log('[editRole] response status:', res.status);
+  console.log('[editRole] response headers:', res.headers);
+  console.log('[editRole] response data:', res.data); // 👈 log the body
+
+  // If backend sends 204 No Content, res.data will be undefined.
+  if (res.status === 204 || typeof res.data === 'undefined' || res.data === null) {
+    return { success: true, message: 'No content', data: null };
+  }
+
   console.log('editRole response status:', res.status);
   return res.data;
 }
