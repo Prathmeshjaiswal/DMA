@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
-import NavBar from "../../NavBar.jsx"
+// import Layout from  '../.Layout'
 import { getProfilesByDemandID } from '../../api/Trackers/getProfileTracker';
 import { getProfilesByDateRange } from '../../api/Trackers/getProfileTracker';
 import { DatePicker } from 'antd';
@@ -119,6 +119,7 @@ export default function ProfileTracker() {
   return (
       <>
 {/*        <NavBar /> */}
+{/* <Layout> */}
     <div className="p-4">
             <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
                 Profile Tracker
@@ -264,9 +265,7 @@ export default function ProfileTracker() {
         </table>
       </div>
     </div>
-      <footer className="mt-6 text-center text-sm text-black">
-        © Coforge, 2026 | Confidential
-      </footer>
+{/*       </Layout> */}
     </>
   );
 }

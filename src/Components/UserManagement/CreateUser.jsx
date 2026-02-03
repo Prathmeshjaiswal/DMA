@@ -4,168 +4,180 @@ import { CloseOutlined } from "@ant-design/icons";
 import NavBar from "../NavBar.jsx";
 
 import { createUser } from "../api/userApi.js";
-import {
-  getCountries,
-  getLocations,
-  getDepartments,
-  getSubDepartments,
-  getRoles,
-} from "../api/masterApi.js";
+import { getAllDropdowns } from "../api/masterApi.js";
+
+
+function normalizeSubDepartments(subDepartmentsByName, departments) {
+  const nameToId = new Map((departments || []).map((d) => [d.name, d.id]));
+  const flat = [];
+
+  Object.entries(subDepartmentsByName || {}).forEach(([deptName, items]) => {
+    const deptId = nameToId.get(deptName);
+    (items || []).forEach((sd) => {
+      flat.push({
+        ...sd,
+        // Prefer mapped id; fallback to nested department object if present
+        departmentId: deptId ?? sd.department?.id ?? null,
+      });
+    });
+  });
+
+  return flat;
+}
+
 
 export default function CreateUser() {
   const [form, setForm] = useState({
     userId: "",
+    name: "",
     emailId: "",
-    countryCode: "",
     phoneNumber: "",
-    role: "",
-    empName: "",
-    location: "",
-    department: "",
-    subDepartment: "",
+    countryId: "",
+    roleId: "",
+    locationId: "",
+    departmentId: "",
+    subdepartmentId: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
 
-  const [roles, setRoles] = useState([]);
-  const [countries, setCountries] = useState([]);
+  const [countryCodes, setCountries] = useState([]);
   const [locations, setLocations] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subDepartments, setSubDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [filteredSubDepartments, setFilteredSubDepartments] = useState([]);
 
-  /* ---------------- LOAD MASTER DATA ---------------- */
+  /* ---------- LOAD ALL DROPDOWNS ---------- */
   useEffect(() => {
     (async () => {
       try {
-        const [countryRes, locRes, deptRes, roleRes] = await Promise.all([
-          getCountries(),
-          getLocations(),
-          getDepartments(),
-          getRoles(),
-        ]);
+        const res = await getAllDropdowns();
+        const data = res.data;
+        console.log("Dropdowns:", data);
 
-        setCountries(countryRes.data || []);
-        setLocations(locRes.data || []);
-        setDepartments(deptRes.data || []);
-        setRoles(roleRes.data || []);
-      } catch (e) {
-        message.error("Failed to load master data");
+       
+   setCountries(data.countryCodes || []);
+        setLocations(data.locations || []);
+        setDepartments(data.departments || []);
+        const normalizedSubDepts = normalizeSubDepartments(
+          data.subDepartments,
+          data.departments
+        );
+        setSubDepartments(normalizedSubDepts);
+
+        setRoles(data.roles || []);
+      } catch {
+        message.error("Failed to load dropdown data");
       }
     })();
   }, []);
 
-  /* ---------------- HANDLERS ---------------- */
+  
+  /* ---------- COMMON CHANGE ---------- */
   const onChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((p) => ({ ...p, [name]: value }));
   };
+  
 
-  const handleDepartmentChange = async (e) => {
-    const departmentId = e.target.value;
-
-    setForm((prev) => ({
-      ...prev,
-      department: departmentId,
-      subDepartment: "",
+  /* ---------- DEPT → SUB-DEPT ---------- */
+   const handleDepartmentChange = (e) => {
+    const departmentId = Number(e.target.value);
+ 
+    setForm((p) => ({
+      ...p,
+      departmentId,
+      subdepartmentId: "",
     }));
-
-    try {
-      const res = await getSubDepartments(departmentId);
-      setSubDepartments(res.data || []);
-    } catch {
-      message.error("Failed to load sub-departments");
-    }
+ 
+    const filtered = subDepartments.filter(
+      (sd) => Number(sd.departmentId) === departmentId
+    );
+    setFilteredSubDepartments(filtered);
   };
+  
+ // Keep filtered sub-departments in sync if options load later
+  useEffect(() => {
+    if (!form.departmentId) {
+      setFilteredSubDepartments([]);
+      return;
+    }
+    const filtered = subDepartments.filter(
+      (sd) => Number(sd.departmentId) === Number(form.departmentId)
+    );
+    setFilteredSubDepartments(filtered);
+  }, [form.departmentId, subDepartments]);
 
+ 
   const handleAddMore = () => {
     setForm({
       userId: "",
+      name: "",
       emailId: "",
-      countryCode: "",
       phoneNumber: "",
-      role: "",
-      empName: "",
-      location: "",
-      department: "",
-      subDepartment: "",
+      countryId: "",
+      roleId: "",
+      locationId: "",
+      departmentId: "",
+      subdepartmentId: "",
     });
-    setSubDepartments([]);
+    setFilteredSubDepartments([]);
   };
-
-  /* ---------------- SUBMIT ---------------- */
+ 
+ 
+  /* ---------- SUBMIT ---------- */
   const onSubmit = async (e) => {
     e.preventDefault();
+    
+// Basic guard
+    if (!form.departmentId || !form.subdepartmentId) {
+      message.warning("Please select Department and Sub-department");
+      return;
+    }
+
+ 
+    const payload = {
+      userId: form.userId,
+      name: form.name,
+      emailId: form.emailId,
+      phoneNumber: form.phoneNumber,
+      countryId: Number(form.countryId),
+      roleId: Number(form.roleId),
+      locationId: Number(form.locationId),
+      departmentId: Number(form.departmentId),
+      subdepartmentId: Number(form.subdepartmentId),
+    };
+ 
     try {
       setSubmitting(true);
-
-      const payload = {
-        userId: form.userId,
-        empName: form.empName,
-        emailId: form.emailId,
-        countryCode: form.countryCode,
-        phoneNumber: form.phoneNumber,
-        role: form.role,
-        location: form.location,
-        department: form.department,
-        subDepartments: form.subDepartment,
-
-
-      };
-
-      const data = await createUser(payload);
-
-      if (data?.success) {
-        const hide = message.success({
-          duration: 0,
-          content: (
-            <div className="flex items-center justify-between gap-4">
-              <span>
-                Temporary password:
-                <strong className="ml-2 font-mono">
-                  {data.data.tempPassword}
-                </strong>
-              </span>
-              <Button
-                size="small"
-                type="text"
-                icon={<CloseOutlined />}
-                onClick={() => hide()}
-              />
-            </div>
-          ),
-        });
-
-        const createdOn = new Date().toISOString();
-
-        const combinedUser = {
-          ...form,
-          createdOn,
-          active: true,
-        };
-
-        const existingUsers =
-          JSON.parse(localStorage.getItem("users")) || [];
-
-        const filtered = existingUsers.filter(
-          (u) => u.userId !== combinedUser.userId
-        );
-
-        localStorage.setItem(
-          "users",
-          JSON.stringify([...filtered, combinedUser])
-        );
-      } else {
-        message.error(data?.message || "Create user failed");
-      }
+      const res = await createUser(payload);
+ 
+      const hide = message.success({
+        duration: 0,
+        content: (
+          <div className="flex items-center justify-between gap-4">
+            <span>
+              Temporary password:
+              <strong className="ml-2 font-mono">
+                {res?.data?.tempPassword}
+              </strong>
+            </span>
+            <Button
+              size="small"
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={() => hide()}
+            />
+          </div>
+        ),
+      });
     } catch (err) {
-      message.error(
-        err?.response?.data?.message || "Create user failed"
-      );
+      message.error(err?.response?.dropdowns?.message || "Create user failed");
     } finally {
       setSubmitting(false);
     }
   };
-
 
 
 
@@ -175,8 +187,8 @@ export default function CreateUser() {
       <NavBar />
 
       {/* Page bg + center container */}
-      <div className="min-h-[calc(100vh-64px)] bg-gray-50 mt-[-50px]">
-        <main className="mx-auto w-full max-w-[520px] md:max-w-[640px] px-4 py-6">
+      <div className="bg-gray-50 mt-2px">
+        <main className="mx-auto w-full max-w-[520px] md:max-w-[640px] px-4">
           <div className="rounded-2xl bg-white shadow-md border border-gray-100 overflow-hidden">
             {/* Sticky card header (optional) */}
             <div className="px-5 md:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
@@ -205,7 +217,7 @@ export default function CreateUser() {
                 <input
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                  focus:outline-none focus:ring-2 focus:ring-blue-700"
-                  name="empName" value={form.empName} onChange={onChange} placeholder="Employee Name" required
+                  name="name" value={form.name} onChange={onChange} placeholder="Employee Name" required
                 />
 
                 {/* Email */}
@@ -224,10 +236,10 @@ export default function CreateUser() {
                 <select
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                  name="location" value={form.location} onChange={onChange} required>
+                  name="locationId" value={form.locationId} onChange={onChange} required>
                   <option value="" disabled>Select Location</option>
                   {locations.map((l) => (
-                    <option key={l.id} value={l.code}>{l.name}</option>
+                    <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
                 </select>
 
@@ -236,8 +248,11 @@ export default function CreateUser() {
                   <select
                     className="w-[92px] rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                   text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                    name="countryCode" value={form.countryCode} onChange={onChange}>
-                    <option value="+91">+91</option>
+                    name="countryId" value={form.countryId} onChange={onChange}>
+                    <option value="" disabled>Select</option>
+                    {countryCodes.map((c)=>(
+                      <option key={c.id} value={c.id}>{c.callingCode}</option>  
+                    ))}
                   </select>
 
                   <input
@@ -250,7 +265,7 @@ export default function CreateUser() {
                 <select
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                  value={form.department} onChange={handleDepartmentChange} required>
+                  value={form.departmentId} onChange={handleDepartmentChange} required>
                   <option value="" disabled>Select Department</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -261,15 +276,15 @@ export default function CreateUser() {
                 <select
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 disabled:opacity-60"
-                  value={form.subDepartment}
+                  value={form.subdepartmentId}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, subDepartment: e.target.value }))
+                    setForm((p) => ({ ...p, subdepartmentId:e.target.value === "" ? "" : Number(e.target.value), }))
                   }
-                  disabled={!form.department}
+                  disabled={!form.departmentId}
                   required
                 >
                   <option value="" disabled>Select Sub-department</option>
-                  {subDepartments.map((sd) => (
+                  {filteredSubDepartments.map((sd) => (
                     <option key={sd.id} value={sd.id}>{sd.name}</option>
                   ))}
                 </select>
@@ -278,14 +293,14 @@ export default function CreateUser() {
                 <select
                   className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 
                 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-700 md:col-span-2"
-                  name="role"
-                  value={form.role}
+                  name="roleId"
+                  value={form.roleId}
                   onChange={onChange}
                   required
                 >
                   <option value="" disabled>Select Role</option>
                   {roles.map((r) => (
-                    <option key={r.id} value={r.role}>{r.role}</option>
+                    <option key={r.id} value={r.id}>{r.role}</option>
                   ))}
                 </select>
 

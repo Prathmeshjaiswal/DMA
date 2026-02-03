@@ -1,4 +1,5 @@
 import api from '../client';
+
 export const submitStep1 = async (form1Data) => {
   const params = new URLSearchParams();
   Object.entries(form1Data).forEach(([key, value]) => {
@@ -9,30 +10,9 @@ export const submitStep1 = async (form1Data) => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
   });
 
-  console.log('[submitStep1] response status:', res.status);
+  console.log('[submitStep1] response status:', res.data);
   return res.data;
 };
-
-
-//export const submitStep2 = async ({ addNewDemandDTO, file = null }) => {
-//  const formData = new FormData();
-//  if (file) {
-//    formData.append('file', file);
-//  }
-//
-//  const dtoBlob = new Blob([JSON.stringify(addNewDemandDTO)], {
-//    type: 'application/json',
-//  });
-//  formData.append('addNewDemandDTO', dtoBlob);
-//
-//  const res = await api.post('/addNewDemand/step2', formData, {
-//    headers: { 'Content-Type': undefined },
-//
-//  });
-//
-//  console.log('[submitStep2] response status:', res.status);
-//  return res.data;
-//};
 
 
 
@@ -55,15 +35,11 @@ export const submitStep2 = async (payload) => {
     }
 
     formData = new FormData();
-
-    // ---- Files ----
-    // Legacy single file (append to both 'file' and 'files' for compatibility)
     if (file) {
       formData.append('file', file);
       formData.append('files', file, file.name);
     }
 
-    // Multiple files (append each under 'files')
     if (Array.isArray(files) && files.length) {
       files.forEach((f) => {
         if (f) formData.append('files', f, f.name);
@@ -105,7 +81,7 @@ export const getDropDownData = async () => {
     headers: { Accept: 'application/json' },
   });
 
-  console.log('[getHome] response status:', res.status);
+  console.log('[getDropDownData of Add Data] response status:', res.data);
 
   // If backend returns { status, message, data }, unwrap data; else return as-is
   return res.data?.data ?? res.data;

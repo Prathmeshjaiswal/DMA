@@ -1,17 +1,6 @@
 
 import React from "react";
 
-/**
- * ColumnsPanel
- *
- * Props:
- * - columnsEnabled: boolean
- * - setColumnsEnabled: (boolean) => void
- * - ALL_COLUMNS: Array<{ key: string, label: string, alwaysVisible?: boolean }>
- * - visibleColumns: string[]
- * - toggleColumn: (key: string) => void
- * - className?: string
- */
 export default function ColumnsPanel({
   columnsEnabled,
   setColumnsEnabled,

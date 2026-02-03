@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Upload, Button, message,Select } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined,DownloadOutlined } from "@ant-design/icons";
 import { makeGetFieldOptions } from "./dropDownOptions";
 import { submitUpdateDemand } from "../../api/Demands/updateDemands"; 
 
@@ -190,7 +190,7 @@ const toDisplayString = (arr) => (Array.isArray(arr) ? arr.join(', ') : String(a
               </td>
             );
           }
-            const multiSelectFields = new Set(['skillCluter', 'primarySkills', 'secondarySkills']);
+            const multiSelectFields = new Set(['skillCluster', 'primarySkills', 'secondarySkills']);
             const apiOpts = getFieldOptions(col.key);
             const isMulti = multiSelectFields.has(col.key);
 
@@ -292,10 +292,9 @@ const toDisplayString = (arr) => (Array.isArray(arr) ? arr.join(', ') : String(a
             disabled={isSaving}
           >
             <Button size="small" icon={<UploadOutlined />} disabled={isSaving}>
-              Attach file
+              Attach JD
             </Button>
           </Upload>
-
           <button
             type="button"
             onClick={handleSave}
