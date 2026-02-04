@@ -26,6 +26,12 @@ import EditUser from './Components/UserManagement/EditUser.jsx'
 // ⬇️ NEW: route-level permission guard
 import RequirePermission from './Components/Auth/RequirePermission.jsx'
 
+
+
+// ⬇️✅ NEW: import the minimal Drafts page
+import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx' // <-- adjust path if needed
+
+
 function App() {
   return (
     <>
@@ -131,9 +137,13 @@ function App() {
           />
 
           {/* Other demand-related routes remain auth-only for now */}
-          <Route path="/adddemands2" element={<ProtectedRoute><AddDemands2/></ProtectedRoute>}/>
-          <Route path="/adddemands1" element={<ProtectedRoute><AddDemands1/></ProtectedRoute>}/>
+          <Route path="/adddemands2" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><AddDemands2/></RequirePermission></ProtectedRoute>}/>
+          <Route path="/adddemands1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><AddDemands1/></RequirePermission></ProtectedRoute>}/>
           
+          
+ {/* ⬇️✅ NEW: Minimal Drafts route (protected) */}
+          <Route path="/drafts1" element={<ProtectedRoute><Draft1/></ProtectedRoute>} />
+
           <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/>
 
 
