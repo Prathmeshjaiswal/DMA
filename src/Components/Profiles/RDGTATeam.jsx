@@ -463,12 +463,12 @@ export default function RDGTATeam() {
       <section className={cardWrap}>
         <SectionTitle>Add Profile</SectionTitle>
 
-        {/* Profile Type info (read-only display if present) */}
+        {/* Profile Type info (read-only display if present)
         {resolvedProfileType ? (
           <div className="mt-2 text-[12px] text-gray-600">
             Profile Type: <span className="font-semibold">{resolvedProfileType}</span>
           </div>
-        ) : null}
+        ) : null} */}
 
         <form onSubmit={onSubmit} noValidate>
           {/* Basics */}
