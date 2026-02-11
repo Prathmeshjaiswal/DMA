@@ -205,6 +205,7 @@ export default function RoleManagement() {
       const list = asArray(res?.data ?? res);
 
       const mapped = list.map((role) => {
+        // normalize active
         const active =
           typeof role.active === "boolean"
             ? role.active
@@ -354,6 +355,34 @@ export default function RoleManagement() {
     );
   };
 
+  // ---------- NEW helpers to pick the right createdBy/updatedBy from different shapes ----------
+  // UPDATED: handle backend keys like createBy, createdBy, created_by, etc.
+  const pickFirst = (obj, keys) =>
+    keys.reduce((val, k) => (val != null ? val : obj?.[k]), undefined);
+
+  const getCreatedByValue = (rec) =>
+    // UPDATED: prefer createdBy, else createBy (as in your sample), with common fallbacks
+    pickFirst(rec, [
+      "createdBy",
+      "createBy",       // your sample response
+      "created_by",
+      "createdby",
+      "createdUser",
+      "created_user",
+    ]);
+
+  const getUpdatedByValue = (rec) =>
+    // UPDATED: prefer updatedBy, else updateBy, with fallbacks
+    pickFirst(rec, [
+      "updatedBy",     // your sample response
+      "updateBy",
+      "updated_by",
+      "updatedby",
+      "updatedUser",
+      "updated_user",
+    ]);
+  // ---------------------------------------------------------------------------------------------
+
   /** columns: Table columns with permission-aware actions. */
   const columns = [
     {
@@ -370,7 +399,7 @@ export default function RoleManagement() {
       title: "Created By",
       key: "createdBy",
       width: 180,
-      render: (_, record) => renderUserCell(record.createdBy, "Unknown"),
+      render: (_, record) => renderUserCell(getCreatedByValue(record), "Unknown"), // UPDATED
     },
     {
       title: "Created At",
@@ -385,7 +414,7 @@ export default function RoleManagement() {
       title: "Updated By",
       key: "updatedBy",
       width: 180,
-      render: (_, record) => renderUserCell(record.updatedBy, "Unknown"),
+      render: (_, record) => renderUserCell(getUpdatedByValue(record), "Unknown"), // UPDATED
     },
     {
       title: "Updated At",
@@ -507,7 +536,6 @@ export default function RoleManagement() {
             padding: 6px 8px !important; background: #f8fafc; font-weight: 600;
           }
           .compact-table .ant-table-tbody > tr > td { padding: 6px 8px !important; }
-          .compact-table .ant-table-tbody > tr > td .ant-tag { line-height: 18px; padding: 0 6px; }
           .compact-table .ant-table-tbody > tr:hover > td { background: #fcfcff; }
           .compact-table .ant-table-placeholder { padding: 12px !important; }
           .compact-table .ant-pagination { margin: 8px 0 0 0; }
