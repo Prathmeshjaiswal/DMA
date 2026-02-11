@@ -1,51 +1,9 @@
-// import React from "react";
-// import NavBar from "./NavBar";
-// import Footer from "./Footer";
-
-
-
-// export default function Layout({ children }) {
-//   return (
-//     <div className="flex flex-col min-h-screen">
-//         <NavBar/>
-//         <main className="flex-grow">
-//             {children}
-//         </main>
-//         <Footer/>
-
-//     </div>
-  
-//   );
-// }
-
-
-
-// import React from "react";
-// import NavBar from "./NavBar";
-// import Footer from "./Footer";
-//
-//
-//
-// export default function Layout({ children }) {
-//   return (
-//     <div className="flex flex-col max-h-screen">
-//         <NavBar/>
-//         <main className="flex-grow">
-//             {children}
-//         </main>
-//         <Footer/>
-//
-//     </div>
-//
-//   );
-// }
-
 
 // Layout.jsx
 import React, { useState } from "react";
 import NavBar from "./NavBar";
 import Footer from "./Footer";
-import Sliderbar from "./Sliderbar"; // ensure file name matches (not "Sliderbar")
+import Sliderbar from "./Sliderbar";
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,8 +12,9 @@ export default function Layout({ children }) {
   const SIDEBAR_WIDTH = 256; // must match Sidebar width prop
 
   return (
-    <div className="h-full">
-      {/* Top bar */}
+    // Full viewport height + vertical flex
+    <div className="min-h-dvh flex flex-col">
+      {/* Fixed top bar */}
       <NavBar
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((s) => !s)}
@@ -64,28 +23,34 @@ export default function Layout({ children }) {
         setShowProfile={setShowProfile}
       />
 
-      {/* Sidebar */}
+      {/* Sidebar (overlay or pushed) */}
       <Sliderbar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         width={SIDEBAR_WIDTH}
       />
 
-      {/* Push content when sidebar is open */}
+      {/* Spacer already in NavBar: <div className="h-14" /> so content won't go under fixed header */}
+
+      {/* Content area: grows to fill space; pushes footer down */}
       <main
-        className="transition-all duration-300"
+        className="flex-1 transition-all duration-300"
         style={{
           marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0,
         }}
       >
-        {/* Your routed pages */}
-        <div className="flex flex-col "> {/* account for navbar height */}
-          <div className="flex-grow">
-            {children}
-          </div>
-          <Footer />
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          {children}
         </div>
       </main>
+
+      {/* Footer: mt-auto ensures it sticks to bottom when content is short */}
+      <div
+        className="transition-all duration-300"
+        style={{ marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0 }}
+      >
+        <Footer />
+      </div>
     </div>
   );
 }
