@@ -38,15 +38,48 @@ const selectStyles = {
   control: (base, state) => ({
     ...base,
     minHeight: 34,
-    height: 34,
+    height: "auto", 
     borderColor: state.isFocused ? "#111827" : "#D1D5DB",
     boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
     ":hover": { borderColor: "#111827" },
   }),
-  valueContainer: (base) => ({ ...base, padding: "2px 8px", fontSize: 13 }),
+  valueContainer: (base) => ({ ...base, 
+    padding: "2px 8px",
+     fontSize: 13,
+     
+flexWrap: "wrap",                  // UPDATED: wrap the selected chips
+    maxHeight: 84,                     // UPDATED: cap height (3 rows approx)
+    overflowY: "auto",                 // UPDATED: internal scroll when overflowing
+    gap: 4,
+
+
+   }),
+  // indicatorsContainer: (base) => ({ ...base, paddingRight: 6 }),
+  // menu: (base) => ({ ...base, fontSize: 13 }),
+
+  
+multiValue: (base) => ({
+    ...base,
+    backgroundColor: "#F3F4F6",       // subtle tag bg
+    border: "1px solid #E5E7EB",
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    fontSize: 12,
+    paddingRight: 6,
+  }),
+  
+multiValueRemove: (base) => ({
+    ...base,
+    ':hover': { backgroundColor: "#EF4444", color: "white" },
+  }),
   indicatorsContainer: (base) => ({ ...base, paddingRight: 6 }),
-  menu: (base) => ({ ...base, fontSize: 13 }),
+  menu: (base) => ({ ...base, fontSize: 13, zIndex: 9999 }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),   // UPDATED: above modals/parents
 };
+
+
+
 
 /* ------------------------ HELPERS ------------------------ */
 function tryJson(s) {
@@ -655,8 +688,10 @@ export default function RDGTATeam() {
                   value={form.primarySkills}
                   onChange={(selected) => setForm({ ...form, primarySkills: selected || [] })}
                   placeholder="Select"
+                   classNamePrefix="rs" 
                   className="mt-1"
                   styles={selectStyles}
+                  menuPortalTarget={document.body}
                 />
               </div>
 
@@ -672,7 +707,9 @@ export default function RDGTATeam() {
                   onChange={(selected) => setForm({ ...form, secondarySkills: selected || [] })}
                   placeholder="Select"
                   className="mt-1"
+                   classNamePrefix="rs" 
                   styles={selectStyles}
+                  menuPortalTarget={document.body}
                 />
               </div>
             </div>
