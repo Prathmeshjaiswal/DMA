@@ -437,7 +437,7 @@ export default function EditUser() {
     <>
       <Layout >
 
-      <div className="min-h-[calc(100vh-64px)] bg-gray-50 mt-[-40px]">
+      <div className=" mt-[-30px]">
         <main className="mx-auto w-full max-w-[720px] px-4 py-6">
           <div className="rounded-2xl bg-white shadow-md border border-gray-100 overflow-hidden">
             <div className="px-5 md:px-6 py-4 border-b border-gray-100 text-center">
