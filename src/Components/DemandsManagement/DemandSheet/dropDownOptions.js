@@ -32,7 +32,7 @@ export function makeGetFieldOptions(dropdowns) {
     // Map each UI field to: which list to read, and which property inside each item to use
     const map = {
       lob:             { listKey: "lobList",              itemField: "lob" },
-      skillCluter:     { listKey: "skillClusterList",     itemField: "skillCluster" }, // tolerate backend typo
+      skillCluster:     { listKey: "skillClusterList",     itemField: "skillCluster" }, // tolerate backend typo
       primarySkills:   { listKey: "primarySkillsList",    itemField: "primarySkills" }, // adjust to "primarySkill" if needed
       secondarySkills: { listKey: "secondarySkillsList",  itemField: "secondarySkills" }, // adjust to "secondarySkill" if needed
       demandType:      { listKey: "demandTypeList",       itemField: "demandType" },

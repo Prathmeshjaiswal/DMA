@@ -1,4 +1,11 @@
+// ================== options helpers (safe & generic) ==================
 
+/**
+ * Generic: turn any list of primitives or objects into [{label, value}]
+ * - For objects, it uses the first available of:
+ *   value:  x.value | x.id | x.code | x.key | x.name | x.label | x.title | x.displayName
+ *   label:  x.label | x.name | x.displayName | x.title | (valueCandidate)
+ */
 export function toOptions(arr) {
   if (!Array.isArray(arr)) return [];
 
@@ -32,6 +39,10 @@ export function toOptions(arr) {
     .filter(Boolean);
 }
 
+/**
+ * If you truly need to extract a sub-field from each item first (rare now),
+ * keep this helper—but prefer passing the whole list directly to toOptions().
+ */
 export function listToOptionsByField(list = [], itemField) {
   const values = Array.isArray(list)
     ? list
@@ -41,87 +52,52 @@ export function listToOptionsByField(list = [], itemField) {
   return toOptions(values);
 }
 
-export function makeGetFieldOptions(dropdowns) {
-  return function getFieldOptions(field) {
-    // Map each UI field to: backend list key + the item property to pull from each object.
-    // If your list items are { id, name }, change itemField to "name" for that list.
-    const map = {
-      lob:              { listKey: "lobList",               itemField: "lob" },
+/**
+ * Build all options in one shot—safe defaults & tolerant keys.
+ * NOTE:
+ * - We pass the whole list directly to toOptions(), so {id,name} works out of the box.
+ * - We support both demandTimelineList & demandTimeLineList.
+ */
+export function buildAllOptions(dropdowns) {
+  const d = dropdowns || {};
 
-      skillCluster:     { listKey: "skillClusterList",      itemField: "skillCluster" },
+  // Support both timeline key variants
+  const demandTimelineRaw =
+    d.demandTimelineList ?? d.demandTimeLineList ?? [];
 
-      primarySkills:    { listKey: "primarySkillsList",     itemField: "primarySkills" },   // or "primarySkill"
-      secondarySkills:  { listKey: "secondarySkillsList",   itemField: "secondarySkills" }, // or "secondarySkill"
+  return {
+    lob:              toOptions(d.lobList               ?? []),
+    skillCluster:     toOptions(d.skillClusterList      ?? []),
+    primarySkills:    toOptions(d.primarySkillsList     ?? []),
+    secondarySkills:  toOptions(d.secondarySkillsList   ?? []),
+    demandType:       toOptions(d.demandTypeList        ?? []),
+    demandTimeline:   toOptions(demandTimelineRaw),
+    externalInternal: toOptions(d.externalInternalList  ?? []),
+    status:           toOptions(d.statusList            ?? []),
+    hbu:              toOptions(d.hbuList               ?? []),
 
-      demandType:       { listKey: "demandTypeList",        itemField: "demandType" },
-      demandTimeline:   { listKey: "demandTimeLineList",    itemField: "demandTimeLine" }, // note: TimeLine in list key
+    // People/org (works if items are { id, name } or similar)
+    hiringManager:    toOptions(d.hiringManagerList     ?? []),
+    deliveryManager:  toOptions(d.deliveryManagerList   ?? []),
+    salesSpoc:        toOptions(d.salesSpocList         ?? []),
+    pmo:              toOptions(d.pmoList               ?? []),
+    pmoSpoc:          toOptions(d.pmoSpocList           ?? []),
 
-      externalInternal: { listKey: "externalInternalList",  itemField: "externalInternal" },
-      status:           { listKey: "statusList",            itemField: "status" },
-
-      hbu:              { listKey: "hbuList",               itemField: "hbu" },
-
-      // People/org lists — switch itemField to 'name' if items are { id, name }
-      hiringManager:    { listKey: "hiringManagerList",     itemField: "hiringManager" },
-      deliveryManager:  { listKey: "deliveryManagerList",   itemField: "deliveryManager" },
-      salesSpoc:        { listKey: "salesSpocList",         itemField: "salesSpoc" },
-      pmo:              { listKey: "pmoList",               itemField: "pmo" },
-      pmoSpoc:          { listKey: "pmoSpocList",           itemField: "pmoSpoc" },
-    };
-
-    const config = map[field];
-    if (!config || !dropdowns) return [];
-
-    const { listKey, itemField } = config;
-    const raw = dropdowns?.[listKey];
-
-    if (!Array.isArray(raw)) return [];
-
-    return listToOptionsByField(raw, itemField);
+    // Add others as needed:
+    demandLocation:   toOptions(d.demandLocationList    ?? d.locationList ?? []),
+    band:             toOptions(d.bandList              ?? []),
+    priority:         toOptions(d.priorityList          ?? []),
+    pod:              toOptions(d.podList               ?? d.prodProgramNameList ?? []),
   };
 }
 
 /**
- * Convenience: build all options at once into a single object.
- * Keeps your component tidy (no many useMemo calls).
- *
- * @param {Record<string, any>} dropdowns
- * @returns {Record<string, {label:string, value:any}[]>}
+ * Optional: per-field getter if you like that style.
+ * Internally it now just calls buildAllOptions() and returns the right set.
  */
-export function buildAllOptions(dropdowns) {
-  if (!dropdowns) {
-    return {
-      lob: [],
-      skillCluster: [],
-      primarySkills: [],
-      secondarySkills: [],
-      demandType: [],
-      demandTimeline: [],
-      externalInternal: [],
-      status: [],
-      hbu: [],
-      hiringManager: [],
-      deliveryManager: [],
-      salesSpoc: [],
-      pmo: [],
-      pmoSpoc: [],
-    };
-  }
-
-  return {
-    lob:              listToOptionsByField(dropdowns.lobList               ?? [], "lob"),
-    skillCluster:     listToOptionsByField(dropdowns.skillClusterList      ?? [], "skillCluster"),
-    primarySkills:    listToOptionsByField(dropdowns.primarySkillsList     ?? [], "primarySkills"),   // or "primarySkill"
-    secondarySkills:  listToOptionsByField(dropdowns.secondarySkillsList   ?? [], "secondarySkills"), // or "secondarySkill"
-    demandType:       listToOptionsByField(dropdowns.demandTypeList        ?? [], "demandType"),
-    demandTimeline:   listToOptionsByField(dropdowns.demandTimeLineList    ?? [], "demandTimeLine"),
-    externalInternal: listToOptionsByField(dropdowns.externalInternalList  ?? [], "externalInternal"),
-    status:           listToOptionsByField(dropdowns.statusList            ?? [], "status"),
-    hbu:              listToOptionsByField(dropdowns.hbuList               ?? [], "hbu"),
-    hiringManager:    listToOptionsByField(dropdowns.hiringManagerList     ?? [], "hiringManager"),   // switch to 'name' if needed
-    deliveryManager:  listToOptionsByField(dropdowns.deliveryManagerList   ?? [], "deliveryManager"), // switch to 'name' if needed
-    salesSpoc:        listToOptionsByField(dropdowns.salesSpocList         ?? [], "salesSpoc"),       // switch to 'name' if needed
-    pmo:              listToOptionsByField(dropdowns.pmoList               ?? [], "pmo"),             // switch to 'name' if needed
-    pmoSpoc:          listToOptionsByField(dropdowns.pmoSpocList           ?? [], "pmoSpoc"),         // switch to 'name' if needed
+export function makeGetFieldOptions(dropdowns) {
+  const all = buildAllOptions(dropdowns);
+  return function getFieldOptions(field) {
+    return all[field] ?? [];
   };
 }

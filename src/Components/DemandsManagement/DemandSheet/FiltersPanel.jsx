@@ -1,20 +1,5 @@
-
 import React from "react";
 
-/**
- * FiltersPanel
- *
- * Props:
- * - filtersEnabled: boolean
- * - setFiltersEnabled: (boolean) => void
- * - filters: Record<string, string>                 // current values
- * - setFilters: (updaterFn) => void                 // e.g., setFilters(prev => ({...prev, key: val}))
- * - enabledFilterFields: Record<string, boolean>    // which filter fields are on
- * - toggleFilterField: (key: string) => void
- * - ALL_COLUMNS: Array<{ key: string, label: string }>
- * - SELECT_OPTIONS: Record<string, string[]>        // select options per key
- * - className?: string
- */
 export default function FiltersPanel({
   filtersEnabled,
   setFiltersEnabled,

@@ -24,6 +24,7 @@ import UserManagement from './Components/UserManagement/UserManagement.jsx'
 import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
 import EditUser from './Components/UserManagement/EditUser.jsx'
 import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
+import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx'
 
 
 
@@ -31,9 +32,7 @@ import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
 
 // ⬇️ NEW: route-level permission guard
 import RequirePermission from './Components/Auth/RequirePermission.jsx'
-
-// ⬇️✅ NEW: import the minimal Drafts page
-import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx' // <-- adjust path if needed
+// <-- adjust path if needed
 
 // ⬇️ add a tiny component (inline) for unauthorized page, or create a separate file if you prefer
 const Unauthorized = () => (
