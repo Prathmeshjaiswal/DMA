@@ -1,887 +1,31 @@
-//
-// import React, { useState, useEffect, useMemo } from "react";
-// import { useNavigate } from "react-router-dom";
-// import Layout from "../../Layout.jsx";
-// import Select, { components } from "react-select";
-// import { message, Spin } from "antd";
-// import DatePicker from "react-datepicker";
-// import "react-datepicker/dist/react-datepicker.css";
-// import {
-//   LoadingOutlined,
-//   AppstoreOutlined,         // Basics
-//   ToolOutlined,             // Skills
-//   TeamOutlined,             // People
-//   ProjectOutlined,          // Business
-//   ScheduleOutlined,         // Timeline
-//   EnvironmentOutlined,      // Location
-//   BarsOutlined,             // Band
-//   CalendarOutlined          // Date
-// } from "@ant-design/icons";
-// import { format } from "date-fns";
-//
-// import { buildAllOptions } from "../DemandSheet/dropdown.js";
-// import { getDropDownData, submitStep1 } from "../../api/Demands/addDemands.js";
-//  import { saveStep1Draft } from "../../api/Demands/draft.js";
-//
-// const todayStr = () => format(new Date(), "dd-MMM-yyyy");
-//
-// // React-Select list option with a checkbox
-// const CheckboxOption = (props) => (
-//   <components.Option {...props}>
-//     <div className="flex items-center justify-between">
-//       <span>{props.label}</span>
-//       <input type="checkbox" checked={props.isSelected} readOnly />
-//     </div>
-//   </components.Option>
-// );
-//
-// // Small section header with icon
-// const SectionHeader = ({ icon, title, helper }) => (
-//   <div className="flex items-center gap-2 mt-1 mb-3 ml-4 ">
-//     <span className="text-gray-700">{icon}</span>
-//     <h2 className="text-sm font-bold text-gray-900">{title}</h2>
-//     {helper ? <span className="text-xs text-gray-500">• {helper}</span> : null}
-//   </div>
-// );
-//
-// /**
-//  * Reusable: Dropdown that toggles to a pure text input when user selects “Other”.
-//  * - When “Other” is chosen, dropdown is hidden and only a text input is shown
-//  * - No placeholder and the input is empty initially
-//  * - The same bound value is used for both modes
-//  */
-// function SelectOrText({
-//   label,
-//   name,
-//   value,
-//   onChange,
-//   optionsList,
-//   placeholder = "Select",
-// }) {
-//   const [isOther, setIsOther] = useState(false);
-//
-//   // If current value is not in options, treat it as “Other”
-//   useEffect(() => {
-//     const list = Array.isArray(optionsList) ? optionsList : [];
-//     const found = list.some((o) => String(o.value) === String(value));
-//     if (value && !found) {
-//       setIsOther(true);
-//     }
-//   }, [optionsList, value]);
-//
-//   if (isOther) {
-//     return (
-//       <div>
-//         {label ? <label className="block text-xs font-medium text-gray-700">{label}</label> : null}
-//         <div className="mt-1 flex items-center gap-2">
-//           <input
-//             className="w-full h-10 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-//             name={name}
-//             value={value || ""}   // empty by default
-//             onChange={(e) => onChange(e.target.value)}
-//           />
-//           <button
-//             type="button"
-//             className="text-xs text-gray-600 underline hover:text-gray-900"
-//             onClick={() => {
-//               setIsOther(false);
-//               onChange(""); // clear when switching back to dropdown
-//             }}
-//           >
-//             Back to list
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   }
-//
-//   return (
-//     <div>
-//       {label ? <label className="block text-xs font-medium text-gray-700">{label}</label> : null}
-//       <select
-//         className="w-full h-10 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 mt-1"
-//         value={value || ""}
-//         onChange={(e) => {
-//           const v = e.target.value;
-//           if (v === "__other__") {
-//             setIsOther(true);
-//             onChange(""); // switch to empty text input
-//           } else {
-//             onChange(v);
-//           }
-//         }}
-//       >
-//         <option value="">{placeholder}</option>
-//         {(Array.isArray(optionsList) ? optionsList : []).map((o) => (
-//           <option key={String(o.value)} value={String(o.value)}>
-//             {o.label}
-//           </option>
-//         ))}
-//         <option value="__other__">Other (Specify)</option>
-//       </select>
-//     </div>
-//   );
-// }
-//
-//
-// export default function AddDemands1() {
-//   const navigate = useNavigate();
-//
-//   // Minimalist tokens
-//   const labelCls = "block text-xs font-medium text-gray-700";
-//   const inputCls =
-//     "w-full h-10 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900";
-//
-//   const [loading, setLoading] = useState(false);
-//   const [dropdowns, setDropdowns] = useState(null);
-//
-//   const [form, setForm] = useState({
-//     // Basics
-//     lob: "",
-//     noOfPositions: "1",
-//     // Skills
-//     skillCluster: [],
-//     primarySkills: [],
-//     secondarySkills: [],
-//     // People (single string each: either option value or free text)
-//     hiringManager: "",
-//     deliveryManager: "",
-//     pm: "",
-//     // Business
-//     salesSpoc: "",
-//     pmo: "",
-//     hbu: "",
-//     // Demand details
-//     demandTimeline: "",  // defaulted to "Current" after options load
-//     demandType: "",      // defaulted to "New" after options load
-//     demandLocation: [],  // checkbox pills
-//     // Other
-//     band: "",
-//     priority: "",
-//     demandReceivedDate: todayStr(),
-//     remark: "",
-//   });
-//
-//   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
-//
-//   useEffect(() => {
-//     let mounted = true;
-//     (async () => {
-//       try {
-//         const dd = await getDropDownData();
-//         if (mounted) setDropdowns(dd);
-//       } catch (e) {
-//         console.error("Failed to load dropdowns:", e);
-//         message.error("Failed to load form data. Please refresh.");
-//       } finally {
-//         if (mounted) setDropdownsLoaded(true);
-//       }
-//     })();
-//     return () => {
-//       mounted = false;
-//     };
-//   }, []);
-//
-//   const options = useMemo(() => buildAllOptions(dropdowns), [dropdowns]);
-//
-//   const safe = (arr) => (Array.isArray(arr) ? arr : []);
-//   const strVal = (v) => (v === null || v === undefined ? "" : String(v));
-//
-//   const handleChange = (e) => {
-//     const { name, value, type } = e.target;
-//     setForm((prev) => ({
-//       ...prev,
-//       [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-//     }));
-//   };
-//
-//  // small helpers
-//  const toNum = (v) => (v === "" || v == null ? null : Number(v));
-//  const toNumArray = (arr) =>
-//    Array.isArray(arr)
-//      ? arr
-//          .map((x) => {
-//            const raw = typeof x === "object" ? x.value ?? x : x;
-//            const n = Number(raw);
-//            return Number.isFinite(n) ? n : null;
-//          })
-//          .filter((n) => n != null)
-//      : [];
-//
-// const handleSaveDraft = async () => {
-//     try {
-//       // Build payload as per server schema; assumes your dropdown `value`s are numeric IDs.
-//       const payload = {
-//         bandId:             toNum(form.band),
-//         priorityId:         toNum(form.priority),
-//         lobId:              toNum(form.lob),
-//         demandTypeId:       toNum(form.demandType),
-//         demandTimelineId:   toNum(form.demandTimeline),
-//         externalInternalId: toNum(form.externalInternal),  // if not present, will be null
-//         statusId:           toNum(form.status),            // if not present, will be null
-//         podId:              toNum(form.prodProgramName),   // if you hold pod/program id
-//         pmoSpocId:          toNum(form.pmoSpoc),
-//         salesSpocId:        toNum(form.salesSpoc),
-//         hiringManagerId:    toNum(form.hiringManager),
-//         deliveryManagerId:  toNum(form.deliveryManager),
-//         skillClusterId:     toNum(form.skillCluster?.value ?? form.skillCluster),
-//         pmoId:              toNum(form.pmo),
-//         experience:         toNum(form.experience),
-//         remark:             form.remark || "",
-//         primarySkillsId:    toNumArray(form.primarySkills),
-//         secondarySkillsId:  toNumArray(form.secondarySkills),
-//         demandLocationId:   toNumArray(form.demandLocation),
-//         numberOfPositions:  toNum(form.noOfPositions),
-//         hbu_id:             toNum(form.hbu),
-//         hbu_spoc_id:        toNum(form.hbuSpoc),           // if you have it, otherwise null
-//       };
-//
-//       const resp = await saveStep1Draft(payload);
-//       if (!resp?.success) throw new Error(resp?.message || "Draft save failed");
-//
-//       const { draftId, assignments } = resp.data || {};
-//       // Keep the draftId handy for Step-2 and DemandSheet view
-//       localStorage.setItem("step1DraftId", String(draftId));
-//       localStorage.setItem("step1DraftAssignments", JSON.stringify(assignments || []));
-//
-//       message.success(`Draft saved. Draft ID: ${draftId}`);
-//     } catch (err) {
-//       console.error("[Step1] save draft error:", err);
-//       message.error(err?.message || "Could not save draft.");
-//     }
-//   };
-//
-//
-//   // Restore draft
-//   useEffect(() => {
-//     try {
-//       const raw = localStorage.getItem("addDemandStep1Draft");
-//       if (!raw) return;
-//       const draft = JSON.parse(raw);
-//       setForm((prev) => ({
-//         ...prev,
-//         ...draft,
-//         demandReceivedDate: draft.demandReceivedDate || todayStr(),
-//         // normalize location if saved previously as CSV
-//         demandLocation: Array.isArray(draft.demandLocation)
-//           ? draft.demandLocation.map(String)
-//           : typeof draft.demandLocation === "string" && draft.demandLocation.length
-//           ? draft.demandLocation.split(",").map((v) => v.trim())
-//           : [],
-//       }));
-//       message.info("Draft restored.");
-//     } catch {
-//       /* ignore */
-//     }
-//   }, []);
-//
-//   // ===== Default "Demand Type: New" and "Demand Timeline: Current" once options are available =====
-//   useEffect(() => {
-//     if (!options) return;
-//     setForm((prev) => {
-//       const next = { ...prev };
-//       // If empty, try to find match by value first, else by label
-//       if (!prev.demandType) {
-//         const byVal =
-//           safe(options.demandType).find((o) => String(o.value).toLowerCase() === "new");
-//         const byLabel =
-//           safe(options.demandType).find((o) => String(o.label).toLowerCase() === "new");
-//         next.demandType = strVal(byVal?.value ?? byLabel?.value ?? prev.demandType);
-//       }
-//       if (!prev.demandTimeline) {
-//         const byVal =
-//           safe(options.demandTimeline).find((o) => String(o.value).toLowerCase() === "current");
-//         const byLabel =
-//           safe(options.demandTimeline).find((o) => String(o.label).toLowerCase() === "current");
-//         next.demandTimeline = strVal(byVal?.value ?? byLabel?.value ?? prev.demandTimeline);
-//       }
-//       return next;
-//     });
-//     // run once after options change
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [options?.demandType, options?.demandTimeline]);
-//
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//
-//     // Basic validations
-//     if (!form.lob) return message.warning("Line of Business is required.");
-//     if (!form.noOfPositions || Number(form.noOfPositions) < 1)
-//       return message.warning("No. of Positions must be at least 1.");
-//     if (!form.skillCluster) return message.warning("Skill Cluster is required.");
-//     if (!form.demandReceivedDate)
-//       return message.warning("Demand Received Date is required.");
-//
-//     // Stringify skills
-//     const primarySkillsStr = (form.primarySkills || [])
-//       .map((i) => i.value)
-//       .join(",");
-//     const secondarySkillsStr = (form.secondarySkills || [])
-//       .map((i) => i.value)
-//       .join(",");
-//     const skillClusterStr = form.skillCluster?.value || "";
-//
-//     // Demand Location: CSV
-//     const demandLocationStr = (form.demandLocation || []).join(",");
-//
-//     setLoading(true);
-//
-//     const payload = {
-//       lob: form.lob,
-//       noOfPositions: Number(form.noOfPositions || 0),
-//       skillCluster: skillClusterStr,
-//       primarySkills: primarySkillsStr,
-//       secondarySkills: secondarySkillsStr,
-//       demandReceivedDate: form.demandReceivedDate,
-//
-//       // People: directly either option value or free text
-//       hiringManager: form.hiringManager,
-//       deliveryManager: form.deliveryManager,
-//       pm: form.pm,
-//
-//       // Business + details
-//       salesSpoc: form.salesSpoc,
-//       hbu: form.hbu,
-//       pmo: form.pmo,
-//       demandType: form.demandType,
-//       demandTimeline: form.demandTimeline,
-//       demandLocation: demandLocationStr, // CSV
-//       band: form.band,
-//       priority: form.priority,
-//       remark: form.remark,
-//     };
-//
-//     try {
-//       const res = await submitStep1(payload);
-//       const serverDTO = res?.data ?? res;
-//       message.success("Demand ID has been generated successfully!");
-//       localStorage.removeItem("addDemandStep1Draft");
-//       navigate("/addDemands2", { state: { form1Data: serverDTO } });
-//     } catch (err) {
-//       console.error("[Step1] error:", err);
-//       message.error(err?.message || "Step 1 failed.");
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-//
-//   if (!dropdowns || !dropdownsLoaded) {
-//     return (
-//       <Layout>
-//         <div className="flex items-center justify-center h-72">
-//           <Spin indicator={<LoadingOutlined style={{ fontSize: 28 }} spin />} />
-//           <span className="ml-3 text-gray-600">Loading…</span>
-//         </div>
-//       </Layout>
-//     );
-//   }
-//
-//   // ===== pill radio renderer (re-usable for LOB, Timeline, Type) =====
-//   const PillRadios = ({ name, optionsList, value, onChange }) => (
-//     <div className="flex flex-wrap gap-3">
-//       {safe(optionsList).map((o) => {
-//         const val = strVal(o.value);
-//         const active = value === val;
-//         return (
-//           <label
-//             key={val}
-//             className={`px-3 py-2 rounded-md border cursor-pointer text-sm
-//               ${
-//                 active
-//                   ? "bg-gray-900 text-white border-gray-900"
-//                   : "border-gray-300 text-gray-700 hover:border-gray-400"
-//               }`}
-//           >
-//             <input
-//               type="radio"
-//               name={name}
-//               value={val}
-//               checked={active}
-//               onChange={(e) => onChange(e.target.value)}
-//               className="hidden"
-//             />
-//             <span>{o.label}</span>
-//           </label>
-//         );
-//       })}
-//     </div>
-//   );
-//
-//   // ===== checkbox pill renderer for locations =====
-//   const PillCheckboxes = ({ name, optionsList, selected, onToggle }) => (
-//     <div className="flex flex-wrap gap-3">
-//       {safe(optionsList).map((o) => {
-//         const val = strVal(o.value);
-//         const checked = selected.includes(val);
-//         return (
-//           <label
-//             key={val}
-//             className={`px-3 py-2 rounded-md border cursor-pointer text-sm
-//               ${
-//                 checked
-//                   ? "bg-gray-900 text-white border-gray-900"
-//                   : "border-gray-300 text-gray-700 hover:border-gray-400"
-//               }`}
-//           >
-//             <input
-//               type="checkbox"
-//               name={name}
-//               value={val}
-//               checked={checked}
-//               onChange={(e) => onToggle(val, e.target.checked)}
-//               className="hidden"
-//             />
-//             <span>{o.label}</span>
-//           </label>
-//         );
-//       })}
-//     </div>
-//   );
-//
-//   return (
-//     <Layout>
-//       {/* Page Title */}
-//       <div className="">
-//         <h1 className="text-lg font-bold">Add Demands</h1>
-//       </div>
-//
-//       <form onSubmit={handleSubmit} className="">
-//         <div className="bg-white border border-gray-200 ">
-//
-//           {/* ========= Section: Basics ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<AppstoreOutlined />}
-//               title="Basics"
-//               helper="Select the LOB and enter total positions."
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               {/* LOB (pill radios) */}
-//               <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
-//                 <span className={`${labelCls} whitespace-nowrap mt-2`}>Line of Business:</span>
-//                 <PillRadios
-//                   name="lob"
-//                   optionsList={options?.lob}
-//                   value={form.lob}
-//                   onChange={(val) => setForm((p) => ({ ...p, lob: val }))}
-//                 />
-//               </div>
-//
-//               {/* No. of Positions (inline) */}
-//               <div className="flex items-center gap-4 px-3 pb-3">
-//                 <label className={`${labelCls} whitespace-nowrap`}>No. of Positions:</label>
-//                 <input
-//                   className={`${inputCls} w-1/6`}
-//                   type="number"
-//                   min={1}
-//                   placeholder="1"
-//                   value={form.noOfPositions}
-//                   onChange={(e) => setForm({ ...form, noOfPositions: e.target.value })}
-//                 />
-//               </div>
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: Skills ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<ToolOutlined />}
-//               title="Skills"
-//               helper="Choose skill cluster, then primary and secondary skills."
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-//               {/* Skill Cluster (single) */}
-//               <div>
-//                 <label className={labelCls}>Skill Cluster</label>
-//                 <Select
-//                   options={safe(options?.skillCluster)}
-//                   isMulti={false}
-//                   isClearable
-//                   value={form.skillCluster}
-//                   onChange={(selected) => setForm({ ...form, skillCluster: selected })}
-//                   placeholder="Select Skill Cluster"
-//                   className="mt-1"
-//                   styles={{
-//                     control: (base, state) => ({
-//                       ...base,
-//                       minHeight: 38,
-//                       borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-//                       boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-//                       ":hover": { borderColor: "#111827" },
-//                     }),
-//                     valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-//                     indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-//                   }}
-//                 />
-//               </div>
-//
-//               {/* Primary Skills (max 5) */}
-//               <div>
-//                 <label className={labelCls}>Primary Skills (max 5)</label>
-//                 <Select
-//                   options={safe(options?.primarySkills)}
-//                   isMulti
-//                   isClearable
-//                   closeMenuOnSelect={false}
-//                   hideSelectedOptions
-//                   components={{ Option: CheckboxOption }}
-//                   value={form.primarySkills}
-//                   onChange={(selected) => {
-//                     if (selected && selected.length > 5) {
-//                       message.warning("You can select only 5 primary skills.");
-//                       return;
-//                     }
-//                     setForm({ ...form, primarySkills: selected || [] });
-//                   }}
-//                   placeholder="Select up to 5"
-//                   className="mt-1"
-//                   styles={{
-//                     control: (base, state) => ({
-//                       ...base,
-//                       minHeight: 38,
-//                       borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-//                       boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-//                       ":hover": { borderColor: "#111827" },
-//                     }),
-//                     valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-//                     indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-//                   }}
-//                 />
-//               </div>
-//
-//               {/* Secondary Skills */}
-//               <div>
-//                 <label className={labelCls}>Secondary Skills</label>
-//                 <Select
-//                   options={safe(options?.secondarySkills)}
-//                   isMulti
-//                   isClearable
-//                   closeMenuOnSelect={false}
-//                   hideSelectedOptions
-//                   components={{ Option: CheckboxOption }}
-//                   value={form.secondarySkills}
-//                   onChange={(selected) => setForm({ ...form, secondarySkills: selected || [] })}
-//                   placeholder="Secondary Skills"
-//                   className="mt-1 "
-//                   styles={{
-//                     control: (base, state) => ({
-//                       ...base,
-//                       minHeight: 38,
-//                       borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-//                       boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-//                       ":hover": { borderColor: "#111827" },
-//                     }),
-//                     valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-//                     indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-//                   }}
-//                 />
-//               </div>
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: People ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<TeamOutlined />}
-//               title="People"
-//               helper="Select stakeholders for this demand."
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-//               {/* Hiring Manager */}
-//               <SelectOrText
-//                 label="Hiring Manager"
-//                 name="hiringManager"
-//                 value={form.hiringManager}
-//                 onChange={(v) => setForm((p) => ({ ...p, hiringManager: v }))}
-//                 optionsList={options?.hiringManager}
-//                 placeholder="Select Hiring Manager"
-//               />
-//
-//               {/* Delivery Manager */}
-//               <SelectOrText
-//                 label="Delivery Manager"
-//                 name="deliveryManager"
-//                 value={form.deliveryManager}
-//                 onChange={(v) => setForm((p) => ({ ...p, deliveryManager: v }))}
-//                 optionsList={options?.deliveryManager}
-//                 placeholder="Select Delivery Manager"
-//               />
-//
-//               {/* PM */}
-//               <SelectOrText
-//                 label="Project Manager (PM)"
-//                 name="pm"
-//                 value={form.pm}
-//                 onChange={(v) => setForm((p) => ({ ...p, pm: v }))}
-//                 optionsList={options?.pm}
-//                 placeholder="Select Project Manager"
-//               />
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: Business ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<ProjectOutlined />}
-//               title="Business"
-//               helper="Business context and internal ownership."
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-//               {/* Sales SPOC */}
-//               <div>
-//                 <label className={labelCls}>Sales SPOC</label>
-//                 <select
-//                   className={`${inputCls} mt-1 `}
-//                   value={form.salesSpoc}
-//                   onChange={(e) => setForm({ ...form, salesSpoc: e.target.value })}
-//                 >
-//                   <option value="">Select Sales SPOC</option>
-//                   {safe(options?.salesSpoc).map((o) => (
-//                     <option key={String(o.value)} value={String(o.value)}>
-//                       {o.label}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//
-//               {/* PMO */}
-//               <div>
-//                 <label className={labelCls}>PMO</label>
-//                 <select
-//                   className={`${inputCls} mt-1`}
-//                   value={form.pmo}
-//                   onChange={(e) => setForm({ ...form, pmo: e.target.value })}
-//                 >
-//                   <option value="">Select PMO</option>
-//                   {safe(options?.pmo).map((o) => (
-//                     <option key={String(o.value)} value={String(o.value)}>
-//                       {o.label}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//
-//               {/* HBU */}
-//               <div>
-//                 <label className={labelCls}>HBU</label>
-//                 <select
-//                   className={`${inputCls} mt-1`}
-//                   value={form.hbu}
-//                   onChange={(e) => setForm({ ...form, hbu: e.target.value })}
-//                 >
-//                   <option value="">Select HBU</option>
-//                   {safe(options?.hbu).map((o) => (
-//                     <option key={String(o.value)} value={String(o.value)}>
-//                       {o.label}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: Demand Details ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<ScheduleOutlined />}
-//               title="Demand Details"
-//               helper="Timeline, type and locations."
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-//               {/* Demand Timeline (pill radios) */}
-//               <div>
-//                 <label className={`${labelCls} mb-1 block`}>Demand Timeline</label>
-//                 <PillRadios
-//                   name="demandTimeline"
-//                   optionsList={options?.demandTimeline}
-//                   value={form.demandTimeline}
-//                   onChange={(val) => setForm((p) => ({ ...p, demandTimeline: val }))}
-//                 />
-//               </div>
-//
-//               {/* Demand Type (pill radios) */}
-//               <div>
-//                 <label className={`${labelCls} mb-1 block`}>Demand Type</label>
-//                 <PillRadios
-//                   name="demandType"
-//                   optionsList={options?.demandType}
-//                   value={form.demandType}
-//                   onChange={(val) => setForm((p) => ({ ...p, demandType: val }))}
-//                 />
-//               </div>
-//
-//               {/* Priority */}
-//               <div>
-//                 <label className={labelCls}>Priority</label>
-//                 <select
-//                   className={`${inputCls}`}
-//                   value={form.priority}
-//                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
-//                 >
-//                   <option value="">Select Priority</option>
-//                   {safe(options?.priority).map((o) => (
-//                     <option key={String(o.value)} value={String(o.value)}>
-//                       {o.label}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: Band, Locations & Date ========= */}
-//           <section>
-//             <SectionHeader
-//               icon={<BarsOutlined />}
-//               title="Band • Locations • Date"
-//             />
-//
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-//               {/* Band */}
-//               <div>
-//                 <label className={labelCls}>Band</label>
-//                 <select
-//                   className={`${inputCls} mt-1`}
-//                   value={form.band}
-//                   onChange={(e) => setForm({ ...form, band: e.target.value })}
-//                 >
-//                   <option value="">Select Band</option>
-//                   {safe(options?.band).map((o) => (
-//                     <option key={String(o.value)} value={String(o.value)}>
-//                       {o.label}
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//
-//               {/* Demand Location (checkbox pills) */}
-//               <div>
-//                 <label className={`${labelCls} mb-1 block`}>Demand Location</label>
-//                 <PillCheckboxes
-//                   name="demandLocation"
-//                   optionsList={options?.demandLocation || options?.location || []}
-//                   selected={form.demandLocation}
-//                   onToggle={(val, isChecked) =>
-//                     setForm((prev) => {
-//                       const curr = new Set(prev.demandLocation.map(String));
-//                       if (isChecked) curr.add(val);
-//                       else curr.delete(val);
-//                       return { ...prev, demandLocation: Array.from(curr) };
-//                     })
-//                   }
-//                 />
-//                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2 pl-22">
-//                   <EnvironmentOutlined />
-//                   <span>Select one or more locations.</span>
-//                 </div>
-//               </div>
-//
-//               {/* Demand Received Date */}
-//               <div>
-//                 <label className={labelCls}>Demand Received Date</label>
-//                 <div className="relative mt-1">
-//                   <DatePicker
-//                     selected={
-//                       form.demandReceivedDate
-//                         ? new Date(form.demandReceivedDate)
-//                         : new Date()
-//                     }
-//                     onChange={(date) =>
-//                       setForm({
-//                         ...form,
-//                         demandReceivedDate: date ? format(date, "dd-MMM-yyyy") : "",
-//                       })
-//                     }
-//                     dateFormat="dd-MMM-yyyy"
-//                     className={`${inputCls} pr-10`}
-//                     placeholderText="dd-MMM-yyyy"
-//                   />
-//                   <CalendarOutlined className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
-//                 </div>
-//               </div>
-//             </div>
-//           </section>
-//
-//           {/* ========= Section: Remark ========= */}
-//           <section>
-//             <SectionHeader title="Remark" />
-//             <div className="relative">
-//               <textarea
-//                 className="w-full h-20 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 resize-none"
-//                 rows={4}
-//                 maxLength={500}
-//                 placeholder="Enter Remark (max 500 characters)"
-//                 value={form.remark || ""}
-//                 onChange={(e) => setForm({ ...form, remark: e.target.value })}
-//               />
-//               <span className="absolute bottom-2 right-2 text-xs text-gray-500 pointer-events-none select-none">
-//                 {(form.remark?.length || 0)}/500
-//               </span>
-//             </div>
-//           </section>
-//         </div>
-//
-//         {/* Footer Actions (right-aligned) */}
-//         <div className="flex justify-end gap-3 mt-6">
-//           <button
-//             type="button"
-//             onClick={handleSaveDraft}
-//             className="rounded-md border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 px-4 py-2 text-sm font-medium"
-//             disabled={loading}
-//           >
-//             Save Draft
-//           </button>
-//           <button
-//             type="submit"
-//             className="rounded-md bg-gray-900 text-white px-5 py-2 text-sm font-semibold hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-70"
-//             disabled={loading}
-//           >
-//             {loading ? (
-//               <>
-//                 <LoadingOutlined style={{ marginRight: 8 }} />
-//                 Generating…
-//               </>
-//             ) : (
-//               "Next: Generate Demand IDs"
-//             )}
-//           </button>
-//         </div>
-//       </form>
-//     </Layout>
-//   );
-// }
-
+// src/Components/DemandsManagement/AddNewDemand/AddDemands1.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "../../Layout.jsx";
 import Select, { components } from "react-select";
 import { message, Spin } from "antd";
+import { useLocation, useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   LoadingOutlined,
-  AppstoreOutlined,         // Basics
-  ToolOutlined,             // Skills
-  TeamOutlined,             // People
-  ProjectOutlined,          // Business
-  ScheduleOutlined,         // Timeline
-  EnvironmentOutlined,      // Location
-  BarsOutlined,             // Band
-  CalendarOutlined          // Date
+  AppstoreOutlined,
+  ToolOutlined,
+  TeamOutlined,
+  ProjectOutlined,
+  ScheduleOutlined,
+  EnvironmentOutlined,
+  BarsOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { format } from "date-fns";
 
 import { getDropDownData, submitStep1 } from "../../api/Demands/addDemands.js";
-import { saveStep1Draft } from "../../api/Demands/draft.js";
+import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
 
+// ------------------------ helpers ------------------------
 const todayStr = () => format(new Date(), "dd-MMM-yyyy");
 
-// React-Select list option with a checkbox
+// react-select checkbox option renderer
 const CheckboxOption = (props) => (
   <components.Option {...props}>
     <div className="flex items-center justify-between">
@@ -891,7 +35,6 @@ const CheckboxOption = (props) => (
   </components.Option>
 );
 
-// Small section header with icon
 const SectionHeader = ({ icon, title, helper }) => (
   <div className="flex items-center gap-2 mt-1 mb-3 ml-4 ">
     <span className="text-gray-700">{icon}</span>
@@ -900,7 +43,7 @@ const SectionHeader = ({ icon, title, helper }) => (
   </div>
 );
 
-// Helpers to build react-select options from {id,name}
+// Map backend lists [{id,name}] -> react-select options [{value,label}]
 const toOptions = (list) =>
   Array.isArray(list)
     ? list
@@ -912,60 +55,176 @@ const toOptions = (list) =>
         .filter((o) => o && o.label)
     : [];
 
-// Small helpers for IDs
+const safe = (arr) => (Array.isArray(arr) ? arr : []);
 const toNum = (v) => (v === "" || v == null ? null : Number(v));
 const toNumArrayFromSelect = (arr) =>
-  Array.isArray(arr) ? arr.map((o) => Number(o.value)).filter((n) => Number.isFinite(n)) : [];
-const toCSV = (arr) => (Array.isArray(arr) ? arr.join(",") : "");
+  Array.isArray(arr) ? arr.map((o) => Number(o?.value ?? o)).filter(Number.isFinite) : [];
+const toNumArray = (arr) =>
+  Array.isArray(arr) ? arr.map((v) => Number(v)).filter(Number.isFinite) : [];
 
+// format dd-MMM-yyyy -> yyyy-MM-dd
+const toYyyyMmDd = (d) => {
+  if (!d) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return d;
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return String(d);
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${dt.getFullYear()}-${mm}-${dd}`;
+};
+
+// Build EXACT payload for Step‑1 draft
+const buildDraftCreateRequest = (form) => ({
+  hbuId: toNum(form.hbu),
+  hubSpocId: toNum(form.hbuSpoc),
+  bandId: toNum(form.band),
+  priorityId: toNum(form.priority),
+  lobId: toNum(form.lob),
+  demandTypeId: toNum(form.demandType),
+  demandTimelineId: toNum(form.demandTimeline),
+  externalInternalId: toNum(form.externalInternal),
+  statusId: toNum(form.status),
+  podId: toNum(form.pod),
+  pmoSpocId: toNum(form.pmoSpoc),
+  salesSpocId: toNum(form.salesSpoc),
+  hiringManagerId: toNum(form.hiringManager),
+  deliveryManagerId: toNum(form.deliveryManager),
+  skillClusterId: toNum(form.skillCluster?.value ?? form.skillCluster),
+  pmoId: toNum(form.pmo),
+
+  experience: form.experience ?? "5-7",
+  remark: form.remark ?? "Saving as draft from Step-1 (mix file + text)",
+
+  numberOfPositions: toNum(form.noOfPositions),
+
+  primarySkillIds: toNumArrayFromSelect(form.primarySkills),
+  secondarySkillIds: toNumArrayFromSelect(form.secondarySkills),
+  locationIds: toNumArray(form.demandLocation),
+
+  flag: true,
+
+  demandReceivedDate: toYyyyMmDd(form.demandReceivedDate),
+
+  rrDrafts: Array.isArray(form.rrDrafts) ? form.rrDrafts : [],
+});
+
+/** Inline component: Select with “Other” mode in the SAME space. */
+function OtherableSelect({
+  label,
+  name,
+  value,
+  options,
+  placeholder = "Select",
+  otherValue = "",
+  onChangeSelect,
+  onChangeOther,
+  inputCls,
+  labelCls,
+}) {
+  const showOther = String(value) === "__other__";
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      {!showOther ? (
+        <select className={`${inputCls} mt-1`} value={value} onChange={(e) => onChangeSelect(e.target.value)}>
+          <option value="">{placeholder}</option>
+          {safe(options).map((o) => (
+            <option key={String(o.value)} value={String(o.value)}>
+              {o.label}
+            </option>
+          ))}
+          <option value="__other__">Other</option>
+        </select>
+      ) : (
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            className={inputCls}
+            type="text"
+            value={otherValue}
+            placeholder={`Enter ${label}`}
+            onChange={(e) => onChangeOther(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => onChangeSelect("")}
+            className="text-xs text-gray-700 underline hover:text-black"
+            title="Back to list"
+          >
+            Back to list
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------ component ------------------------
 export default function AddDemands1() {
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // Minimalist tokens
   const labelCls = "block text-xs font-medium text-gray-700";
   const inputCls =
     "w-full h-10 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900";
 
   const [loading, setLoading] = useState(false);
   const [dropdowns, setDropdowns] = useState(null);
-
-  const [form, setForm] = useState({
-    // Basics
-    lob: "",                     // ID
-    noOfPositions: "1",
-    // Skills
-    skillCluster: null,          // react-select option: {value:id,label}
-    primarySkills: [],           // react-select options[]
-    secondarySkills: [],         // react-select options[]
-    // People (IDs)
-    hiringManager: "",
-    deliveryManager: "",
-    pm: "",
-    // Business
-    salesSpoc: "",
-    pmo: "",
-    pmoSpoc: "",
-    hbu: "",
-    // Demand details (IDs)
-    demandTimeline: "",          // e.g. 1 = Current
-    demandType: "",              // e.g. 1 = New
-    demandLocation: [],          // array of numeric IDs (pills)
-    // Other
-    band: "",
-    priority: "",
-    demandReceivedDate: todayStr(),
-    remark: "",
-  });
-
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
 
+  // draftId from navigation or storage
+  const [draftId, setDraftId] = useState(() => {
+    const fromNav = location?.state?.draftId;
+    const fromStorage = localStorage.getItem("step1DraftId");
+    const n = Number(fromNav ?? fromStorage);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
+
+  // Step-1 form
+  const [form, setForm] = useState({
+    lob: "",
+    noOfPositions: "1",
+    skillCluster: null,
+    primarySkills: [],
+    secondarySkills: [],
+    hiringManager: "",
+    hiringManagerOther: "",
+    deliveryManager: "",
+    deliveryManagerOther: "",
+    pm: "",
+    pmOther: "",
+    salesSpoc: "",
+    salesSpocOther: "",
+    pmoSpoc: "",
+    pmoSpocOther: "",
+    pmo: "",
+    pmoOther: "",
+    hbu: "",
+    hbuOther: "",
+    hbuSpoc: "",
+    hbuSpocOther: "",
+
+    demandTimeline: "",
+    demandType: "",
+    demandLocation: [],
+    band: "",
+    priority: "",
+    externalInternal: "",
+    status: "",
+    pod: "",
+    demandReceivedDate: todayStr(),
+    experience: "",
+    remark: "",
+    rrDrafts: [],
+  });
+
+  // dropdowns
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const dd = await getDropDownData(); // expects { data: { ...lists } } already unwrapped in your api
+        const dd = await getDropDownData();
         if (!mounted) return;
-        setDropdowns(dd?.data || dd); // support both shapes
+        setDropdowns(dd?.data || dd);
       } catch (e) {
         console.error("Failed to load dropdowns:", e);
         message.error("Failed to load form data. Please refresh.");
@@ -974,11 +233,11 @@ export default function AddDemands1() {
       }
     })();
     return () => {
-      mounted = false;
+      setDropdownsLoaded(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Build options directly from provided lists (id, name)
   const options = useMemo(() => {
     const d = dropdowns || {};
     return {
@@ -986,26 +245,31 @@ export default function AddDemands1() {
       skillCluster: toOptions(d.skillClusterList),
       primarySkills: toOptions(d.primarySkillsList),
       secondarySkills: toOptions(d.secondarySkillsList),
+
       demandType: toOptions(d.demandTypeList),
       demandTimeline: toOptions(d.demandTimelineList),
+
       externalInternal: toOptions(d.externalInternalList),
       status: toOptions(d.statusList),
+
       hbu: toOptions(d.hbuList),
+      hbuSpoc: toOptions(d.hbuSpocList || d.hubSpocList || []),
+
       hiringManager: toOptions(d.hiringManagerList),
       deliveryManager: toOptions(d.deliveryManagerList),
+      projectManager: toOptions(d.projectManagerList),
       salesSpoc: toOptions(d.salesSpocList),
       pmo: toOptions(d.pmoList),
       pmoSpoc: toOptions(d.pmoSpocList),
-      projectManager: toOptions(d.projectManagerList),
+
       demandLocation: toOptions(d.demandLocationList),
+
       band: toOptions(d.bandList),
       priority: toOptions(d.priorityList),
+
       pod: toOptions(d.podList),
     };
   }, [dropdowns]);
-
-  const safe = (arr) => (Array.isArray(arr) ? arr : []);
-  const strVal = (v) => (v === null || v === undefined ? "" : String(v));
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -1015,75 +279,117 @@ export default function AddDemands1() {
     }));
   };
 
-  // ===== Default "Demand Type: New" and "Demand Timeline: Current" once options are available =====
+  // ---------- HYDRATE FROM DRAFT (if draftId exists) ----------
   useEffect(() => {
-    if (!options) return;
-    setForm((prev) => {
-      const next = { ...prev };
+    const idNum = Number(draftId);
+    if (!Number.isFinite(idNum) || idNum <= 0) return;
 
-      if (!prev.demandType && options?.demandType?.length) {
-        // find id by label 'New' (case-insensitive), else pick first
-        const newOpt =
-          options.demandType.find((o) => o.label?.toLowerCase() === "new") ||
-          options.demandType[0];
-        next.demandType = strVal(newOpt?.value ?? "");
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getStep1Draft(idNum);
+        const data = res?.data || res;
+
+        setForm((prev) => ({
+          ...prev,
+          lob: String(data?.lob?.id ?? data?.lobId ?? prev.lob ?? ""),
+          noOfPositions: String(data?.numberOfPositions ?? prev.noOfPositions ?? "1"),
+          skillCluster: data?.skillCluster
+            ? {
+                value: Number(data.skillCluster.id ?? data.skillClusterId),
+                label: String(data.skillCluster.name ?? ""),
+              }
+            : prev.skillCluster,
+          primarySkills: Array.isArray(data?.primarySkills)
+            ? data.primarySkills.map((s) => ({ value: Number(s.id), label: String(s.name) }))
+            : prev.primarySkills,
+          secondarySkills: Array.isArray(data?.secondarySkills)
+            ? data.secondarySkills.map((s) => ({ value: Number(s.id), label: String(s.name) }))
+            : prev.secondarySkills,
+
+          hiringManager: String(data?.hiringManager?.id ?? data?.hiringManagerId ?? ""),
+          deliveryManager: String(data?.deliveryManager?.id ?? data?.deliveryManagerId ?? ""),
+          pm: String(data?.projectManager?.id ?? data?.projectManagerId ?? ""),
+
+          salesSpoc: String(data?.salesSpoc?.id ?? data?.salesSpocId ?? ""),
+          pmoSpoc: String(data?.pmoSpoc?.id ?? data?.pmoSpocId ?? ""),
+          pmo: String(data?.pmo?.id ?? data?.pmoId ?? ""),
+
+          hbu: String(data?.hbu?.id ?? data?.hbuId ?? ""),
+          hbuSpoc: String(data?.hbuSpoc?.id ?? data?.hbuSpocId ?? ""),
+
+          demandTimeline: String(data?.demandTimeline?.id ?? data?.demandTimelineId ?? ""),
+          demandType: String(data?.demandType?.id ?? data?.demandTypeId ?? ""),
+          demandLocation: Array.isArray(data?.demandLocations)
+            ? data.demandLocations.map((l) => Number(l.id))
+            : prev.demandLocation,
+
+          band: String(data?.band?.id ?? data?.bandId ?? ""),
+          priority: String(data?.priority?.id ?? data?.priorityId ?? ""),
+
+          externalInternal: String(data?.externalInternal?.id ?? data?.externalInternalId ?? ""),
+          status: String(data?.status?.id ?? data?.statusId ?? ""),
+          pod: String(data?.pod?.id ?? data?.podId ?? ""),
+
+          demandReceivedDate: data?.demandReceivedDate || prev.demandReceivedDate,
+          experience: data?.experience ?? prev.experience,
+          remark: data?.remark ?? prev.remark,
+          rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : prev.rrDrafts,
+        }));
+
+        localStorage.setItem("step1DraftId", String(idNum));
+      } catch (e) {
+        console.error("load draft error:", e);
+        message.error("Failed to load draft for editing.");
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, [draftId]);
 
-      if (!prev.demandTimeline && options?.demandTimeline?.length) {
-        const curOpt =
-          options.demandTimeline.find((o) => o.label?.toLowerCase() === "current") ||
-          options.demandTimeline[0];
-        next.demandTimeline = strVal(curOpt?.value ?? "");
-      }
+  // Defaults for Demand Type + Timeline — only if not set
+useEffect(() => {
+  setForm((prev) => {
+    const next = { ...prev };
 
-      return next;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.demandType, options?.demandTimeline]);
-
-  // Save draft to SERVER (Step-1) — send only IDs
-  const handleSaveDraft = async () => {
-    try {
-      const payload = {
-        bandId:             toNum(form.band),
-        priorityId:         toNum(form.priority),
-        lobId:              toNum(form.lob),
-        demandTypeId:       toNum(form.demandType),
-        demandTimelineId:   toNum(form.demandTimeline),
-        externalInternalId: toNum(form.externalInternal),   // if you add UI for this
-        statusId:           toNum(form.status),             // if you add UI for this
-        podId:              toNum(form.pod),                // if you add UI for this
-        pmoSpocId:          toNum(form.pmoSpoc),
-        salesSpocId:        toNum(form.salesSpoc),
-        hiringManagerId:    toNum(form.hiringManager),
-        deliveryManagerId:  toNum(form.deliveryManager),
-        skillClusterId:     toNum(form.skillCluster?.value ?? form.skillCluster),
-        pmoId:              toNum(form.pmo),
-        experience:         toNum(form.experience),
-        remark:             form.remark || "",
-        primarySkillsId:    toNumArrayFromSelect(form.primarySkills),
-        secondarySkillsId:  toNumArrayFromSelect(form.secondarySkills),
-        demandLocationId:   form.demandLocation.map((id) => Number(id)).filter((n) => Number.isFinite(n)),
-        numberOfPositions:  toNum(form.noOfPositions),
-        hbu_id:             toNum(form.hbu),
-        hbu_spoc_id:        toNum(form.hbuSpoc),            // if you add UI for this
-      };
-
-      const resp = await saveStep1Draft(payload);
-      if (!resp?.success) throw new Error(resp?.message || "Draft save failed");
-
-      const { draftId, assignments } = resp.data || {};
-      localStorage.setItem("step1DraftId", String(draftId));
-      localStorage.setItem("step1DraftAssignments", JSON.stringify(assignments || []));
-
-      message.success(`Draft saved. Draft ID: ${draftId}`);
-    } catch (err) {
-      console.error("[Step1] save draft error:", err);
-      message.error(err?.message || "Could not save draft.");
+    // demandType default -> "New"
+    if (!prev.demandType && options?.demandType?.length) {
+      const newOpt =
+        options.demandType.find((o) => o.label?.toLowerCase() === "new") ||
+        options.demandType[0];
+      next.demandType = String(newOpt?.value ?? "");
     }
-  };
 
-  // ===== pill radio renderer (re-usable for LOB, Timeline, Type) =====
+    // demandTimeline default -> "Current"
+    if (!prev.demandTimeline && options?.demandTimeline?.length) {
+      const curOpt =
+        options.demandTimeline.find((o) => o.label?.toLowerCase() === "current") ||
+        options.demandTimeline[0];
+      next.demandTimeline = String(curOpt?.value ?? "");
+    }
+
+    // ✅ demandLocations default -> include "Pune"
+    if ((!prev.demandLocation || prev.demandLocation.length === 0) && options?.demandLocation?.length) {
+      const pune =
+        options.demandLocation.find((o) => o.label?.toLowerCase() === "pune") ||
+        null;
+
+      if (pune?.value != null) {
+        // MULTI-SELECT: store as array of values
+        next.demandLocation = [String(pune.value)];
+      } else {
+        // fallback to first option if Pune not found
+        const first = options.demandLocation[0];
+        next.demandLocation = first?.value != null ? [String(first.value)] : [];
+      }
+    }
+
+    return next;
+  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [options?.demandType, options?.demandTimeline, options?.demandLocations]);
+
+  // ===== pill radios (LOB, Timeline, Type) =====
   const PillRadios = ({ name, optionsList, value, onChange }) => (
     <div className="flex flex-wrap gap-3">
       {safe(optionsList).map((o) => {
@@ -1114,7 +420,7 @@ export default function AddDemands1() {
     </div>
   );
 
-  // ===== checkbox pill renderer for locations =====
+  // ===== pill checkboxes (Locations) =====
   const PillCheckboxes = ({ name, optionsList, selected, onToggle }) => (
     <div className="flex flex-wrap gap-3">
       {safe(optionsList).map((o) => {
@@ -1145,63 +451,63 @@ export default function AddDemands1() {
     </div>
   );
 
-  const submitting = loading;
-  const setSubmitting = setLoading;
-
+  // Build payload and call API:
+  // - If draftId exists -> PUT via updateDraft (payload only; no files, NO rrDrafts)
+  // - Else -> POST via submitStep1 (normal flow)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validations
+    // Validations
     if (!form.lob) return message.warning("Line of Business is required.");
     if (!form.noOfPositions || Number(form.noOfPositions) < 1)
       return message.warning("No. of Positions must be at least 1.");
     if (!form.skillCluster) return message.warning("Skill Cluster is required.");
-    if (!form.demandReceivedDate)
-      return message.warning("Demand Received Date is required.");
+    if (!form.demandReceivedDate) return message.warning("Demand Received Date is required.");
 
-    setSubmitting(true);
-
-    // Build Step-1 SUBMIT payload with only IDs (arrays as CSV)
-    const payload = {
-      bandId:             toNum(form.band),
-      priorityId:         toNum(form.priority),
-      lobId:              toNum(form.lob),
-      demandTypeId:       toNum(form.demandType),
-      demandTimelineId:   toNum(form.demandTimeline),
-      externalInternalId: toNum(form.externalInternal),
-      statusId:           toNum(form.status),
-      podId:              toNum(form.pod),
-      pmoSpocId:          toNum(form.pmoSpoc),
-      salesSpocId:        toNum(form.salesSpoc),
-      hiringManagerId:    toNum(form.hiringManager),
-      deliveryManagerId:  toNum(form.deliveryManager),
-      skillClusterId:     toNum(form.skillCluster?.value ?? form.skillCluster),
-      pmoId:              toNum(form.pmo),
-      experience:         toNum(form.experience),
-      remark:             form.remark || "",
-      primarySkillsId:    toCSV(toNumArrayFromSelect(form.primarySkills)),
-      secondarySkillsId:  toCSV(toNumArrayFromSelect(form.secondarySkills)),
-      demandLocationId:   toCSV(form.demandLocation.map((id) => Number(id)).filter((n) => Number.isFinite(n))),
-      numberOfPositions:  toNum(form.noOfPositions),
-      hbu_id:             toNum(form.hbu),
-      hbu_spoc_id:        toNum(form.hbuSpoc),
-      demandReceivedDate: form.demandReceivedDate, // keeping as date string (dd-MMM-yyyy)
-    };
-
+    setLoading(true);
     try {
-      const res = await submitStep1(payload);
-      const serverDTO = res?.data ?? res;
-      message.success("Demand ID has been generated successfully!");
-      navigate("/addDemands2", { state: { form1Data: serverDTO } });
+      const request = buildDraftCreateRequest(form);
+
+      let resp;
+      let effDraftId = Number(draftId) || null;
+
+      if (effDraftId) {
+        // strip rrDrafts on Step‑1 update (server enforces rrDraftId/positionIndex)
+        const { rrDrafts: _omit, ...requestWithoutRrDrafts } = request;
+        await updateDraft({ draftId: effDraftId, request: requestWithoutRrDrafts, files: [] });
+        resp = { data: { draftId: effDraftId } };
+      } else {
+        resp = await submitStep1(request);
+        const newId = Number(resp?.data?.draftId ?? resp?.draftId);
+        if (Number.isFinite(newId) && newId > 0) {
+          effDraftId = newId;
+          setDraftId(newId);
+          localStorage.setItem("step1DraftId", String(newId));
+        }
+      }
+
+      const serverDTO = resp?.data ?? resp;
+      const finalDraftId = Number(serverDTO?.draftId ?? effDraftId) || effDraftId || null;
+
+      const forStep2 = {
+        ...request, // what we sent
+        ...serverDTO,
+        draftId: finalDraftId,
+        noOfPositions: form.noOfPositions,
+      };
+
+      // ➜ Navigate to Step‑2 page with required data
+      navigate("/addDemands2", { state: { draftId: finalDraftId, form1Data: forStep2 } });
     } catch (err) {
       console.error("[Step1] error:", err);
-      message.error(err?.message || "Step 1 failed.");
+      const msg = err?.response?.data?.message || err?.message || "Step 1 failed.";
+      message.error(msg);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (!dropdowns || !dropdownsLoaded) {
+  if (!dropdowns || !dropdownsLoaded || loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-72">
@@ -1214,23 +520,20 @@ export default function AddDemands1() {
 
   return (
     <Layout>
-      {/* Page Title */}
       <div className="">
         <h1 className="text-lg font-bold">Add Demands</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="">
         <div className="bg-white border border-gray-200 ">
-          {/* ========= Section: Basics ========= */}
+          {/* ========= Basics ========= */}
           <section>
             <SectionHeader
               icon={<AppstoreOutlined />}
               title="Basics"
               helper="Select the LOB and enter total positions."
             />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* LOB (pill radios, values are IDs) */}
               <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
                 <span className={`${labelCls} whitespace-nowrap mt-2`}>Line of Business:</span>
                 <PillRadios
@@ -1240,8 +543,6 @@ export default function AddDemands1() {
                   onChange={(val) => setForm((p) => ({ ...p, lob: val }))}
                 />
               </div>
-
-              {/* No. of Positions (inline) */}
               <div className="flex items-center gap-4 px-3 pb-3">
                 <label className={`${labelCls} whitespace-nowrap`}>No. of Positions:</label>
                 <input
@@ -1256,16 +557,10 @@ export default function AddDemands1() {
             </div>
           </section>
 
-          {/* ========= Section: Skills ========= */}
+          {/* ========= Skills ========= */}
           <section>
-            <SectionHeader
-              icon={<ToolOutlined />}
-              title="Skills"
-              helper="Choose skill cluster, then primary and secondary skills."
-            />
-
+            <SectionHeader icon={<ToolOutlined />} title="Skills" helper="Choose cluster and skills." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              {/* Skill Cluster (single, stores option object but payload uses id) */}
               <div>
                 <label className={labelCls}>Skill Cluster</label>
                 <Select
@@ -1276,21 +571,9 @@ export default function AddDemands1() {
                   onChange={(selected) => setForm({ ...form, skillCluster: selected })}
                   placeholder="Select Skill Cluster"
                   className="mt-1"
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      minHeight: 38,
-                      borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-                      boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-                      ":hover": { borderColor: "#111827" },
-                    }),
-                    valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-                    indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-                  }}
                 />
               </div>
 
-              {/* Primary Skills (max 5) */}
               <div>
                 <label className={labelCls}>Primary Skills (max 5)</label>
                 <Select
@@ -1310,21 +593,9 @@ export default function AddDemands1() {
                   }}
                   placeholder="Select up to 5"
                   className="mt-1"
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      minHeight: 38,
-                      borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-                      boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-                      ":hover": { borderColor: "#111827" },
-                    }),
-                    valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-                    indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-                  }}
                 />
               </div>
 
-              {/* Secondary Skills */}
               <div>
                 <label className={labelCls}>Secondary Skills</label>
                 <Select
@@ -1338,156 +609,135 @@ export default function AddDemands1() {
                   onChange={(selected) => setForm({ ...form, secondarySkills: selected || [] })}
                   placeholder="Secondary Skills"
                   className="mt-1 "
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      minHeight: 38,
-                      borderColor: state.isFocused ? "#111827" : "#D1D5DB",
-                      boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
-                      ":hover": { borderColor: "#111827" },
-                    }),
-                    valueContainer: (base) => ({ ...base, padding: "2px 8px" }),
-                    indicatorsContainer: (base) => ({ ...base, paddingRight: 4 }),
-                  }}
                 />
               </div>
             </div>
           </section>
 
-          {/* ========= Section: People ========= */}
+          {/* ========= People ========= */}
           <section>
-            <SectionHeader
-              icon={<TeamOutlined />}
-              title="People"
-              helper="Select stakeholders for this demand."
-            />
-
+            <SectionHeader icon={<TeamOutlined />} title="People" helper="Select stakeholders." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              {/* Hiring Manager (IDs) */}
-              <div>
-                <label className={labelCls}>Hiring Manager</label>
-                <select
-                  className={`${inputCls} mt-1`}
-                  value={form.hiringManager}
-                  onChange={(e) => setForm({ ...form, hiringManager: e.target.value })}
-                >
-                  <option value="">Select Hiring Manager</option>
-                  {safe(options?.hiringManager).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OtherableSelect
+                label="Hiring Manager"
+                name="hiringManager"
+                value={form.hiringManager}
+                options={options?.hiringManager}
+                placeholder="Select Hiring Manager"
+                otherValue={form.hiringManagerOther}
+                onChangeSelect={(val) => setForm({ ...form, hiringManager: val })}
+                onChangeOther={(val) => setForm({ ...form, hiringManagerOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
 
-              {/* Delivery Manager (IDs) */}
-              <div>
-                <label className={labelCls}>Delivery Manager</label>
-                <select
-                  className={`${inputCls} mt-1`}
-                  value={form.deliveryManager}
-                  onChange={(e) => setForm({ ...form, deliveryManager: e.target.value })}
-                >
-                  <option value="">Select Delivery Manager</option>
-                  {safe(options?.deliveryManager).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OtherableSelect
+                label="Delivery Manager"
+                name="deliveryManager"
+                value={form.deliveryManager}
+                options={options?.deliveryManager}
+                placeholder="Select Delivery Manager"
+                otherValue={form.deliveryManagerOther}
+                onChangeSelect={(val) => setForm({ ...form, deliveryManager: val })}
+                onChangeOther={(val) => setForm({ ...form, deliveryManagerOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
 
-              {/* PM (projectManagerList) */}
-              <div>
-                <label className={labelCls}>Project Manager (PM)</label>
-                <select
-                  className={`${inputCls} mt-1`}
-                  value={form.pm}
-                  onChange={(e) => setForm({ ...form, pm: e.target.value })}
-                >
-                  <option value="">Select Project Manager</option>
-                  {safe(options?.projectManager).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OtherableSelect
+                label="Project Manager (PM)"
+                name="pm"
+                value={form.pm}
+                options={options?.projectManager}
+                placeholder="Select Project Manager"
+                otherValue={form.pmOther}
+                onChangeSelect={(val) => setForm({ ...form, pm: val })}
+                onChangeOther={(val) => setForm({ ...form, pmOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
             </div>
           </section>
 
-          {/* ========= Section: Business ========= */}
+          {/* ========= Business ========= */}
           <section>
-            <SectionHeader
-              icon={<ProjectOutlined />}
-              title="Business"
-              helper="Business context and internal ownership."
-            />
+            <SectionHeader icon={<ProjectOutlined />} title="Business" helper="Context & ownership." />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
+              <OtherableSelect
+                label="Sales SPOC"
+                name="salesSpoc"
+                value={form.salesSpoc}
+                options={options?.salesSpoc}
+                placeholder="Select Sales SPOC"
+                otherValue={form.salesSpocOther}
+                onChangeSelect={(val) => setForm({ ...form, salesSpoc: val })}
+                onChangeOther={(val) => setForm({ ...form, salesSpocOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
+
+              <OtherableSelect
+                label="PMO"
+                name="pmo"
+                value={form.pmo}
+                options={options?.pmo}
+                placeholder="Select PMO"
+                otherValue={form.pmoOther}
+                onChangeSelect={(val) => setForm({ ...form, pmo: val })}
+                onChangeOther={(val) => setForm({ ...form, pmoOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
+
+              <OtherableSelect
+                label="PMO SPOC"
+                name="pmoSpoc"
+                value={form.pmoSpoc}
+                options={options?.pmoSpoc}
+                placeholder="Select PMO SPOC"
+                otherValue={form.pmoSpocOther}
+                onChangeSelect={(val) => setForm({ ...form, pmoSpoc: val })}
+                onChangeOther={(val) => setForm({ ...form, pmoSpocOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              {/* Sales SPOC */}
-              <div>
-                <label className={labelCls}>Sales SPOC</label>
-                <select
-                  className={`${inputCls} mt-1 `}
-                  value={form.salesSpoc}
-                  onChange={(e) => setForm({ ...form, salesSpoc: e.target.value })}
-                >
-                  <option value="">Select Sales SPOC</option>
-                  {safe(options?.salesSpoc).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OtherableSelect
+                label="HBU"
+                name="hbu"
+                value={form.hbu}
+                options={options?.hbu}
+                placeholder="Select HBU"
+                otherValue={form.hbuOther}
+                onChangeSelect={(val) => setForm({ ...form, hbu: val })}
+                onChangeOther={(val) => setForm({ ...form, hbuOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
 
-              {/* PMO */}
-              <div>
-                <label className={labelCls}>PMO</label>
-                <select
-                  className={`${inputCls} mt-1`}
-                  value={form.pmo}
-                  onChange={(e) => setForm({ ...form, pmo: e.target.value })}
-                >
-                  <option value="">Select PMO</option>
-                  {safe(options?.pmo).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <OtherableSelect
+                label="HBU SPOC"
+                name="hbuSpoc"
+                value={form.hbuSpoc}
+                options={options?.hbuSpoc}
+                placeholder="Select HBU SPOC"
+                otherValue={form.hbuSpocOther}
+                onChangeSelect={(val) => setForm({ ...form, hbuSpoc: val })}
+                onChangeOther={(val) => setForm({ ...form, hbuSpocOther: val })}
+                inputCls={inputCls}
+                labelCls={labelCls}
+              />
 
-              {/* PMO SPOC */}
-              <div>
-                <label className={labelCls}>PMO SPOC</label>
-                <select
-                  className={`${inputCls} mt-1`}
-                  value={form.pmoSpoc}
-                  onChange={(e) => setForm({ ...form, pmoSpoc: e.target.value })}
-                >
-                  <option value="">Select PMO SPOC</option>
-                  {safe(options?.pmoSpoc).map((o) => (
-                    <option key={String(o.value)} value={String(o.value)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="hidden md:block" />
             </div>
           </section>
 
-          {/* ========= Section: Demand Details ========= */}
+          {/* ========= Demand Details ========= */}
           <section>
-            <SectionHeader
-              icon={<ScheduleOutlined />}
-              title="Demand Details"
-              helper="Timeline, type and locations."
-            />
-
+            <SectionHeader icon={<ScheduleOutlined />} title="Demand Details" helper="Timeline, type & locations." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              {/* Demand Timeline (pill radios, IDs) */}
               <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Timeline</label>
                 <PillRadios
@@ -1498,7 +748,6 @@ export default function AddDemands1() {
                 />
               </div>
 
-              {/* Demand Type (pill radios, IDs) */}
               <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Type</label>
                 <PillRadios
@@ -1509,7 +758,6 @@ export default function AddDemands1() {
                 />
               </div>
 
-              {/* Priority (IDs) */}
               <div>
                 <label className={labelCls}>Priority</label>
                 <select
@@ -1528,15 +776,10 @@ export default function AddDemands1() {
             </div>
           </section>
 
-          {/* ========= Section: Band, Locations & Date ========= */}
+          {/* ========= Band, Locations & Date ========= */}
           <section>
-            <SectionHeader
-              icon={<BarsOutlined />}
-              title="Band • Locations • Date"
-            />
-
+            <SectionHeader icon={<BarsOutlined />} title="Band • Locations • Date" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              {/* Band (IDs) */}
               <div>
                 <label className={labelCls}>Band</label>
                 <select
@@ -1550,10 +793,28 @@ export default function AddDemands1() {
                       {o.label}
                     </option>
                   ))}
+                  <option value="__other__">Other</option>
                 </select>
+                {String(form.band) === "__other__" && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      className={inputCls}
+                      type="text"
+                      value={form.bandOther || ""}
+                      placeholder="Enter Band"
+                      onChange={(e) => setForm({ ...form, bandOther: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, band: "" })}
+                      className="text-xs text-gray-700 underline hover:text-black"
+                    >
+                      Back to list
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Demand Location (checkbox pills with IDs) */}
               <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Location</label>
                 <PillCheckboxes
@@ -1575,16 +836,11 @@ export default function AddDemands1() {
                 </div>
               </div>
 
-              {/* Demand Received Date */}
               <div>
                 <label className={labelCls}>Demand Received Date</label>
                 <div className="relative mt-1">
                   <DatePicker
-                    selected={
-                      form.demandReceivedDate
-                        ? new Date(form.demandReceivedDate)
-                        : new Date()
-                    }
+                    selected={form.demandReceivedDate ? new Date(form.demandReceivedDate) : new Date()}
                     onChange={(date) =>
                       setForm({
                         ...form,
@@ -1601,7 +857,8 @@ export default function AddDemands1() {
             </div>
           </section>
 
-          {/* ========= Section: Remark ========= */}
+
+          {/* ========= Remark ========= */}
           <section>
             <SectionHeader title="Remark" />
             <div className="relative">
@@ -1620,16 +877,7 @@ export default function AddDemands1() {
           </section>
         </div>
 
-        {/* Footer Actions (right-aligned) */}
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="rounded-md border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 px-4 py-2 text-sm font-medium"
-            disabled={loading}
-          >
-            Save Draft
-          </button>
           <button
             type="submit"
             className="rounded-md bg-gray-900 text-white px-5 py-2 text-sm font-semibold hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-70"
@@ -1641,7 +889,7 @@ export default function AddDemands1() {
                 Generating…
               </>
             ) : (
-              "Next: Generate Demand IDs"
+              "Save & Next"
             )}
           </button>
         </div>

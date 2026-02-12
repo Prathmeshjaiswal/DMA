@@ -197,43 +197,75 @@ export default function RoleManagement() {
   const [sorterInfo, setSorterInfo] = useState({ field: null, order: null });
 
   /** fetchRoles: Load all roles from API and normalize 'active' boolean. */
-  const fetchRoles = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await getroles();
-      const list = asArray(res?.data ?? res);
 
-      const mapped = list.map((role) => {
-        const active =
-          typeof role.active === "boolean"
-            ? role.active
-            : typeof role.isActive === "boolean"
-            ? role.isActive
-            : typeof role.isactive === "boolean"
-            ? role.isactive
-            : typeof role.is_active === "boolean"
-            ? role.is_active
-            : typeof role.enabled === "boolean"
-            ? role.enabled
-            : role.active === 1 ||
-              role.isActive === 1 ||
-              role.isactive === 1 ||
-              role.is_active === 1 ||
-              role.enabled === 1;
+const fetchRoles = async () => {
+  setLoading(true);
+  setError("");
+  try {
+    const res = await getroles();
 
-        return { ...role, active };
-      });
+    // Handle API returning either { data: [...] } or bare array
+    const list = asArray(res?.data ?? res);
 
-      setRoles(mapped);
-    } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || "Failed to load roles.";
-      setError(msg);
-      message.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const mapped = list.map((role) => {
+      // Normalize active/isActive/isactive/etc → boolean 'active'
+      const active =
+        typeof role.active === "boolean"
+          ? role.active
+          : typeof role.isActive === "boolean"
+          ? role.isActive
+          : typeof role.isactive === "boolean"
+          ? role.isactive
+          : typeof role.is_active === "boolean"
+          ? role.is_active
+          : typeof role.enabled === "boolean"
+          ? role.enabled
+          : role.active === 1 ||
+            role.isActive === 1 ||
+            role.isactive === 1 ||
+            role.is_active === 1 ||
+            role.enabled === 1;
+
+      // Normalize createBy → createdBy for table rendering
+      const createdBy =
+        role.createBy ??
+        null;
+
+      // Optional: ensure nested shape is consistent for renderUserCell()
+      const normalizedCreatedBy =
+        createdBy && typeof createdBy === "object"
+          ? {
+              name:
+                createdBy.name ??
+                null,
+              userId:
+                createdBy.userId ??
+                null,
+            }
+          : createdBy;
+
+      // updatedBy may be null; keep as-is—your renderUserCell handles it
+      const updatedBy = role.updatedBy ?? null;
+
+      return {
+        ...role,
+        active,
+        createdBy: normalizedCreatedBy, // <<< key fix
+        updatedBy,                      // keep key consistent with column
+      };
+    });
+
+    setRoles(mapped);
+  } catch (e) {
+    const msg =
+      e?.response?.data?.message || e?.message || "Failed to load roles.";
+    setError(msg);
+    message.error(msg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   /** fetchPermissions: Load permission master to build label lookups for modal. */
   const fetchPermissions = async () => {

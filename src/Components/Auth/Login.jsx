@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS } from "./theme/colors";
-import NavBar from "../NavBar";
+import Layout from "../Layout";
 import { login } from "../api/login";
 import { message } from "antd";
 
@@ -73,12 +73,11 @@ export default function Login() {
   };
 
   return (
-    <>
+        <Layout>
       <div
-        className="flex flex-col items-center justify-center "
-        style={{ backgroundColor: COLORS.white }}
+        className="flex flex-col items-center justify-center mt-4 bg-white mt-4"
       >
-        <NavBar />
+
 
         <div
           className="shadow-lg rounded-lg px-8  py-15 w-[400px]"
@@ -166,6 +165,6 @@ export default function Login() {
 
         {/* <Footer /> */}
       </div>
-    </>
+    </Layout>
   );
 }

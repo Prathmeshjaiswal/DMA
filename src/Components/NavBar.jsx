@@ -46,7 +46,7 @@ export default function NavBar({
   ].filter(Boolean);
 
   return (
-    <>
+    <div className="mb-10">
       <div className="fixed inset-x-0 top-0 z-40 bg-[#082340] text-white border-b border-white/10 shadow-md">
         <div className="flex items-center px-3 py-3 gap-3">
           {/* Hamburger (only when authenticated) */}
@@ -95,13 +95,13 @@ export default function NavBar({
       </div>
 
       {/* navbar spacer */}
-      <div className="h-14" />
+      <div className="h-2" />
 
       {/* Profile modal */}
       <ProfileModel
         isOpen={!!showProfile}
         onClose={() => setShowProfile?.(false)}
       />
-    </>
+    </div>
   );
 }

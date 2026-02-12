@@ -1,21 +1,71 @@
-
-
-import { useEffect, useState } from "react";
+// src/Components/DemandsManagement/DemandSheet1.jsx
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDemandsheet } from "../../api/Demands/getDemands.js";
+import { Spin, Alert, Button, Modal, message, Tabs, Pagination } from "antd";
+import { PlusOutlined, EyeOutlined } from "@ant-design/icons";
+
+import Layout from "../../Layout.jsx";
 import ColumnsSelector from "./ColumnsSelector.jsx";
 import DemandTable from "./DemandTable.jsx";
-import { Spin, Alert, Button, Modal, message, Tag } from "antd";
-import { PlusOutlined, EyeOutlined } from "@ant-design/icons";
-import Layout from "../../Layout.jsx";
-import { getStep1Draft } from "../../api/Demands/draft.js";
 
-const ORANGE = "#F15B40";
+import { getDemandsheet } from "../../api/Demands/getDemands.js";
+import { getStep1Draft } from "../../api/Demands/draft.js";
+import { getDropDownData } from "../../api/Demands/addDemands.js";
+
+// ---------- helpers to flatten backend objects ----------
+const nameOf = (obj) =>
+  (obj && typeof obj === "object" ? (obj.name ?? "") : String(obj ?? ""));
+
+const joinNames = (arr) =>
+  Array.isArray(arr)
+    ? arr.map(nameOf).filter(Boolean).join(", ")
+    : nameOf(arr);
+
+/**
+ * Normalize backend DTO (objects with {id,name}, arrays) to flat table row.
+ * Prefers displayDemandId (e.g., "CTO-100") as demandId for the table chip.
+ */
+const normalizeDemandDto = (d) => ({
+  demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
+  rrNumber: String(d.rrNumber ?? ""),
+
+  // People / org (flatten {id,name} -> name)
+  lob: nameOf(d.lob),
+  skillCluster: nameOf(d.skillCluster),
+  hiringManager: nameOf(d.hiringManager),
+  deliveryManager: nameOf(d.deliveryManager),
+  pm: nameOf(d.projectManager),
+  pmoSpoc: nameOf(d.pmoSpoc),
+  pmo: nameOf(d.pmo),
+  salesSpoc: nameOf(d.salesSpoc),
+  hbu: nameOf(d.hbu),
+
+  // Skills & locations
+  primarySkills: joinNames(d.primarySkills),
+  secondarySkills: joinNames(d.secondarySkills),
+  demandLocation: joinNames(d.demandLocations),
+
+  // Meta
+  priority: nameOf(d.priority),
+  band: nameOf(d.band),
+  experience: d.experience ?? "",
+  status: nameOf(d.status),
+  demandType: nameOf(d.demandType),
+  demandTimeline: nameOf(d.demandTimeline),
+
+  // Dates & extra
+  demandReceivedDate: d.demandReceivedDate ?? "",
+  remark: d.remark ?? "",
+
+  // Raw id / file name
+  id: d.id,
+  jdFileName: d.jdFileName ?? d.fileName ?? null,
+});
 
 export default function DemandSheet1() {
   const navigate = useNavigate();
 
-  // === Columns in required sequence ===
+  // === Columns in required sequence (as per your new order requirement) ===
   const ALL_COLUMNS = [
     { key: "demandId",        label: "Demand ID", alwaysVisible: true },
     { key: "rrNumber",        label: "RR" },
@@ -23,37 +73,40 @@ export default function DemandSheet1() {
     { key: "skillCluster",    label: "Skill Cluster" },
     { key: "primarySkills",   label: "Primary Skill" },
     { key: "secondarySkills", label: "Secondary Skill" },
-    { key: "hiringManager",   label: "HSBC Hiring Manager" },
+
+    // order right after secondary skill
+    { key: "priority",        label: "Priority" },
+    { key: "status",          label: "Status" },
+    { key: "hbu",             label: "HBU" },
+    { key: "p1Age",           label: "P1 Age" },
+    { key: "demandTimeline",  label: "Demand Timeline" },
+    { key: "demandType",      label: "Demand Type" },
+
+    // remaining
+    { key: "demandLocation",  label: "Demand Location" },
+    { key: "hiringManager", label: "Hiring Manager" },
     { key: "deliveryManager", label: "Delivery Manager" },
     { key: "pm",              label: "PM" },
     { key: "pmoSpoc",         label: "PMO SPOC" },
     { key: "salesSpoc",       label: "Sales Spoc" },
-    { key: "hbu",             label: "HBU" },
-    { key: "demandTimeline",  label: "Demand Timeline" },
-    { key: "demandType",      label: "Demand Type" },
-    { key: "demandLocation",  label: "Demand Location" },
-    { key: "priority",        label: "Priority" },
-    { key: "status",          label: "Status" },
-    // extra default-visible fields
-    { key: "prodProgramName", label: "Pod /Programme Name" },
-    { key: "p1Age",           label: "P1 Age" },
+    { key: "pmo",             label: "PMO" },
+    { key: "band",            label: "Band" },
+    { key: "experience",      label: "Experience" },
+    { key: "statusNote",      label: "Status Note" },
 
     // keep available (not default-visible)
-    { key: "demandReceivedDate", label: "Demand Recieved Date" },
-    { key: "pmo",                label: "PMO" },
-    { key: "priorityComment",    label: "Priority Comment" },
-    { key: "band",               label: "Band" },
+    { key: "prodProgramName",   label: "Pod /Programme Name" },
+    { key: "demandReceivedDate",label: "Demand Recieved Date" },
+    { key: "priorityComment",   label: "Priority Comment" },
     { key: "currentProfileShared", label: "Current Profile Shared (Drop Down)" },
-    { key: "externalInternal",   label: "External / Internal" },
-    { key: "experience",         label: "Experience" },
+    { key: "externalInternal",  label: "External / Internal" },
   ];
 
-  // Default visible columns per your ask
+  // Default visible columns matching the same order (you can tweak)
   const defaultVisible = [
     "demandId","rrNumber","lob","skillCluster","primarySkills","secondarySkills",
-    "hiringManager","deliveryManager","pm","pmoSpoc","salesSpoc","hbu",
-    "demandTimeline","demandType","demandLocation","priority","status",
-    "prodProgramName","p1Age"
+    "priority","status","hbu","p1Age","demandTimeline","demandType",
+    "demandLocation","hiringManager","deliveryManager","pm","pmoSpoc","salesSpoc","pmo","band","experience"
   ];
 
   // API state
@@ -61,96 +114,117 @@ export default function DemandSheet1() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
 
+  // Dropdowns (for RowEdit inside DemandTable)
+  const [dropdowns, setDropdowns] = useState(null);
+  const [ddLoading, setDdLoading] = useState(false);
+
+  // Pagination state (UI is 1-based)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
   // Columns selector state
   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
   const [columnsEnabled, setColumnsEnabled] = useState(false);
 
-  // DTO -> UI
-  const normalizeDemandDto = (d) => ({
-    demandId: d.demandId ?? "",
-    rrNumber: (d.rrNumber ?? d.rr ?? "").toString(),
-    demandReceivedDate: d.demandReceivedDate ?? d.demandRecievedDate ?? "",
-    prodProgramName: d.prodProgramName ?? d.podprogrammeName ?? "",
-    lob: d.lob ?? "",
-    hiringManager: d.hiringManager ?? d.manager ?? "",
-    deliveryManager: d.deliveryManager ?? "",
-    pmo: d.pmo ?? "",
-    pmoSpoc: d.pmoSpoc ?? "",
-    pm: d.pm ?? "",
-    hbu: d.hbu ?? "",
-    skillCluster: d.skillCluster ?? "",
-    primarySkills: d.primarySkills ?? d.primarySkill ?? "",
-    secondarySkills: d.secondarySkills ?? d.secondarySkill ?? "",
-    experience: d.experience ?? "",
-    priority: d.priority ?? "",
-    demandLocation: d.demandLocation ?? "",
-    salesSpoc: d.salesSpoc ?? "",
-    priorityComment: d.priorityComment ?? "",
-    band: d.band ?? "",
-    p1Age: d.p1Age ?? "",
-    currentProfileShared: d.currentProfileShared,
-    dateOfProfileShared: d.dateOfProfileShared ?? "",
-    externalInternal: d.externalInternal ?? "",
-    status: d.status ?? "",
-    demandType: d.demandType ?? "",
-    demandTimeline: d.demandTimeline ?? "",
-    id: d.id,
-    // optional history fields
-    updatedBy: d.updatedBy ?? "",
-    updatedAt: d.updatedAt ?? "",
-    updatedData: d.updatedData ?? null,
-  });
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const resp = await getDemandsheet();
-        const list = Array.isArray(resp?.data.updateDemandDTOList) ? resp.data.updateDemandDTOList : [];
-        const normalized = list.map(normalizeDemandDto);
-        setRows(normalized);
-      } catch (err) {
-        const msg =
-          err?.userMessage ||
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load demands";
-        setApiError(msg);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
   // Demand details modal
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRow, setDetailRow] = useState(null);
-  const onViewRow = (row) => { setDetailRow(row); setDetailOpen(true); };
-  const closeDetails = () => { setDetailOpen(false); setDetailRow(null); };
+  const [detailTab, setDetailTab] = useState("details"); // 'details' | 'profile' | 'history'
 
-  // View Draft (Step 1)
-  const [draftOpen, setDraftOpen] = useState(false);
-  const [draftData, setDraftData] = useState(null);
-
-const openDraft = async () => {
+  // -------- fetch and normalize list (with pagination) --------
+  const loadDemands = useCallback(async (uiPage = currentPage, uiSize = pageSize) => {
     try {
-      const draftId = localStorage.getItem("step1DraftId");
-      if (!draftId) {
-        message.info("No Step-1 draftId found. Save a Step-1 draft first.");
-        return;
-      }
-      const resp = await getStep1Draft(Number(draftId));
-      if (!resp?.success) throw new Error(resp?.message || "Draft fetch failed");
-      setDraftData(resp?.data || {});
-      setDraftOpen(true);
-    } catch (e) {
-      console.error("Load draft error:", e);
-      message.error(e?.message || "Failed to load draft.");
+      setLoading(true);
+      const apiPage = Math.max(0, Number(uiPage) - 1);
+      const apiSize = Number(uiSize);
+      const resp = await getDemandsheet(apiPage, apiSize);
+
+      const list =
+        Array.isArray(resp?.data?.content) ? resp.data.content :
+        Array.isArray(resp?.content)        ? resp.content :
+        Array.isArray(resp)                 ? resp :
+        [];
+
+      const total =
+        resp?.data?.totalElements ?? resp?.totalElements ??
+        resp?.data?.total ?? resp?.total ??
+        (Array.isArray(resp) ? resp.length : 0);
+
+      const pageIndex =
+        resp?.data?.number ?? resp?.number ?? apiPage; // 0-based
+      const pageSz =
+        resp?.data?.size ?? resp?.size ?? apiSize;
+
+      const normalized = list.map(normalizeDemandDto);
+
+      setRows(normalized);
+      setTotalItems(Number.isFinite(total) ? total : normalized.length);
+      setCurrentPage(Number(pageIndex) + 1);
+      setPageSize(pageSz);
+    } catch (err) {
+      const msg =
+        err?.userMessage ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to load demands";
+      setApiError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize]);
+
+  // -------- fetch dropdowns once --------
+  const loadDropdowns = async () => {
+    try {
+      setDdLoading(true);
+      const dd = await getDropDownData();
+      const data = dd?.data || dd;
+      setDropdowns(data || {});
+    } catch (err) {
+      console.error("dropdowns load error:", err);
+      message.error("Failed to load dropdown data");
+    } finally {
+      setDdLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadDemands(1, pageSize);
+    loadDropdowns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pagination handlers
+  const onPageChange = (page, size) => {
+    setCurrentPage(page);
+    setPageSize(size);
+    loadDemands(page, size);
+  };
+  const onPageSizeChange = (page, size) => {
+    setCurrentPage(1);
+    setPageSize(size);
+    loadDemands(1, size);
+  };
+
+  // -------- detail modal handlers --------
+  const onViewRow = (row) => {
+    setDetailRow(row);
+    setDetailOpen(true);
+    setDetailTab("details");
+  };
+  const closeDetails = () => {
+    setDetailOpen(false);
+    setDetailRow(null);
+    setDetailTab("details");
+  };
+
+  // -------- View Draft modal handlers --------
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftData, setDraftData] = useState(null);
   const closeDraft = () => { setDraftOpen(false); setDraftData(null); };
 
-  if (loading) {
+  if (loading || ddLoading) {
     return (
       <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'200px' }}>
         <Spin size="large" tip="Loading..." />
@@ -160,7 +234,7 @@ const openDraft = async () => {
   if (apiError) {
     return (
       <div style={{ padding:'16px' }}>
-        <Alert title="Error" description={apiError} type="error" showIcon />
+        <Alert message="Error" description={apiError} type="error" showIcon />
       </div>
     );
   }
@@ -169,8 +243,7 @@ const openDraft = async () => {
     <>
       <Layout>
         <div className="">
-
-          {/* SAME ROW: left = ColumnsSelector, right = buttons */}
+          {/* SAME ROW: left = ColumnsSelector, center = title, right = buttons */}
           <div className="mb-4 grid grid-cols-3 w-full items-center">
             <ColumnsSelector
               columnsEnabled={columnsEnabled}
@@ -187,35 +260,53 @@ const openDraft = async () => {
                 })
               }
             />
-            <div >
+            <div>
               <h1 className="text-lg font-bold">Demand Sheet</h1>
-
             </div>
             <div className="flex items-start justify-end gap-1 pt-1">
-              <Button onClick={openDraft}>View Draft</Button>
-<Button
-type="default"
-  icon={<PlusOutlined />}
-  onClick={() => navigate("/addDemands1")}
-  className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
->
-  Add New Demands
-</Button>
+              <Button onClick={() => navigate("/drafts1")}>View Draft</Button>
+              <Button
+                type="default"
+                icon={<PlusOutlined />}
+                onClick={() =>{
+    try {
+      localStorage.removeItem('step1DraftId');
+    } catch {}
+    navigate('/addDemands1'); // change to '/addDemands1' if that's your route
+  }}
+
+                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
+              >
+                Add New Demands
+              </Button>
             </div>
           </div>
 
-          {/* Table (keeps your UI & edit behavior) */}
+          {/* Table – pass dropdowns so RowEdit can use them */}
           <DemandTable
             rows={rows}
             columns={ALL_COLUMNS}
             visibleColumns={visibleColumns}
-            dropdowns={null}
+            dropdowns={dropdowns}
             onViewRow={onViewRow}
           />
+
+          {/* Pagination controls */}
+          <div className="mt-4 flex justify-end">
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={totalItems}
+              showSizeChanger
+              onChange={onPageChange}
+              onShowSizeChange={onPageSizeChange}
+              showTotal={(total, range) => `${range[0]}-${range[1]} of ${total}`}
+            />
+          </div>
         </div>
       </Layout>
 
-      {/* Demand Details Modal — cards + status capsule near close */}
+      {/* Demand Details Modal (read-only; Update & JD removed) */}
       <Modal
         open={detailOpen}
         onCancel={closeDetails}
@@ -226,11 +317,11 @@ type="default"
             <div className="flex items-center gap-8">
               <div className="flex items-center gap-2 text-gray-800">
                 <EyeOutlined />
-                <span className="font-semibold">Demand Details — {detailRow?.demandId}</span>
+                <span className="font-semibold">
+                  Demand Details — {detailRow?.demandId}
+                </span>
               </div>
             </div>
-
-            {/* Status capsule aligned near close btn */}
             {detailRow?.status ? (
               <span
                 className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
@@ -248,64 +339,84 @@ type="default"
         }
       >
         {detailRow ? (
-          // ⬇️ CHANGED: stacked row layout (three rows)
           <div className="space-y-4">
-            {/* Row 1: Details (full width card) */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">Details</h3>
+            <Tabs
+              activeKey={detailTab}
+              onChange={setDetailTab}
+              items={[
+                {
+                  key: "details",
+                  label: "Demand Detail",
+                  children: (
+                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                      {/* Full read-only matrix including Priority, Band, Status, etc. */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <div><strong>RR:</strong> {detailRow.rrNumber || "-"}</div>
+                        <div><strong>Pod/Programme:</strong> {detailRow.prodProgramName || "-"}</div>
 
-              {/* Inside Details: tidy 2-column rows */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                <div><strong>RR:</strong> {detailRow.rrNumber || "-"}</div>
-                <div><strong>Pod/Programme:</strong> {detailRow.prodProgramName || "-"}</div>
+                        <div><strong>LOB:</strong> {detailRow.lob || "-"}</div>
+                        <div><strong>Skill Cluster:</strong> {detailRow.skillCluster || "-"}</div>
 
-                <div><strong>LOB:</strong> {detailRow.lob || "-"}</div>
-                <div><strong>Skill Cluster:</strong> {detailRow.skillCluster || "-"}</div>
+                        <div><strong>Primary Skill:</strong> {detailRow.primarySkills || "-"}</div>
+                        <div><strong>Secondary Skill:</strong> {detailRow.secondarySkills || "-"}</div>
 
-                <div><strong>Primary Skill:</strong> {detailRow.primarySkills || "-"}</div>
-                <div><strong>Secondary Skill:</strong> {detailRow.secondarySkills || "-"}</div>
+                        <div><strong>Priority:</strong> {detailRow.priority || "-"}</div>
+                        <div><strong>Status:</strong> {detailRow.status || "-"}</div>
 
-                <div><strong>Hiring Manager:</strong> {detailRow.hiringManager || "-"}</div>
-                <div><strong>Delivery Manager:</strong> {detailRow.deliveryManager || "-"}</div>
+                        <div><strong>Band:</strong> {detailRow.band || "-"}</div>
+                        <div><strong>Experience:</strong> {detailRow.experience || "-"}</div>
 
-                <div><strong>PM:</strong> {detailRow.pm || "-"}</div>
-                <div><strong>PMO SPOC:</strong> {detailRow.pmoSpoc || "-"}</div>
+                        <div><strong>Hiring Manager:</strong> {detailRow.hiringManager || "-"}</div>
+                        <div><strong>Delivery Manager:</strong> {detailRow.deliveryManager || "-"}</div>
 
-                <div><strong>Sales Spoc:</strong> {detailRow.salesSpoc || "-"}</div>
-                <div><strong>HBU:</strong> {detailRow.hbu || "-"}</div>
+                        <div><strong>PM:</strong> {detailRow.pm || "-"}</div>
+                        <div><strong>PMO SPOC:</strong> {detailRow.pmoSpoc || "-"}</div>
 
-                <div><strong>Timeline:</strong> {detailRow.demandTimeline || "-"}</div>
-                <div><strong>Type:</strong> {detailRow.demandType || "-"}</div>
+                        <div><strong>Sales Spoc:</strong> {detailRow.salesSpoc || "-"}</div>
+                        <div><strong>PMO:</strong> {detailRow.pmo || "-"}</div>
 
-                <div className="sm:col-span-2"><strong>Location:</strong> {detailRow.demandLocation || "-"}</div>
-                {/* Status intentionally removed from Details (shown top‑right) */}
-              </div>
-            </div>
+                        <div><strong>HBU:</strong> {detailRow.hbu || "-"}</div>
+                        <div><strong>Timeline:</strong> {detailRow.demandTimeline || "-"}</div>
 
-            {/* Row 2: Profiles Shared (full width card) */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">Profiles Shared</h3>
-              <div className="text-sm">
-                {detailRow.currentProfileShared != null ? (
-                  <>Current Profile Shared: <strong>{String(detailRow.currentProfileShared)}</strong></>
-                ) : (
-                  <span className="text-gray-500">No profile data available.</span>
-                )}
-              </div>
-            </div>
+                        <div><strong>Type:</strong> {detailRow.demandType || "-"}</div>
+                        <div><strong>Received Date:</strong> {detailRow.demandReceivedDate || "-"}</div>
 
-            {/* Row 3: History (full width card) */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold mb-3">History</h3>
-              <div className="space-y-2 text-sm">
-                <div><strong>Updated By:</strong> {detailRow.updatedBy || "-"}</div>
-                <div><strong>Updated At:</strong> {detailRow.updatedAt || "-"}</div>
-                <div><strong>Updated Data:</strong></div>
-                <pre className="bg-gray-50 p-2 rounded border border-gray-200 overflow-auto text-xs">
-                  {detailRow.updatedData ? JSON.stringify(detailRow.updatedData, null, 2) : "No change log available."}
-                </pre>
-              </div>
-            </div>
+                        <div className="sm:col-span-2"><strong>Location:</strong> {detailRow.demandLocation || "-"}</div>
+                        <div className="sm:col-span-2"><strong>Remark:</strong> {detailRow.remark || "-"}</div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "profile",
+                  label: "Profile Shared",
+                  children: (
+                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm text-sm">
+                      <div className="space-y-2">
+                        <div><strong>Current Profile Shared:</strong> {"-"}</div>
+                        <div><strong>Date of Profile Shared:</strong> {"-"}</div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "history",
+                  label: "History",
+                  children: (
+                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                      <div className="space-y-2 text-sm">
+                        <div><strong>Updated By:</strong> {"-"}</div>
+                        <div><strong>Updated At:</strong> {"-"} </div>
+                        <div><strong>Updated Data:</strong></div>
+                        <pre className="bg-gray-50 p-2 rounded border border-gray-200 overflow-auto text-xs">
+                          {"No change log available."}
+                        </pre>
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
           </div>
         ) : null}
       </Modal>

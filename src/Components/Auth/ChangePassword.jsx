@@ -23,33 +23,67 @@ export default function ChangePassword() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setServerMsg("");
-    setLoading(true);
 
-    try {
-      const payload ={ userId: form.userId,tempPassword: form.tempPassword ,password:form.password}
-      const resp = await changePassword(payload);
-      if (resp?.success) {
-        setServerMsg(resp?.data || "Password changed successfully.");
-        message.success("Temporary password verified.");
-        message.success("Password Changed Successfully.");
-      } else {
-        setServerMsg(resp?.message || "Failed to change password.");
-      }
-    } catch (err) {
-      const errormsg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Unable to change password. Please try again.";
-      setServerMsg(errormsg);
-      console.log(errormsg);
-      message.error(errormsg);
-    } finally {
-      setLoading(false);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setServerMsg("");
+
+  // Basic validations
+  if (!form.userId?.trim()) {
+    message.error("Please enter Employee ID.");
+    return;
+  }
+  if (!form.tempPassword?.trim()) {
+    message.error("Please enter the temporary password.");
+    return;
+  }
+  if (!newPwd || !confirmPwd) {
+    message.error("Please enter and confirm your new password.");
+    return;
+  }
+  if (newPwd !== confirmPwd) {
+    message.error("New password and confirm password do not match.");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const finalPassword = newPwd; // use the new password the user typed
+
+    const payload = {
+      userId: form.userId,
+      tempPassword: form.tempPassword,
+      password: finalPassword, // IMPORTANT: send this instead of form.password
+    };
+
+    const resp = await changePassword(payload);
+
+    if (resp?.success) {
+      setServerMsg(resp?.data || "Password changed successfully.");
+      message.success("Temporary password verified.");
+      message.success("Password Changed Successfully.");
+      // Optional: clear fields or navigate away after success
+      // setForm({ userId: "", tempPassword: "", password: "" });
+      // setNewPwd(""); setConfirmPwd("");
+      // navigate("/login");
+    } else {
+      const msg = resp?.message || "Failed to change password.";
+      setServerMsg(msg);
+      message.error(msg);
     }
-  };
+  } catch (err) {
+    const errormsg =
+      err?.response?.data?.message ||
+      err?.message ||
+      "Unable to change password. Please try again.";
+    setServerMsg(errormsg);
+    console.log(errormsg);
+    message.error(errormsg);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div

@@ -1,38 +1,105 @@
+// src/Components/DemandsManagement/AddNewDemand/AddDemands2.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { message, Spin } from 'antd';
 import { submitStep2 } from '../../api/Demands/addDemands';
-import { message } from 'antd';
-import Layout from "../../Layout.jsx";
-import { saveStep2DraftBulk } from '../../api/Demands/draft';
+import { getStep1Draft, updateDraft } from '../../api/Demands/draft';
+import Layout from '../../Layout';
 
 export default function AddDemands2() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const form1Data = state?.form1Data ?? null;
 
-  const REQUIRE_FILE_PER_ROW = true;
+  // From navigation
+  const navDraftId = state?.draftId ?? null;
+  const navForm1Data = state?.form1Data ?? null;
+
+  // Keep a single meta object to build payloads
+  const [meta, setMeta] = useState(navForm1Data || null);
+  const [loadingMeta, setLoadingMeta] = useState(false);
+
+  const REQUIRE_INPUT_PER_ROW = true;
   const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-  const DRAFT_KEY = 'addDemandStep2Draft';
+  const WORD_LIMIT = 2000;
 
   const [submitting, setSubmitting] = useState(false);
 
+  // draftId (prefer nav, fall back to localStorage)
+  const draftIdNum = useMemo(() => {
+    const id = navDraftId ?? localStorage.getItem('step1DraftId');
+    const n = Number(id);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [navDraftId]);
+
+  // Hydrate meta if not provided via navigation
   useEffect(() => {
-    if (!form1Data) {
-      navigate('/addDemands1', { replace: true });
-    }
-  }, [form1Data, navigate]);
+    if (meta || !draftIdNum) return;
+    (async () => {
+      try {
+        setLoadingMeta(true);
+        const res = await getStep1Draft(draftIdNum);
+        const data = res?.data ?? res ?? {};
+        // Normalize to shape expected by previous Step‑2 logic
+        setMeta({
+          draftId: draftIdNum,
 
-  // Demand IDs from backend DTO
-  const demandIds = useMemo(() => {
-    const list = Array.isArray(form1Data?.demandRRDTOList) ? form1Data.demandRRDTOList : [];
-    return list.map((item) => item?.demandId).filter(Boolean);
-  }, [form1Data]);
+          // scalar ids (prefer *_id if present)
+          hbuId: data?.hbu?.id ?? data?.hbuId ?? null,
+          hubSpocId: data?.hbuSpoc?.id ?? data?.hbuSpocId ?? data?.hubSpocId ?? null,
+          bandId: data?.band?.id ?? data?.bandId ?? null,
+          priorityId: data?.priority?.id ?? data?.priorityId ?? null,
+          lobId: data?.lob?.id ?? data?.lobId ?? null,
+          demandTypeId: data?.demandType?.id ?? data?.demandTypeId ?? null,
+          demandTimelineId: data?.demandTimeline?.id ?? data?.demandTimelineId ?? null,
+          externalInternalId: data?.externalInternal?.id ?? data?.externalInternalId ?? null,
+          statusId: data?.status?.id ?? data?.statusId ?? null,
+          podId: data?.pod?.id ?? data?.podId ?? null,
+          pmoSpocId: data?.pmoSpoc?.id ?? data?.pmoSpocId ?? null,
+          pmoId: data?.pmo?.id ?? data?.pmoId ?? null,
+          salesSpocId: data?.salesSpoc?.id ?? data?.salesSpocId ?? null,
+          hiringManagerId: data?.hiringManager?.id ?? data?.hiringManagerId ?? null,
+          deliveryManagerId: data?.deliveryManager?.id ?? data?.deliveryManagerId ?? null,
+          skillClusterId: data?.skillCluster?.id ?? data?.skillClusterId ?? null,
 
-  // RR numbers (plain text numeric)
-  const [rrNumbers, setRrNumbers] = useState([]); // idx -> string digits
+          // text/scalars
+          experience: data?.experience ?? '',
+          remark: data?.remark ?? '',
+          numberOfPositions: data?.numberOfPositions ?? 0,
+          noOfPositions: data?.numberOfPositions ?? 0, // keep compatibility with earlier code
+          flag: true,
+          demandReceivedDate: data?.demandReceivedDate ?? '',
+
+          // arrays
+          primarySkillIds: Array.isArray(data?.primarySkills) ? data.primarySkills.map(s => Number(s.id)) : [],
+          secondarySkillIds: Array.isArray(data?.secondarySkills) ? data.secondarySkills.map(s => Number(s.id)) : [],
+          locationIds: Array.isArray(data?.demandLocations) ? data.demandLocations.map(l => Number(l.id)) : [],
+
+          rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : [],
+        });
+      } catch (e) {
+        console.error('Step‑2 hydrate error:', e);
+        message.error('Failed to hydrate Step‑2. Go back to Step‑1.');
+      } finally {
+        setLoadingMeta(false);
+      }
+    })();
+  }, [meta, draftIdNum]);
+
+  // Row count: prefer server list length, else positions
+  const rowCount = useMemo(() => {
+    const fromList = Array.isArray(meta?.demandRRDTOList) ? meta.demandRRDTOList.length : 0;
+    const fromPositions = Number(meta?.numberOfPositions ?? meta?.noOfPositions ?? 0);
+    return Math.max(fromList, fromPositions, 0);
+  }, [meta]);
+
+  // RR numbers per row
+  const [rrNumbers, setRrNumbers] = useState([]);
+  useEffect(() => {
+    setRrNumbers(Array.from({ length: rowCount }, () => ''));
+  }, [rowCount]);
 
   const onChangeRR = (index, value) => {
-    const cleaned = value.replace(/\D/g, '');
+    const cleaned = (value || '').replace(/\D/g, '');
     setRrNumbers((prev) => {
       const next = [...prev];
       next[index] = cleaned;
@@ -45,13 +112,19 @@ export default function AddDemands2() {
   const setFileRef = (idx, el) => { fileRefs.current[idx] = el; };
 
   // Per-row state
-  const [rowFiles, setRowFiles] = useState({});        // idx -> File to submit
-  const [rowRawFiles, setRowRawFiles] = useState({});  // idx -> original selected File
-  const [rowErrors, setRowErrors] = useState({});      // idx -> error string
-  const [rowMode, setRowMode] = useState({});          // idx -> 'file' | 'text'
-  const [rowText, setRowText] = useState({});          // idx -> string (max 5000)
+  const [rowFiles, setRowFiles] = useState({});
+  const [rowRawFiles, setRowRawFiles] = useState({});
+  const [rowErrors, setRowErrors] = useState({});
+  const [rowMode, setRowMode] = useState({}); // 'file' | 'text'
+  const [rowText, setRowText] = useState({});
 
-  // Allowed file types
+  // Default to file mode for all rows
+  useEffect(() => {
+    const init = {};
+    for (let i = 0; i < rowCount; i++) init[i] = 'file';
+    setRowMode(init);
+  }, [rowCount]);
+
   const isAllowedType = (f) => {
     if (!f) return false;
     const allowedMimes = new Set([
@@ -61,7 +134,7 @@ export default function AddDemands2() {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ]);
     const mime = f.type || '';
-    if (mime.startsWith('image/')) return true; // images allowed as-is
+    if (mime.startsWith('image/')) return true;
     if (allowedMimes.has(mime)) return true;
     const name = (f.name || '').toLowerCase();
     return (
@@ -76,7 +149,7 @@ export default function AddDemands2() {
   };
 
   const validateFile = (f) => {
-    if (!f) return REQUIRE_FILE_PER_ROW ? 'Please select a file.' : '';
+    if (!f) return REQUIRE_INPUT_PER_ROW ? 'Please select a file.' : '';
     if (!isAllowedType(f)) return 'Unsupported file type. Allowed: txt, pdf, doc, docx, images.';
     if (f.size === 0) return 'Selected file is empty.';
     if (f.size >= MAX_BYTES) return 'File too large. It must be less than 5 MB.';
@@ -92,7 +165,6 @@ export default function AddDemands2() {
     if (fileRefs.current[idx]) fileRefs.current[idx].value = '';
   };
 
-  // Handle file select (no OCR — images saved as-is)
   const handleSelectedFile = async (idx, f) => {
     const msg = validateFile(f);
     if (msg) {
@@ -101,7 +173,6 @@ export default function AddDemands2() {
       setRowRawFiles(({ [idx]: _, ...rest }) => rest);
       return;
     }
-    // Save as-is (including images)
     setRowErrors((prev) => ({ ...prev, [idx]: '' }));
     setRowRawFiles((prev) => ({ ...prev, [idx]: f }));
     setRowFiles((prev) => ({ ...prev, [idx]: f }));
@@ -114,7 +185,6 @@ export default function AddDemands2() {
     await handleSelectedFile(idx, f);
   };
 
-  // Drag & drop area handlers
   const onDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
   const onDrop = async (idx, e) => {
     e.preventDefault(); e.stopPropagation();
@@ -124,100 +194,151 @@ export default function AddDemands2() {
     await handleSelectedFile(idx, f);
   };
 
+  const countWords = (text) =>
+    (text || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
 
-const saveDraft = async () => {
+  // ---------- Helpers ----------
+  const toNum = (v) => (v === '' || v == null ? null : Number(v));
+  const toNumArr = (v) => (Array.isArray(v) ? v.map((x) => Number(x)).filter(Number.isFinite) : []);
+  const pickFirst = (...candidates) => {
+    for (const c of candidates) {
+      if (c !== undefined && c !== null && c !== '') return c;
+    }
+    return undefined;
+  };
+
+  // ---------- Save Draft ----------
+  const onSaveDraft = async () => {
     try {
-      const draftId = localStorage.getItem("step1DraftId");
-      if (!draftId) {
-        message.warning("No Step-1 draft found. Please save Step-1 draft first.");
+      const draftIdLocal = draftIdNum;
+      if (!Number.isFinite(draftIdLocal)) {
+        message.warning('No valid draftId found. Cannot save draft.');
         return;
       }
 
-      const files = [];
-      const assignments = [];
+      const maxIndex =
+        (Array.isArray(meta?.rrDrafts) ? meta.rrDrafts.length : 0) ||
+        Number(meta?.numberOfPositions ?? meta?.noOfPositions ?? rowCount) ||
+        rowCount;
 
-      demandIds.forEach((id, idx) => {
-        const rr = Number(rrNumbers[idx] || 0);
+      const getRrDraftIdAt = (i) => {
+        if (!Array.isArray(meta?.rrDrafts) || !meta.rrDrafts[i]) return null;
+        const row = meta.rrDrafts[i];
+        const cand = row.rrDraftId ?? row.id ?? row.rrId ?? row.rr_draft_id ?? null;
+        const n = Number(cand);
+        return Number.isFinite(n) ? n : null;
+      };
+
+      const files = [];
+      const rrDrafts = [];
+
+      for (let idx = 0; idx < rowCount; idx++) {
+        const rrNumber = Number(rrNumbers[idx] || 0);
         const mode = rowMode[idx];
+
+        const rrDraftId = getRrDraftIdAt(idx);
+        const positionIndex = idx + 1;
+
+        let fileName = null;
+        let jdText = null;
+
         if (mode === 'file') {
           const f = rowFiles[idx];
           if (f) {
-            const fileIndex = files.length;
-            files.push(f); // keep order
-            assignments.push({
-              demandId: id,
-              rrNumber: rr,
-              fileIndex,
-            });
+            files.push(f);
+            fileName = f.name || `RR${rrNumber || positionIndex}.txt`;
           }
-        } else if (mode === 'text') {
+        } else {
           const content = (rowText[idx] || '').trim();
-          if (content) {
-            assignments.push({
-              demandId: id,
-              rrNumber: rr,
-              jdText: content,
-              filenameHint: `JD_${id}.txt`,
-            });
-          }
+          if (content) jdText = content;
         }
-      });
 
-      if (assignments.length === 0) {
-        message.info("Nothing to save in draft yet.");
+        const noRR = !rrNumbers[idx] || String(rrNumbers[idx]).trim() === '';
+        const noContent = !fileName && !jdText;
+        if (rrDraftId == null && noRR && noContent) continue;
+
+        if (rrDraftId == null && (positionIndex < 1 || positionIndex > maxIndex)) {
+          message.error(`Row #${idx + 1}: positionIndex out of range (${positionIndex}). Expected 1..${maxIndex}.`);
+          return;
+        }
+
+        const rowEntry = {
+          rrNumber: Number.isFinite(rrNumber) ? rrNumber : 0,
+          fileName: fileName || null,
+          jdText: jdText || null,
+          filenameHint: `RR${rrNumber || positionIndex}_JD`,
+          clearFile: false,
+        };
+        if (rrDraftId != null) rowEntry.rrDraftId = rrDraftId;
+        else rowEntry.positionIndex = positionIndex;
+
+        rrDrafts.push(rowEntry);
+      }
+
+      if (!rrDrafts.length) {
+        message.info('Nothing to save in draft yet.');
         return;
       }
 
-      const resp = await saveStep2DraftBulk({ draftId: Number(draftId), assignments }, files);
-      if (!resp?.success) throw new Error(resp?.message || "Step-2 draft save failed");
-      message.success(resp?.message || "Step-2 draft saved.");
+      const request = {
+        hbuId:              toNum(pickFirst(meta?.hbuId, meta?.hbu)),
+        hubSpocId:          toNum(pickFirst(meta?.hubSpocId, meta?.hbuSpoc, meta?.hbu_spoc_id)),
+        bandId:             toNum(pickFirst(meta?.bandId, meta?.band)),
+        priorityId:         toNum(pickFirst(meta?.priorityId, meta?.priority)),
+        lobId:              toNum(pickFirst(meta?.lobId, meta?.lob)),
+        demandTypeId:       toNum(pickFirst(meta?.demandTypeId, meta?.demandType)),
+        demandTimelineId:   toNum(pickFirst(meta?.demandTimelineId, meta?.demandTimeline)),
+        externalInternalId: toNum(pickFirst(meta?.externalInternalId, meta?.externalInternal)),
+        statusId:           toNum(pickFirst(meta?.statusId, meta?.status)),
+        podId:              toNum(pickFirst(meta?.podId, meta?.pod)),
+        pmoSpocId:          toNum(pickFirst(meta?.pmoSpocId, meta?.pmoSpoc)),
+        pmoId:              toNum(pickFirst(meta?.pmoId, meta?.pmo)),
+        salesSpocId:        toNum(pickFirst(meta?.salesSpocId, meta?.salesSpoc)),
+        hiringManagerId:    toNum(pickFirst(meta?.hiringManagerId, meta?.hiringManager)),
+        deliveryManagerId:  toNum(pickFirst(meta?.deliveryManagerId, meta?.deliveryManager)),
+        skillClusterId:     toNum(pickFirst(meta?.skillClusterId, meta?.skillCluster?.value, meta?.skillCluster)),
+        experience:         String(pickFirst(meta?.experience, '') ?? ''),
+        remark:             String(pickFirst(meta?.remark, '') ?? ''),
+        numberOfPositions:  toNum(pickFirst(meta?.numberOfPositions, meta?.noOfPositions)) ?? rowCount,
+        flag: true,
+        demandReceivedDate: String(pickFirst(meta?.demandReceivedDate, '')),
+        primarySkillIds:    toNumArr(pickFirst(meta?.primarySkillIds, meta?.primarySkillsId, meta?.primarySkills)),
+        secondarySkillIds:  toNumArr(pickFirst(meta?.secondarySkillIds, meta?.secondarySkillsId, meta?.secondarySkills)),
+        locationIds:        toNumArr(pickFirst(meta?.locationIds, meta?.demandLocationId, meta?.demandLocation)),
+        rrDrafts,
+      };
+
+      await updateDraft({ draftId: draftIdLocal, request, files });
+      message.success('Draft updated.');
+      navigate("/drafts1");
+
+      // Clear stored draftId so new flows don't prefill
+      try { localStorage.removeItem('step1DraftId'); } catch {}
+
+      // Go to drafts list or keep user here — you choose:
+      // navigate('/drafts1');
     } catch (err) {
-      console.error("[Step2] save draft error:", err);
-      message.error(err?.message || "Could not save draft.");
+      console.error('[Step‑2 Save Draft] error:', err);
+      message.error(err?.response?.data?.message || err?.message || 'Could not save draft.');
     }
   };
 
-
-  // Restore draft
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) return;
-      const draft = JSON.parse(raw);
-      if (!draft?.byId) return;
-
-      const nextRR = [];
-      const nextMode = {};
-      const nextText = {};
-      demandIds.forEach((id, idx) => {
-        const rec = draft.byId[id];
-        if (rec) {
-          nextRR[idx] = String(rec.rr || '');
-          if (rec.mode) nextMode[idx] = rec.mode;
-          if (rec.text) nextText[idx] = rec.text;
-        }
-      });
-      setRrNumbers(nextRR);
-      setRowMode(nextMode);
-      setRowText(nextText);
-      message.info('Draft restored.');
-    } catch { /* ignore */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demandIds.join(',')]);
-
-  // Submit
+  // ---------- Submit (final) ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    if (!form1Data) return;
+    if (!meta) return;
 
-    if (demandIds.length === 0) {
-      message.error('No demand IDs found in backend response. Please go back to Step 1.');
+    if (rowCount === 0) {
+      message.error('No rows to submit. Please go back to Step 1.');
       return;
     }
 
-    // Validate RR numbers
-    const invalidRR = demandIds.some((_, idx) => {
+    // RR validation
+    const invalidRR = Array.from({ length: rowCount }).some((_, idx) => {
       const v = rrNumbers[idx];
       return v === undefined || v === '' || isNaN(Number(v)) || Number(v) < 0;
     });
@@ -226,16 +347,16 @@ const saveDraft = async () => {
       return;
     }
 
-    // Validate per-row input
-    for (let idx = 0; idx < demandIds.length; idx++) {
+    // Per-row validation
+    for (let idx = 0; idx < rowCount; idx++) {
       const mode = rowMode[idx];
       if (!mode) {
-        message.warning(`Please choose "Add File" or "Add Text" for demand #${idx + 1}.`);
+        message.warning(`Please choose input for row #${idx + 1}.`);
         return;
       }
       if (mode === 'file') {
         if (!rowFiles[idx]) {
-          message.warning(`Please attach JD for demand #${idx + 1}.`);
+          message.warning(`Please attach JD for row #${idx + 1}.`);
           return;
         }
         const msg = validateFile(rowRawFiles[idx] || rowFiles[idx]);
@@ -247,11 +368,12 @@ const saveDraft = async () => {
       } else if (mode === 'text') {
         const t = (rowText[idx] || '').trim();
         if (!t) {
-          message.warning(`Please enter text (JD) for demand #${idx + 1}.`);
+          message.warning(`Please enter text (JD) for row #${idx + 1}.`);
           return;
         }
-        if (t.length > 5000) {
-          message.warning(`Text exceeds 5000 characters for demand #${idx + 1}.`);
+        const words = countWords(t);
+        if (words > WORD_LIMIT) {
+          message.warning(`Text exceeds ${WORD_LIMIT} words for row #${idx + 1}. Current: ${words}`);
           return;
         }
       }
@@ -259,37 +381,19 @@ const saveDraft = async () => {
 
     setSubmitting(true);
     try {
-      // Build DTO
-      const demandRRDTOList = demandIds.map((id, idx) => ({
-        demandId: id,
-        rrNumber: Number(rrNumbers[idx] || 0),
-      }));
+      const files = [];
+      const rrs = [];
 
-      const addNewDemandDTO = {
-        ...form1Data,
-        demandRRDTOList,
-      };
-
-      // Build multipart
-      const formData = new FormData();
-      formData.append(
-        'addNewDemandDTO',
-        new Blob([JSON.stringify(addNewDemandDTO)], { type: 'application/json' })
-      );
-
-      const filesMeta = [];
-      for (let idx = 0; idx < demandIds.length; idx++) {
-        const id = demandIds[idx];
+      for (let idx = 0; idx < rowCount; idx++) {
         let f = null;
+        let fileName = null;
 
         if (rowMode[idx] === 'file') {
-          // attach the selected file as-is (including images)
           f = rowFiles[idx];
         } else {
-          // build a text file from typed JD
           const content = (rowText[idx] || '').trim();
           const blob = new Blob([content], { type: 'text/plain' });
-          const fname = `JD_${id}.txt`;
+          const fname = `JD_row${idx + 1}.txt`;
           try {
             f = new File([blob], fname, { type: 'text/plain' });
           } catch {
@@ -300,148 +404,179 @@ const saveDraft = async () => {
         }
 
         if (f) {
-          formData.append('files', f, f.name || `JD_${id}.txt`);
-          filesMeta.push({ index: idx, demandId: id });
+          fileName = f.name || `JD_row${idx + 1}.txt`;
+          files.push(f);
+        } else {
+          fileName = `JD_row${idx + 1}.txt`;
         }
+
+        rrs.push({
+          rrNumber: Number(rrNumbers[idx] || 0),
+          fileName,
+        });
       }
 
-      formData.append('filesMeta', JSON.stringify(filesMeta));
+      // Build Step‑2 payload
+      const payload = {
+        rrs,
+        bandId:             toNum(pickFirst(meta?.bandId, meta?.band)),
+        deliveryManagerId:  toNum(pickFirst(meta?.deliveryManagerId, meta?.deliveryManager)),
+        demandLocationId:   toNumArr(pickFirst(meta?.demandLocationId, meta?.locationIds, meta?.demandLocation)),
+        demandTimelineId:   toNum(pickFirst(meta?.demandTimelineId, meta?.demandTimeline)),
+        demandTypeId:       toNum(pickFirst(meta?.demandTypeId, meta?.demandType)),
+        experience:         String(pickFirst(meta?.experience, '') || ''),
+        externalInternalId: toNum(pickFirst(meta?.externalInternalId, meta?.externalInternal)),
+        hbuId:              toNum(pickFirst(meta?.hbuId, meta?.hbu)),
+        hbuSpocId:          toNum(pickFirst(meta?.hbuSpocId, meta?.hubSpocId, meta?.hbu_spoc_id)),
+        hiringManagerId:    toNum(pickFirst(meta?.hiringManagerId, meta?.hiringManager)),
+        lobId:              toNum(pickFirst(meta?.lobId, meta?.lob)),
+        numberOfPositions:  toNum(pickFirst(meta?.numberOfPositions, meta?.noOfPositions)),
+        pmoId:              toNum(pickFirst(meta?.pmoId, meta?.pmo)),
+        pmoSpocId:          toNum(pickFirst(meta?.pmoSpocId, meta?.pmoSpoc)),
+        podId:              toNum(pickFirst(meta?.podId, meta?.pod)),
+        primarySkillsId:    toNumArr(pickFirst(meta?.primarySkillsId, meta?.primarySkillIds, meta?.primarySkills)),
+        priorityId:         toNum(pickFirst(meta?.priorityId, meta?.priority)),
+        projectManagerId:   toNum(pickFirst(meta?.projectManagerId, meta?.pm)),
+        remark:             String(pickFirst(meta?.remark, '') || ''),
+        salesSpocId:        toNum(pickFirst(meta?.salesSpocId, meta?.salesSpoc)),
+        secondarySkillsId:  toNumArr(pickFirst(meta?.secondarySkillsId, meta?.secondarySkillIds, meta?.secondarySkills)),
+        skillClusterId:     toNum(pickFirst(meta?.skillClusterId, meta?.skillCluster?.value, meta?.skillCluster)),
+        statusId:           toNum(pickFirst(meta?.statusId, meta?.status)),
+      };
+
+      // Build multipart: 'payload' + 'files'
+      const formData = new FormData();
+      formData.append('payload', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+      files.forEach((f) => formData.append('files', f, f.name));
 
       const res = await submitStep2(formData);
-      const serverResponse = res?.data ?? res;
-      message.success('Demand has been created successfully!');
-      localStorage.removeItem(DRAFT_KEY);
-      navigate('/DemandSheet1', {
-        state: { form1Data: addNewDemandDTO, serverResponse },
-      });
+      const server = res?.data ?? res;
+
+      message.success('Demands created successfully.');
+
+      // Clear stored draftId so new flows don't prefill
+      try { localStorage.removeItem('step1DraftId'); } catch {}
+
+      // Go to Demand Sheet
+      navigate("/demandsheet1");
     } catch (err) {
       const status = err?.response?.status;
       const data = err?.response?.data;
       console.error('[Step2] submit error:', { status, data, err });
-      message.error(err?.message || 'Step 2 failed.');
+      message.error(data?.message || data?.detail || err?.message || 'Step 2 failed.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (!draftIdNum) {
+    return (
+      <Layout>
+        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+          No draftId found. Please complete Step‑1 first.
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!meta || loadingMeta) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-72">
+          <Spin />
+          <span className="ml-3 text-gray-600">Loading Step‑2…</span>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="">
-        <div className="mx-auto w-full max-w-6xl px-6 pt-6">
-          <hr className="border-gray-200" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          {/* Page header */}
-          <div className="mx-auto w-full max-w-6xl px-6 mt-6">
-            <div className="flex items-center justify-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Submit Demands</h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  Map generated demand IDs to RR numbers and attach the JD per demand.
-                </p>
-              </div>
+      <form onSubmit={handleSubmit} className="flex top-0 flex-col w-full m-0 p-0">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="flex items-center justify-center">
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Submit Demands</h1>
             </div>
           </div>
+        </div>
 
-          {/* Demand mapping rows */}
-          <section className="mx-auto w-full max-w-6xl px-6 mt-6">
-            <div className="rounded-xl bg-white shadow-sm border border-gray-200">
-              {/* Header row (kept Serial # AND ID) */}
-              <div className="px-6 pt-6">
-                <div className="grid grid-cols-[110px_180px_60px_180px_1fr] items-center gap-4">
-                  <div className="text-gray-700 font-medium">Serial</div>
-                  <div className="text-gray-700 font-medium">Generated ID</div>
-                  <div />
-                  <div className="text-gray-700 font-medium">Enter RR No.</div>
-                  <div className="text-gray-700 font-medium">JD Input</div>
-                </div>
+        {/* Rows */}
+        <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 mt-4 sm:mt-6">
+          <div className="rounded-xl bg-white shadow-sm border border-gray-200">
+            <div className="px-4 sm:px-6 pt-6">
+              <div className="grid grid-cols-[90px_150px_1fr] sm:grid-cols-[110px_180px_1fr] items-center gap-3 sm:gap-4">
+                <div className="text-gray-700 font-medium">Serial</div>
+                <div className="text-gray-700 font-medium">Enter RR No.</div>
+                <div className="text-gray-700 font-medium">JD Input</div>
               </div>
+            </div>
 
-              {/* Rows */}
-              <div className="px-6 pb-6">
-                <div className="mt-4 space-y-4">
-                  {demandIds.length === 0 ? (
-                    <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-                      No demand IDs found in backend response. Please go back to Step 1.
-                    </div>
-                  ) : (
-                    demandIds.map((id, idx) => {
-                      const mode = rowMode[idx];
-                      return (
-                        <div
-                          key={id}
-                          className="grid grid-cols-[110px_180px_60px_180px_1fr] items-center gap-4 rounded-lg bg-white p-4 border border-gray-200 shadow-sm"
-                          onDragOver={onDragOver}
-                          onDrop={(e) => onDrop(idx, e)}
-                        >
-                          {/* Serial Number */}
-                          <div className="inline-flex w-12 items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-800">
-                            #{idx + 1}
-                          </div>
+            <div className="px-4 sm:px-6 pb-6">
+              <div className="mt-4 space-y-2">
+                {rowCount === 0 ? (
+                  <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    No rows available. Please go back to Step 1.
+                  </div>
+                ) : (
+                  Array.from({ length: rowCount }).map((_, idx) => {
+                    const mode = rowMode[idx] || 'file';
+                    return (
+                      <div
+                        key={`row-${idx}`}
+                        className="grid grid-cols-[90px_150px_1fr] sm:grid-cols-[110px_180px_1fr] items-start gap-3 sm:gap-4 rounded-lg bg-white p-3 sm:p-4 border border-gray-200 shadow-sm"
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                          e.preventDefault(); e.stopPropagation();
+                          const f = e.dataTransfer?.files?.[0] || null;
+                          if (!f) return;
+                          setRowMode((prev) => ({ ...prev, [idx]: 'file' }));
+                          handleSelectedFile(idx, f);
+                        }}
+                      >
+                        {/* Serial */}
+                        <div className="inline-flex w-12 items-center justify-center rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-800">
+                          #{idx + 1}
+                        </div>
 
-                          {/* Demand ID (readonly) */}
-                          <input
-                            type="text"
-                            value={id}
-                            readOnly
-                            className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                            title={`Demand ID ${id}`}
-                          />
+                        {/* RR number */}
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={rrNumbers[idx] ?? ''}
+                          onChange={(e) => onChangeRR(idx, e.target.value)}
+                          placeholder="RR No."
+                          className="w-2/3 rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        />
 
-                          {/* Arrow */}
-                          <div className="flex items-center justify-center text-gray-400">
-                            <span className="select-none text-lg">↔︎</span>
-                          </div>
-
-                          {/* RR text */}
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={rrNumbers[idx] ?? ''}
-                            onChange={(e) => onChangeRR(idx, e.target.value)}
-                            placeholder="RR No."
-                            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                          />
-
-                          {/* JD Input area */}
-                          <div className="flex flex-col gap-2">
-                            {/* If no mode selected yet -> radio choices */}
-                            {!mode ? (
-                              <div className="flex items-center gap-6">
-                                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name={`mode-${idx}`}
-                                    value="file"
-                                    onChange={() => setRowMode((p) => ({ ...p, [idx]: 'file' }))}
-                                  />
-                                  <span>Add File</span>
-                                </label>
-                                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name={`mode-${idx}`}
-                                    value="text"
-                                    onChange={() => setRowMode((p) => ({ ...p, [idx]: 'text' }))}
-                                  />
-                                  <span>Add Text</span>
-                                </label>
+                        {/* JD Input row */}
+                        <div className="flex items-start gap-3">
+                          {/* LEFT: content */}
+                          <div className="flex-1 min-w-0">
+                            {mode === 'text' ? (
+                              <div className="w-full">
+                                <textarea
+                                  rows={4}
+                                  placeholder={`Paste or type JD text (max ${WORD_LIMIT} words)…`}
+                                  value={rowText[idx] ?? ''}
+                                  onChange={(e) => setRowText((p) => ({ ...p, [idx]: e.target.value }))}
+                                  className="w-full h-20 md:w-11/12 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                />
                               </div>
-                            ) : null}
-
-                            {/* Mode = file */}
-                            {mode === 'file' && (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => triggerFileDialog(idx)}
-                                  className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                                >
-                                  Attach JD
-                                </button>
-
+                            ) : (
+                              <div
+                                className={`flex-1 min-w-0 h-12 rounded-md border px-3 py-2 text-xs flex items-center justify-between cursor-pointer ${
+                                  rowFiles[idx]
+                                    ? 'border-green-300 bg-green-50 text-green-800'
+                                    : 'border-dashed border-gray-300 text-gray-600 bg-gray-50'
+                                }`}
+                                title="You can also drop a file here"
+                                onClick={() => triggerFileDialog(idx)}
+                              >
+                                <span className="truncate">
+                                  {rowFiles[idx] ? rowFiles[idx].name : 'Drop here or click Attach JD'}
+                                </span>
                                 <input
                                   ref={(el) => setFileRef(idx, el)}
                                   type="file"
@@ -450,109 +585,112 @@ const saveDraft = async () => {
                                   className="sr-only"
                                   aria-hidden="true"
                                 />
-
-                                {/* Drop pill */}
-                                <div
-                                  className={`flex-1 min-w-0 h-10 rounded-md border px-3 py-2 text-xs flex items-center justify-between ${
-                                    rowFiles[idx]
-                                      ? 'border-green-300 bg-green-50 text-green-800'
-                                      : 'border-dashed border-gray-300 text-gray-600 bg-gray-50'
-                                  }`}
-                                  title="You can also drop a file here"
-                                >
-                                  <span className="truncate">
-                                    {rowFiles[idx] ? rowFiles[idx].name : 'Drop here or click Attach JD'}
-                                  </span>
-                                  {rowFiles[idx] && (
-                                    <button
-                                      type="button"
-                                      onClick={() => clearRowFile(idx)}
-                                      className="ml-3 inline-flex items-center justify-center rounded px-2 py-0.5 text-[11px] bg-white/60 hover:bg-white text-gray-700 border border-gray-300"
-                                    >
-                                      Clear
-                                    </button>
-                                  )}
-                                </div>
                               </div>
                             )}
+                          </div>
 
-                            {/* Mode = text */}
-                            {mode === 'text' && (
-                              <div className="relative">
-                                <textarea
-                                  maxLength={5000}
-                                  rows={3}
-                                  placeholder="Paste or type JD text (max 5000 characters)…"
-                                  value={rowText[idx] ?? ''}
-                                  onChange={(e) =>
-                                    setRowText((p) => ({ ...p, [idx]: e.target.value }))
-                                  }
-                                  className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                />
-                                <span className="absolute bottom-2 right-2 text-[11px] text-gray-500">
-                                  {(rowText[idx]?.length ?? 0)}/5000
-                                </span>
-                              </div>
-                            )}
+                          {/* RIGHT: controls */}
+                          <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+                            <button
+                              type="button"
+                              onClick={() => clearRowFile(idx)}
+                              className={`inline-flex items-center justify-center rounded px-2 py-1 text-xs border border-gray-300 ${
+                                mode === 'file' && rowFiles[idx] ? 'bg-white text-gray-700 hover:bg-gray-50' : 'invisible'
+                              }`}
+                            >
+                              Clear
+                            </button>
 
-                            {/* Per-row error */}
-                            {rowErrors[idx] ? (
-                              <div className="text-xs text-red-700">⚠ {rowErrors[idx]}</div>
-                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRowMode((p) => ({ ...p, [idx]: 'file' }));
+                                setTimeout(() => triggerFileDialog(idx), 0);
+                              }}
+                              className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white text-xs font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
+                            >
+                              Attach JD
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setRowMode((p) => ({ ...p, [idx]: 'text' }))}
+                              className={`inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+                                mode === 'text' ? 'invisible' : ''
+                              }`}
+                            >
+                              Add Text
+                            </button>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
+
+                        {/* Row error */}
+                        {rowErrors[idx] ? (
+                          <div className="col-span-full text-xs text-red-700">⚠ {rowErrors[idx]}</div>
+                        ) : null}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* Footer actions (right aligned, smaller buttons, with Save Draft in the middle) */}
-          <footer className="mt-8 pb-12">
-            <div className="mx-auto w-full max-w-6xl px-6">
-              <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-4">
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/addDemands1')}
-                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                  >
-                    Previous
-                  </button>
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-4">
+            <div className="flex justify-end gap-3">
+              {/* Previous -> go back to Step‑1 route with draftId */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (draftIdNum) {
+                    localStorage.setItem('step1DraftId', String(draftIdNum));
+                    navigate('/addDemands1', { state: { draftId: draftIdNum, __fromStep2: true } });
+                  } else {
+                    navigate('/addDemands1');
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
+              >
+                Previous
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={saveDraft}
-                    className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  >
-                    Save Draft
-                  </button>
+              {/* Save Draft */}
+              <button
+                type="button"
+                onClick={onSaveDraft}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              >
+                Save Draft
+              </button>
 
-                  <button
-                    type="submit"
-                    disabled={
-                      submitting ||
-                      demandIds.some((_, idx) => !!rowErrors[idx]) ||
-                      demandIds.some((_, idx) => {
-                        const mode = rowMode[idx];
-                        if (!mode) return true;
-                        if (mode === 'file') return !rowFiles[idx];
-                        if (mode === 'text') return !(rowText[idx] || '').trim();
-                        return true;
-                      })
-                    }
-                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? 'Submitting…' : 'Submit Demands'}
-                  </button>
-                </div>
-              </div>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={
+                  submitting ||
+                  rowCount === 0 ||
+                  Array.from({ length: rowCount }).some((_, idx) => {
+                    const v = rrNumbers[idx];
+                    return v === undefined || v === '' || isNaN(Number(v)) || Number(v) < 0;
+                  }) ||
+                  Array.from({ length: rowCount }).some((_, idx) => {
+                    const mode = rowMode[idx];
+                    if (!mode) return true;
+                    if (mode === 'file') return !rowFiles[idx];
+                    if (mode === 'text') return !(rowText[idx] || '').trim();
+                    return true;
+                  })
+                }
+                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Submitting…' : 'Submit Demands'}
+              </button>
             </div>
-          </footer>
-        </form>
-      </div>
+          </div>
+        </div>
+      </form>
     </Layout>
   );
 }
