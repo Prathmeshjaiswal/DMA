@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { message, Spin, Button } from "antd";
-import NavBar from "../NavBar";
+import Layout from "../Layout";
 import { getAllDropdowns, updateUserById, getAllUsers } from "../api/UserManagement";
 
 /* ---------- Helpers (keep id numeric) ---------- */
@@ -423,10 +423,11 @@ export default function EditUser() {
   if (initialLoading && !userFromState) {
     return (
       <>
-        <NavBar />
+        <Layout>
         <div className="w-full h-[60vh] flex items-center justify-center">
           <Spin />
         </div>
+        </Layout>
       </>
     );
     }
@@ -434,9 +435,9 @@ export default function EditUser() {
   /** Render: Navbar + Edit form with dropdowns, phone validation, and save actions. */
   return (
     <>
-      <NavBar />
+      <Layout >
 
-      <div className="min-h-[calc(100vh-64px)] bg-gray-50 mt-[-40px]">
+      <div className=" mt-[-30px]">
         <main className="mx-auto w-full max-w-[720px] px-4 py-6">
           <div className="rounded-2xl bg-white shadow-md border border-gray-100 overflow-hidden">
             <div className="px-5 md:px-6 py-4 border-b border-gray-100 text-center">
@@ -589,6 +590,7 @@ export default function EditUser() {
           </div>
         </main>
       </div>
+      </Layout>
     </>
   );
 }

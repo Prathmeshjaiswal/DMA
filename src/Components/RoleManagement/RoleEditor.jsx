@@ -1,4 +1,6 @@
-// src/Components/Auth/RoleEditor.jsx
+
+
+// src/Components/RoleManagement/RoleEditor.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Space, Tree, Tag, message, Input, Spin } from "antd";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -66,6 +68,9 @@ export default function RoleEditor() {
   const [treeError, setTreeError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // ✅ NEW: force-check Dashboard MODULE (UI only)
+  const [forcedModuleKeys, setForcedModuleKeys] = useState([]); // e.g., ['m:3'] // UPDATED: comment clarifies moduleId 3 is Dashboard in your backend
+
   /** computePrecheckedKeys: Prefill checked keys from existing role (edit path). */
   const computePrecheckedKeys = (
     role,
@@ -75,11 +80,19 @@ export default function RoleEditor() {
       actionKeyToChildKey,
       childKeyToActionList,
       childIdToModuleId,
+      nodes
     }
   ) => {
     const fullSet = new Set();
     const childOnly = new Set(); // 'c:<moduleId>:<childId>'
     const actionOnly = new Set(); // 'a:<moduleId>:<childId>:<actionId>'
+
+    // ✅ Find Dashboard module key for forced UI check
+    const dashModuleKeys = nodes
+      .filter((n) => String(n.title).trim().toLowerCase() === "dashboard")
+      .map((n) => n.key); // ['m:<moduleId>'] if present
+
+    setForcedModuleKeys(dashModuleKeys);
 
     // Convert legacy keys (c:<childId> / a:<childId>:<actionId>) to module-scoped.
     const upgradeLegacyKey = (k) => {
@@ -225,6 +238,9 @@ export default function RoleEditor() {
           const moduleKey = `m:${moduleId}`;
           moduleKeys.push(moduleKey);
 
+          const isDashboardModule =
+            String(mod.moduleName).trim().toLowerCase() === "dashboard"; // UPDATED: this drives the grey checkbox and forced-checked behavior
+
           const childNodes = asArray(mod.childModules).map((child) => {
             const childId = num(child.childModuleId);
             const childKey = `c:${moduleId}:${childId}`;
@@ -273,6 +289,8 @@ export default function RoleEditor() {
             key: moduleKey,
             title: mod.moduleName,
             selectable: false,
+            checkable: true,
+            disableCheckbox: isDashboardModule, // grey & non-editable for Dashboard module node
             children: childNodes,
           };
         });
@@ -307,6 +325,7 @@ export default function RoleEditor() {
               childKeyToModuleKey: _childKeyToModuleKey,
               childKeyToActionList: _childKeyToActionList,
               childIdToModuleId: _childIdToModuleId,
+              nodes,
             }
           );
           setCheckedKeys(Array.from(fullTreeKeys));
@@ -423,7 +442,7 @@ export default function RoleEditor() {
     const payload = {
       role: trimmedName,
       moduleChildModule,
-      checkedKeys, // Persist only child/action keys.
+      checkedKeys, // Persist only child/action keys (never module keys, even though Dashboard is force-checked in UI)
     };
 
     setSaving(true);
@@ -523,7 +542,12 @@ export default function RoleEditor() {
                   <Tree
                     checkable
                     defaultExpandedKeys={defaultExpandedModuleKeys}
-                    checkedKeys={checkedKeys}
+                    checkedKeys={{
+                      checked: Array.from(
+                        new Set([...(checkedKeys || []), ...(forcedModuleKeys || [])])
+                      ),
+                      halfChecked: [],
+                    }}
                     onCheck={onCheck}
                     treeData={treeData}
                     disabled={saving}
@@ -542,7 +566,12 @@ export default function RoleEditor() {
                 onClick={handleSave}
                 loading={saving}
                 disabled={
-                  !(name.trim().length > 0 && !saving && treeData.length > 0 && childKeyToModuleId.size > 0) ||
+                  !(
+                    name.trim().length > 0 &&
+                    !saving &&
+                    treeData.length > 0 &&
+                    childKeyToModuleId.size > 0
+                  ) ||
                   loadingTree ||
                   !!treeError
                 }

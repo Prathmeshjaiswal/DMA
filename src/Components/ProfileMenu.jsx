@@ -57,7 +57,7 @@ export default function ProfileMenu({ onProfile, onLogout }) {
           {hasChild("User Management", "Users Sheet") && (
             <button
               onClick={() => go("/UserManagement")}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-green-600 font-medium"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black font-medium"
             >
               User Management
             </button>
@@ -67,7 +67,7 @@ export default function ProfileMenu({ onProfile, onLogout }) {
           {hasChild("Role Management", "Roles Sheet") && (
             <button
               onClick={() => go("/rolemanagement")}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-yellow-600 font-medium"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-black font-medium"
             >
               Roles Management
             </button>
@@ -81,7 +81,7 @@ export default function ProfileMenu({ onProfile, onLogout }) {
               setOpen(false);
               onLogout?.();
             }}
-            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 font-medium"
+            className="w-full px-4 py-2 text-left text-black hover:bg-red-50 font-medium"
           >
             Logout
           </button>

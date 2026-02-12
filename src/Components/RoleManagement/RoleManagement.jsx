@@ -203,6 +203,23 @@ const fetchRoles = async () => {
   setError("");
   try {
     const res = await getroles();
+      const mapped = list.map((role) => {
+        const active =
+          typeof role.active === "boolean"
+            ? role.active
+            : typeof role.isActive === "boolean"
+            ? role.isActive
+            : typeof role.isactive === "boolean"
+            ? role.isactive
+            : typeof role.is_active === "boolean"
+            ? role.is_active
+            : typeof role.enabled === "boolean"
+            ? role.enabled
+            : role.active === 1 ||
+              role.isActive === 1 ||
+              role.isactive === 1 ||
+              role.is_active === 1 ||
+              role.enabled === 1;
 
     // Handle API returning either { data: [...] } or bare array
     const list = asArray(res?.data ?? res);
@@ -386,6 +403,34 @@ const fetchRoles = async () => {
     );
   };
 
+  // ---------- NEW helpers to pick the right createdBy/updatedBy from different shapes ----------
+  // UPDATED: handle backend keys like createBy, createdBy, created_by, etc.
+  const pickFirst = (obj, keys) =>
+    keys.reduce((val, k) => (val != null ? val : obj?.[k]), undefined);
+
+  const getCreatedByValue = (rec) =>
+    // UPDATED: prefer createdBy, else createBy (as in your sample), with common fallbacks
+    pickFirst(rec, [
+      "createdBy",
+      "createBy",       // your sample response
+      "created_by",
+      "createdby",
+      "createdUser",
+      "created_user",
+    ]);
+
+  const getUpdatedByValue = (rec) =>
+    // UPDATED: prefer updatedBy, else updateBy, with fallbacks
+    pickFirst(rec, [
+      "updatedBy",     // your sample response
+      "updateBy",
+      "updated_by",
+      "updatedby",
+      "updatedUser",
+      "updated_user",
+    ]);
+  // ---------------------------------------------------------------------------------------------
+
   /** columns: Table columns with permission-aware actions. */
   const columns = [
     {
@@ -402,7 +447,7 @@ const fetchRoles = async () => {
       title: "Created By",
       key: "createdBy",
       width: 180,
-      render: (_, record) => renderUserCell(record.createdBy, "Unknown"),
+      render: (_, record) => renderUserCell(getCreatedByValue(record), "Unknown"), // UPDATED
     },
     {
       title: "Created At",
@@ -417,7 +462,7 @@ const fetchRoles = async () => {
       title: "Updated By",
       key: "updatedBy",
       width: 180,
-      render: (_, record) => renderUserCell(record.updatedBy, "Unknown"),
+      render: (_, record) => renderUserCell(getUpdatedByValue(record), "Unknown"), // UPDATED
     },
     {
       title: "Updated At",
@@ -539,7 +584,6 @@ const fetchRoles = async () => {
             padding: 6px 8px !important; background: #f8fafc; font-weight: 600;
           }
           .compact-table .ant-table-tbody > tr > td { padding: 6px 8px !important; }
-          .compact-table .ant-table-tbody > tr > td .ant-tag { line-height: 18px; padding: 0 6px; }
           .compact-table .ant-table-tbody > tr:hover > td { background: #fcfcff; }
           .compact-table .ant-table-placeholder { padding: 12px !important; }
           .compact-table .ant-pagination { margin: 8px 0 0 0; }

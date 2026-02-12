@@ -1,3 +1,4 @@
+
 // src/Components/Sidebar.jsx
 import React, { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +8,7 @@ import { usePermissions } from "../Components/Auth/PermissionProvider";
 /** Sliderbar: Slide-in sidebar that shows menu items gated by permissions. */
 export default function Sliderbar({ isOpen, onClose, width = 256 }) {
   const navigate = useNavigate();
-  const { hasChild } = usePermissions();
+  const { hasChild /*, can*/ } = usePermissions();
 
   /** COLORS: Centralized theme tokens for consistent styling. */
   const COLORS = {
@@ -26,26 +27,32 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
   }, [onClose]);
 
   /** Permission gates: Determine which groups/items should be visible. */
-  const allowDashboardShortcuts = hasChild("DashBoard", "DashBoard");
-  const allowReports = hasChild("DashBoard", "Reports");
+  // ✅ UPDATED: Use specific child modules under the DashBoard module
+  const allowDemands = hasChild("DashBoard", "Demands");      // UPDATED
+  const allowTrack = hasChild("DashBoard", "Track");          // UPDATED
+  const allowRDGTA = hasChild("DashBoard", "RDG/TA");         // UPDATED
+  const allowHBU = hasChild("DashBoard", "HBU");              // UPDATED
+  const allowReports = hasChild("DashBoard", "Reports");      // UPDATED
+  // If you want the Reports button visible only when action is granted, use:
+  // const allowReports = can("DashBoard", "Reports", "Download Reports");
 
   /** MENU: Build visible menu items based on current permissions. */
   const MENU = useMemo(
     () =>
       [
-        allowDashboardShortcuts && {
+        allowDemands && {
           label: "Demands",
           onClick: () => navigate("/demandsheet1"),
         },
-        allowDashboardShortcuts && {
+        allowTrack && {
           label: "Track",
           onClick: () => navigate("/ProfileTracker"),
         },
-        allowDashboardShortcuts && {
-          label: "RDG/TA",
-          onClick: () => navigate("/RDGTATeam"),
+        allowRDGTA && {
+          label: "Profiles",
+          onClick: () => navigate("/profileSheet"),
         },
-        allowDashboardShortcuts && {
+        allowHBU && {
           label: "HBU",
           onClick: () => navigate("/HBU"),
         },
@@ -54,7 +61,7 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
           onClick: () => navigate("/Report"),
         },
       ].filter(Boolean),
-    [allowDashboardShortcuts, allowReports, navigate]
+    [allowDemands, allowTrack, allowRDGTA, allowHBU, allowReports, navigate] // UPDATED deps
   );
 
   /** Render: Off-canvas sidebar with header, close button, and gated menu. */
@@ -106,11 +113,14 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
           <button
             key={`menu-${item.label}`}
             onClick={item.onClick}
-            className="w-full rounded px-3 py-2 text-left"
-            style={{
-              backgroundColor: COLORS.navyTint,
-              color: COLORS.white,
-            }}
+            className="
+              w-full rounded px-3 py-2 text-left
+              transition-colors duration-150
+              hover:bg-white/10 focus:bg-white/15
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40
+              active:bg-white/20
+            "
+            style={{ color: COLORS.white }}
           >
             {item.label}
           </button>

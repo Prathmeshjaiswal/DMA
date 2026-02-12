@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { message, Spin, Button } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import NavBar from "../NavBar.jsx";
+import Layout from "../Layout.jsx"
 import { createUser } from "../api/userApi.js";
 import { getAllDropdowns } from "../api/UserManagement.js";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +30,15 @@ function normalizeSubDepartments(subDepartmentsByName, departments) {
 function onlyDigits(s = "") {
   return (s || "").replace(/\D+/g, "");
 }
+
+
+function validateUserId(raw) {
+  const digits = onlyDigits(raw);
+  if (!digits) return { ok: false, reason: "Employee ID is required." };
+  if (digits.length < 6) return { ok: false, reason: "Employee ID must be at least 6 digits." };
+  return { ok: true, value: digits };
+}
+
 
 /** getPhoneRegexByCallingCode: Return a country-specific regex for phone validation by calling code. */
 function getPhoneRegexByCallingCode(callingCode) {
@@ -97,6 +107,10 @@ export default function CreateUser() {
 
   const [phoneError, setPhoneError] = useState("");
   const [phoneTouched, setPhoneTouched] = useState(false);
+
+  // add below existing phone state
+  const [userIdError, setUserIdError] = useState("");
+  const [userIdTouched, setUserIdTouched] = useState(false);
 
   /** useEffect: Load dropdown data (countries, locations, departments, sub-departments, roles) on mount. */
   useEffect(() => {
@@ -168,7 +182,9 @@ export default function CreateUser() {
     });
     setFilteredSubDepartments([]);
     setPhoneError("");
+    setUserIdError("");
     setPhoneTouched(false);
+    setUserIdTouched(false);
   };
 
   /** handleCancel: Navigate back to the User Management list. */
@@ -248,14 +264,20 @@ export default function CreateUser() {
     ? "ring-red-500 focus:ring-2 focus:ring-red-600"
     : "ring-gray-200 focus:ring-2 focus:ring-blue-700";
 
+
+  const userIdRingBase = "rounded-lg px-3 py-2 bg-gray-50 ring-1 focus:outline-none";
+  const userIdRingColor = userIdTouched && userIdError
+    ? "ring-red-500 focus:ring-2 focus:ring-red-600"
+    : "ring-gray-200 focus:ring-2 focus:ring-blue-700";
+
   /** Render: Navbar + centered card with Create User form and validation. */
   return (
     <>
-      <NavBar />
+      <Layout>
 
       {/* Page bg + center container */}
-      <div className="min-h-[calc(100vh-64px)] bg-gray-50 mt-[-40px]">
-        <main className="mx-auto w-full max-w-[520px] md:max-w-[640px] px-4 py-6">
+   <div className="mt-[-30px] ">
+        <main className="mx-auto w-full max-w-[520px] md:max-w-[640px] px-4 py-6 ">
           <div className="rounded-2xl bg-white shadow-md border border-gray-100 overflow-hidden">
             {/* Sticky card header */}
             <div className="px-5 md:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
@@ -269,15 +291,37 @@ export default function CreateUser() {
             {/* Form */}
             <form className="px-5 md:px-6 py-5" onSubmit={onSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4">
-                {/* Employee ID */}
-                <input
-                  className="w-full rounded-lg px-3 py-2 bg-gray-50 ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                  name="userId"
-                  value={form.userId}
-                  onChange={onChange}
-                  placeholder="Employee ID"
-                  required
-                />
+                {/* Employee ID (validated like phone) */}
+                <div className="w-full"> {/* <— wraps input + message in the SAME grid cell */}
+                  <input
+                    className={`w-full ${userIdRingBase} ${userIdRingColor}`}
+                    name="userId"
+                    value={form.userId}
+                    onChange={(e) => {
+                      // keep only digits while typing
+                      const val = e.target.value.replace(/\D+/g, "");
+                      setForm((p) => ({ ...p, userId: val }));
+                      setUserIdTouched(true);
+
+                      // live validation
+                      const res = validateUserId(val);
+                      setUserIdError(res.ok ? "" : res.reason);
+                    }}
+                    onBlur={() => {
+                      setUserIdTouched(true);
+                      const res = validateUserId(form.userId);
+                      setUserIdError(res.ok ? "" : res.reason);
+                    }}
+                    placeholder="Employee ID"
+                    inputMode="numeric"
+                    autoComplete="off"
+                  />
+
+                  {/* Keep the SAME message UI, just move it directly under the input */}
+                  {userIdTouched && userIdError && (
+                    <p className="mt-1 text-sm text-red-600">{userIdError}</p>
+                  )}
+                </div>
 
                 {/* Employee Name */}
                 <input
@@ -468,6 +512,7 @@ export default function CreateUser() {
           </div>
         </main>
       </div>
+      </Layout>
     </>
   );
 }
