@@ -7,7 +7,7 @@ import Layout from "../Layout.jsx";
 import { getAllDropdowns } from "../api/UserManagement.js";
 
 // NEW API imports (real backend)
-import { getProfileDropdowns, submitProfileCreate, submitProfileUpdate } from "../api/addProfile.js";
+import { getProfileDropdowns, submitProfileCreate, submitProfileUpdate } from "../api/Profiles/addProfile.js";
 
 /* ============================= COMPACT UI TOKENS ============================= */
 const labelCls = "block text-[12px] font-bold text-gray-800";
@@ -137,6 +137,10 @@ function getCurrentUser() {
 // ------------------------ NEW: read role & map to profile type ------------------------
 // UPDATED: derive role name from stored login response or JWT and map RDG->Internal, TA->External
 function getCurrentRoleName() {
+
+
+
+
   // Try a few likely places the login JSON might be stored
   const fromMem = window.__currentUser?.role?.role || window.__currentUser?.role;
   if (fromMem) return String(fromMem);
@@ -230,6 +234,8 @@ export default function RDGTATeam() {
   const location = useLocation();
   const navigate = useNavigate();
 
+
+
   const [loading, setLoading] = useState(true);
   const [dropdowns, setDropdowns] = useState(null);
   const [options, setOptions] = useState({});
@@ -241,8 +247,12 @@ export default function RDGTATeam() {
   const [empIdError, setEmpIdError] = useState("");
   const [empIdTouched, setEmpIdTouched] = useState(false);
 
+
+
+
   // UPDATED: Prefer role-based profile type; fallback to URL/state
   const roleName = getCurrentRoleName();                 // UPDATED
+    const isAdmin = String(roleName || "").toLowerCase().includes("admin")
   const roleProfileType = mapRoleToProfileType(roleName); // UPDATED
   const derivedProfileTypeFromUrl = useMemo(() => {
     const state = location?.state || {};
@@ -262,7 +272,8 @@ export default function RDGTATeam() {
   // UPDATED: final profile type selection order: Role > URL/state > empty
   const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
   const isInternal = (resolvedProfileType || "").toLowerCase() === "internal";   // UPDATED
-
+ const showEmpIdField = isInternal || isAdmin;
+ 
   const [currentUser, setCurrentUser] = useState({ userId: "", name: "" });
 
   const [form, setForm] = useState({
@@ -428,7 +439,7 @@ export default function RDGTATeam() {
     const payload = {
       candidateName: form.candidateName,
       emailId: form.emailId,
-      ...(isInternal ? { empId: String(form.empId) } : {}), // UPDATED
+       ...(form.empId ? { empId: String(form.empId) } : {}), // UPDATED
 
       phoneNumber: onlyDigits(form.phoneNumber),        // UPDATED
       isActive: true,
@@ -533,7 +544,7 @@ export default function RDGTATeam() {
             </div>
 
             {/* Employee ID — only for Internal */}
-            {isInternal && (
+            {/* {isInternal && (
               <div>
                 <label className={labelCls}>Employee ID</label>
                 <input
@@ -556,7 +567,37 @@ export default function RDGTATeam() {
                   <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
                 )}
               </div>
+            )}  */}
+
+            
+{/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
+            {showEmpIdField && (
+              <div>
+                <label className={labelCls}>Employee ID</label>
+                <input
+                  className={`${inputCls} mt-1 ${
+                    empIdTouched && empIdError ? "border-red-500 focus:ring-red-600" : ""
+                  }`}
+                  name="empId"
+                  value={form.empId}
+                  onChange={handleInput}
+                  onBlur={() => {
+
+setEmpIdTouched(true);
+                    const r = validateEmpId(form.empId);
+                    // if not Internal, do not block submit—just clear/show helper
+                    setEmpIdError(r.ok ? "" : r.reason);
+                  }}
+                  placeholder="e.g., 128713"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                {empIdTouched && empIdError && (
+                  <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
+                )}
+              </div>
             )}
+
 
             <div>
               <label className={labelCls}>Experience (years)</label>
