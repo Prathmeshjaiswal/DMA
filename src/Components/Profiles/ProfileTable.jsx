@@ -1,3 +1,4 @@
+
 // // ================== src/pages/Profiles/ProfileTable.jsx ==================
 // import React, { useMemo, useState } from "react";
 // import {
@@ -35,17 +36,14 @@
 //   query = {},
 //   onQueryChange,
 // }) {
-//   // Edit modal state
 //   const [editOpen, setEditOpen] = useState(false);
 //   const [editRow, setEditRow] = useState(null);
 //   const [saving, setSaving] = useState(false);
 //   const [form] = Form.useForm();
 
-//   // Per-column search toggle state
 //   const [openSearch, setOpenSearch] = useState({});
 //   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
 
-//   // Dropdowns normalized
 //   const opts = {
 //     locations: dropdownOptions?.demandLocation ?? [],
 //     hbu: dropdownOptions?.hbu ?? [],
@@ -63,14 +61,16 @@
 //       return;
 //     }
 //     setEditRow(row);
+
 //     form.setFieldsValue({
-//       // ================= PRE-FILL ALL FIELDS (UPDATED) =================
 //       candidateName: row?.candidateName ?? "",
 //       emailId: row?.emailId ?? "",
 //       phoneNumber:
 //         row?.phoneNumber != null && row?.phoneNumber !== ""
 //           ? String(row.phoneNumber)
 //           : "",
+
+//       // show only if row had empId (internal)
 //       empId:
 //         row?.empId != null && String(row.empId).trim() !== ""
 //           ? String(row.empId)
@@ -98,6 +98,7 @@
 //         : [],
 //       summary: row?.summary ?? "",
 //     });
+
 //     setEditOpen(true);
 //   };
 
@@ -120,86 +121,51 @@
 //     try {
 //       const values = await form.validateFields();
 
-//       // Numeric helpers
 //       const toNum = (v) =>
 //         v == null || v === "" || Number.isNaN(Number(v)) ? undefined : Number(v);
 //       const toNumArr = (arr) =>
 //         Array.isArray(arr)
-//           ? arr
-//               .map((v) => Number(v))
-//               .filter((n) => typeof n === "number" && !Number.isNaN(n))
+//           ? arr.map((v) => Number(v)).filter((n) => typeof n === "number" && !Number.isNaN(n))
 //           : [];
 
-//       // ================= READ ALL FIELDS (UPDATED) =================
-//       const candidateName =
-//         values.candidateName?.trim() ??
-//         (editRow?.candidateName != null ? String(editRow.candidateName).trim() : undefined);
+//       const candidateName = values.candidateName?.trim();
+//       const emailId = values.emailId?.trim();
 
-//       const emailId =
-//         values.emailId?.trim() ??
-//         (editRow?.emailId != null ? String(editRow.emailId).trim() : undefined);
+//       // sanitize digits only
+//       const phoneDigits = String(values.phoneNumber ?? "")
+//         .replace(/\D+/g, "");
 
-//       const phoneRaw =
-//         values.phoneNumber != null
-//           ? String(values.phoneNumber)
-//           : editRow?.phoneNumber != null
-//           ? String(editRow.phoneNumber)
-//           : "";
-//       const phoneDigits = phoneRaw.replace(/\D+/g, ""); // keep digits only
-
-//       const empRaw = values.empId != null ? String(values.empId) : editRow?.empId != null ? String(editRow.empId) : undefined;
 //       const empDigits =
-//         empRaw != null && empRaw !== "" ? empRaw.replace(/\D+/g, "") : undefined;
-
-//       const experience =
-//         values.experienceYears != null
-//           ? Number(values.experienceYears)
-//           : editRow?.experienceYears != null
-//           ? Number(editRow.experienceYears)
+//         values.empId != null && String(values.empId).trim() !== ""
+//           ? String(values.empId).replace(/\D+/g, "")
 //           : undefined;
 
-//       // Foreign keys from selects (fall back to row ids if untouched)
-//       const locationId =
-//         toNum(values.locationId) ??
-//         (editRow?.locationId != null ? Number(editRow.locationId) : undefined);
+//       const experience =
+//         values.experienceYears != null ? Number(values.experienceYears) : undefined;
 
-//       const hbuId =
-//         toNum(values.hbuId) ?? (editRow?.hbuId != null ? Number(editRow.hbuId) : undefined);
+//       const locationId = toNum(values.locationId);
+//       const hbuId = toNum(values.hbuId);
+//       const skillClusterId = toNum(values.skillClusterId);
 
-//       const skillClusterId =
-//         toNum(values.skillClusterId) ??
-//         (editRow?.skillClusterId != null ? Number(editRow.skillClusterId) : undefined);
+//       const primarySkillsIds = toNumArr(values.primarySkillsIds);
+//       const secondarySkillsIds = toNumArr(values.secondarySkillsIds);
 
-//       // Skills
-//       const primarySkillsIds = toNumArr(
-//         values.primarySkillsIds ?? editRow?.primarySkillsArray ?? []
-//       );
-//       const secondarySkillsIds = toNumArr(
-//         values.secondarySkillsIds ?? editRow?.secondarySkillsArray ?? []
-//       );
-
-//       // ---- FINAL PATCH (DTO-friendly keys) ----
 //       const patch = {};
 //       if (candidateName != null) patch.candidateName = candidateName; // UPDATED
-//       if (emailId != null) patch.emailId = emailId;                   // UPDATED
-//       if (phoneDigits) patch.phoneNumber = phoneDigits;               // UPDATED
+//       if (emailId != null)       patch.emailId = emailId;             // UPDATED
+//       if (phoneDigits)           patch.phoneNumber = phoneDigits;      // UPDATED
 
-//       if (experience != null) patch.experience = experience;
-//       if (locationId != null) patch.locationId = locationId;
-//       if (hbuId != null) patch.hbuId = hbuId;
-//       if (skillClusterId != null) patch.skillClusterId = skillClusterId;
+//       if (experience != null)    patch.experience = experience;
+//       if (locationId != null)    patch.locationId = locationId;        // REQUIRED
+//       if (hbuId != null)         patch.hbuId = hbuId;                  // optional
+//       if (skillClusterId != null)patch.skillClusterId = skillClusterId; // REQUIRED
 
-//       // arrays (always include)
-//       patch.primarySkillsIds = primarySkillsIds;
+//       patch.primarySkillsIds   = primarySkillsIds;
 //       patch.secondarySkillsIds = secondarySkillsIds;
 
-//       if (empDigits !== undefined) patch.empId = empDigits; // UPDATED (only for internal rows)
+//       if (empDigits !== undefined) patch.empId = empDigits;            // UPDATED
 
-//       if (values.summary != null) {
-//         patch.summary = String(values.summary).trim();
-//       } else if (editRow?.summary != null) {
-//         patch.summary = String(editRow.summary).trim();
-//       }
+//       if (values.summary != null) patch.summary = String(values.summary).trim();
 
 //       setSaving(true);
 //       await onSavePatch?.(id, patch);
@@ -217,7 +183,7 @@
 //     }
 //   };
 
-//   // Columns with header search (icon toggles input)
+//   // ------- columns (unchanged except for narrow widths & ellipsis) -------
 //   const antdColumns = useMemo(() => {
 //     const base = columns
 //       .filter((c) => visibleColumns.includes(c.key))
@@ -227,7 +193,6 @@
 //           c.key === "primarySkills" ||
 //           c.key === "secondarySkills";
 
-//         // Narrow width to force early truncation
 //         const colWidth = isSkill ? 220 : undefined;
 
 //         return {
@@ -239,9 +204,7 @@
 //               <div className="flex items-center gap-2">
 //                 <span>{c.label}</span>
 //                 <SearchOutlined
-//                   className={`text-gray-400 text-xs cursor-pointer ${
-//                     openSearch[c.key] ? "text-blue-600" : ""
-//                   }`}
+//                   className={`text-gray-400 text-xs cursor-pointer ${openSearch[c.key] ? "text-blue-600" : ""}`}
 //                   onClick={(e) => {
 //                     e.stopPropagation();
 //                     toggleSearch(c.key);
@@ -264,7 +227,6 @@
 //           ),
 //           render: (text) => {
 //             const value = text == null || text === "" ? "-" : String(text);
-
 //             if (isSkill) {
 //               return (
 //                 <Tooltip
@@ -276,14 +238,13 @@
 //                 </Tooltip>
 //               );
 //             }
-
 //             return <div className="text-gray-800">{value}</div>;
 //           },
 //           onHeaderCell: () => ({
-//             className: "bg-white !py-2 md:!py-2 text-gray-800", // tighter header
+//             className: "bg-white !py-2 md:!py-2 text-gray-800",
 //           }),
 //           onCell: () => ({
-//             className: "align-middle !py-2", // tighter row height
+//             className: "align-middle !py-2",
 //           }),
 //         };
 //       });
@@ -323,14 +284,13 @@
 //     return base;
 //   }, [columns, visibleColumns, onViewRow, onDownload, openSearch, query, onQueryChange]);
 
-//   // Pagination
 //   const pagination = useMemo(
 //     () => ({
 //       current: serverPage + 1,
 //       pageSize: serverSize,
 //       total: serverTotal,
 //       showSizeChanger: true,
-//       pageSizeOptions: [ "10", "20", "50"],
+//       pageSizeOptions: ["10", "20", "50"],
 //       showTotal: (total) => `${total} profiles`,
 //       placement: "bottomRight",
 //       size: "default",
@@ -348,17 +308,20 @@
 //     [serverPage, serverSize, serverTotal, onPageChange, onPageSizeChange]
 //   );
 
+
 //   return (
+//     <>
+    
 //     <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-//       <Table
+//       {/* <Table
 //         rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
 //         dataSource={rows}
 //         columns={antdColumns}
-//         pagination={pagination}
+//         pagination={false}
 //         size="middle"
 //         className="profiles-table"
 //         scroll={{ x: true }}
-//       />
+//       /> */}
 
 //       {/* ---- Edit Modal ---- */}
 //       <Modal
@@ -366,7 +329,7 @@
 //         onCancel={closeEdit}
 //         title={
 //           <div className="flex items-center justify-between pr-6">
-//             <span className="text-lg font-bold">Edit Profile</span>
+//             <span className="text-sm font-semibold">Edit Profile</span>
 //           </div>
 //         }
 //         footer={
@@ -386,7 +349,7 @@
 //         maskClosable
 //         width={780}
 //       >
-//         {/* ================= EDIT FORM WITH ALL FIELDS (UPDATED) ================= */}
+//         {/* ================= EDIT FORM WITH SAME VALIDATIONS AS CREATE (UPDATED) ================= */}
 //         <Form
 //           form={form}
 //           layout="vertical"
@@ -395,7 +358,7 @@
 //           <Form.Item
 //             name="candidateName"
 //             label="Candidate Name"
-//             rules={[{  message: "Candidate name is required" }]}
+//             rules={[{  whitespace: true, message: "Candidate name is required" }]} // REQUIRED
 //           >
 //             <Input placeholder="Candidate name" />
 //           </Form.Item>
@@ -404,27 +367,27 @@
 //             name="emailId"
 //             label="Email ID"
 //             rules={[
-//               {  message: "Email is required" },
-//               { type: "email", message: "Invalid email" },
+//               {  message: "Email is required" },            // REQUIRED
+//               { type: "email", message: "Invalid email address" },         // same as create
 //             ]}
 //           >
 //             <Input placeholder="name@example.com" />
 //           </Form.Item>
 
-//           {/* Conditionally show Employee ID if present on row */}
+//           {/* Only if row had empId (internal) */}
 //           {editRow?.empId != null && String(editRow.empId).trim() !== "" && (
 //             <Form.Item
 //               name="empId"
 //               label="Employee ID"
+//               // digits only + min 6 (same as create)
+//               getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""} // sanitize
 //               rules={[
 //                 {
 //                   validator: async (_, v) => {
 //                     if (v == null || String(v).trim() === "") return Promise.resolve();
 //                     const digits = String(v).replace(/\D+/g, "");
 //                     if (digits.length < 6) {
-//                       return Promise.reject(
-//                         new Error("Employee ID must be at least 6 digits")
-//                       );
+//                       return Promise.reject(new Error("Employee ID must be at least 6 digits."));
 //                     }
 //                     return Promise.resolve();
 //                   },
@@ -435,15 +398,42 @@
 //             </Form.Item>
 //           )}
 
-//           <Form.Item name="experienceYears" label="Experience (yrs)">
+//           {/* <Form.Item
+//             name="experienceYears"
+//             label="Experience (yrs)"
+//             rules={[
+//               {  message: "Experience is required" },  // REQUIRED
+//               // { type: "number", min: 0, max: 60, message: "0 - 60 only" },
+//             ]}
+//           >
 //             <InputNumber style={{ width: "100%" }} controls={false} min={0} max={60} step={0.5} placeholder="e.g., 4" />
+//           </Form.Item> */}
+//            <Form.Item name="experienceYears" label="Experience (yrs)">
+//             <InputNumber style={{ width: "100%" }} controls={false} min={0} max={60} step={0.5} placeholder="e.g., 4" />
+//          </Form.Item>
+
+//           <Form.Item
+//             name="phoneNumber"
+//             label="Phone"
+//             // sanitize to digits while typing
+//             getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""}
+//             rules={[
+//               {  message: "Please enter phone number" },   // REQUIRED
+//               {
+//                 // India (+91) rule from create: 10 digits starting with 6–9
+//                 pattern: /^[6-9]\d{9}$/,
+//                 message: "For India (+91), enter 10 digits starting with 6–9.",
+//               },
+//             ]}
+//           >
+//             <Input placeholder="Digits only (e.g., 9876543210)" inputMode="numeric" />
 //           </Form.Item>
 
-//           <Form.Item name="phoneNumber" label="Phone">
-//             <Input placeholder="Digits only" inputMode="numeric" />
-//           </Form.Item>
-
-//           <Form.Item name="locationId" label="Location">
+//           <Form.Item
+//             name="locationId"
+//             label="Location"
+//             rules={[{  message: "Select a Location" }]}   // REQUIRED
+//           >
 //             <AntdSelect
 //               allowClear
 //               placeholder="Select location"
@@ -453,7 +443,11 @@
 //             />
 //           </Form.Item>
 
-//           <Form.Item name="hbuId" label="HBU">
+//           <Form.Item
+//             name="hbuId"
+//             label="HBU"
+//             // HBU is optional in your create form; keeping optional here too
+//           >
 //             <AntdSelect
 //               allowClear
 //               placeholder="Select HBU"
@@ -463,7 +457,11 @@
 //             />
 //           </Form.Item>
 
-//           <Form.Item name="skillClusterId" label="Skill Cluster">
+//           <Form.Item
+//             name="skillClusterId"
+//             label="Skill Cluster"
+//             rules={[{  message: "Select a Skill Cluster" }]}  // REQUIRED
+//           >
 //             <AntdSelect
 //               allowClear
 //               placeholder="Select skill cluster"
@@ -497,8 +495,15 @@
 //             />
 //           </Form.Item>
 
-//           <Form.Item name="summary" label="Summary" className="md:col-span-2">
-//             <Input.TextArea rows={3} placeholder="Short summary / remark" maxLength={1000} showCount />
+//           <Form.Item
+//             name="summary"
+//             label="Summary"
+//             rules={[
+//               { max: 2000, message: "Max 2000 characters" },  // same as create
+//             ]}
+//             className="md:col-span-2"
+//           >
+//             <Input.TextArea rows={3} placeholder="Short summary / remark" maxLength={2000} showCount />
 //           </Form.Item>
 //         </Form>
 //       </Modal>
@@ -515,27 +520,37 @@
 //           padding-top: 8px !important;
 //           padding-bottom: 8px !important;
 //         }
-//         /* Single-line ellipsis for long text cells (skills) */
 //         .profiles-table .cell-ellipsis {
 //           overflow: hidden;
 //           text-overflow: ellipsis;
 //           white-space: nowrap;
-//           color: #1f2937; /* gray-800 */
+//           color: #1f2937;
 //           max-width: 100%;
 //           display: block;
 //         }
-//         /* Shorter preview for long skills */
-//         .profiles-table .cell-ellipsis-compact {
-//           max-width: 180px;
-//         }
+//         .profiles-table .cell-ellipsis-compact { max-width: 180px; }
 //       `}</style>
 //     </div>
+
+//     <div className="" >
+//         <Table
+//         rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
+//         dataSource={rows}
+//         columns={antdColumns}
+//         pagination={pagination}
+//         size="middle"
+//         className="profiles-table"
+//         scroll={{ x: true }}
+//       />
+
+        
+//     </div>
+//     </>
 //   );
 // }
 
-
 // ================== src/pages/Profiles/ProfileTable.jsx ==================
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Table,
   Tooltip,
@@ -574,7 +589,7 @@ export default function ProfileTable({
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm(); // <-- the instance we must connect BEFORE using
 
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
@@ -589,6 +604,35 @@ export default function ProfileTable({
 
   const ensureId = (row) => row?.id ?? row?.profileId;
 
+  // --- compute initial values for the edit form from the selected row
+  const buildInitialValues = (row) => ({
+    candidateName: row?.candidateName ?? "",
+    emailId: row?.emailId ?? "",
+    phoneNumber:
+      row?.phoneNumber != null && row?.phoneNumber !== "" ? String(row.phoneNumber) : "",
+    // show only if row had empId (internal)
+    empId:
+      row?.empId != null && String(row.empId).trim() !== "" ? String(row.empId) : undefined,
+    experienceYears:
+      row?.experienceYears != null && row?.experienceYears !== ""
+        ? Number(row.experienceYears)
+        : undefined,
+    locationId:
+      row?.locationId != null && row?.locationId !== "" ? String(row.locationId) : undefined,
+    hbuId: row?.hbuId != null && row?.hbuId !== "" ? String(row.hbuId) : undefined,
+    skillClusterId:
+      row?.skillClusterId != null && row?.skillClusterId !== ""
+        ? String(row.skillClusterId)
+        : undefined,
+    primarySkillsIds: Array.isArray(row?.primarySkillsArray)
+      ? row.primarySkillsArray.map((n) => String(n))
+      : [],
+    secondarySkillsIds: Array.isArray(row?.secondarySkillsArray)
+      ? row.secondarySkillsArray.map((n) => String(n))
+      : [],
+    summary: row?.summary ?? "",
+  });
+
   const openEdit = (row) => {
     const id = ensureId(row);
     if (!id) {
@@ -596,46 +640,15 @@ export default function ProfileTable({
       return;
     }
     setEditRow(row);
-
-    form.setFieldsValue({
-      candidateName: row?.candidateName ?? "",
-      emailId: row?.emailId ?? "",
-      phoneNumber:
-        row?.phoneNumber != null && row?.phoneNumber !== ""
-          ? String(row.phoneNumber)
-          : "",
-
-      // show only if row had empId (internal)
-      empId:
-        row?.empId != null && String(row.empId).trim() !== ""
-          ? String(row.empId)
-          : undefined,
-
-      experienceYears:
-        row?.experienceYears != null && row?.experienceYears !== ""
-          ? Number(row.experienceYears)
-          : undefined,
-      locationId:
-        row?.locationId != null && row?.locationId !== ""
-          ? String(row.locationId)
-          : undefined,
-      hbuId:
-        row?.hbuId != null && row?.hbuId !== "" ? String(row.hbuId) : undefined,
-      skillClusterId:
-        row?.skillClusterId != null && row?.skillClusterId !== ""
-          ? String(row.skillClusterId)
-          : undefined,
-      primarySkillsIds: Array.isArray(row?.primarySkillsArray)
-        ? row.primarySkillsArray.map((n) => String(n))
-        : [],
-      secondarySkillsIds: Array.isArray(row?.secondarySkillsArray)
-        ? row.secondarySkillsArray.map((n) => String(n))
-        : [],
-      summary: row?.summary ?? "",
-    });
-
-    setEditOpen(true);
+    setEditOpen(true); // <-- just open; we will set fields after form is mounted (see useEffect below)
   };
+
+  // ✅ Populate form only after the modal is open and the Form is mounted/connected
+  useEffect(() => {
+    if (editOpen && editRow) {
+      form.setFieldsValue(buildInitialValues(editRow));
+    }
+  }, [editOpen, editRow, form]);
 
   const closeEdit = () => {
     setEditOpen(false);
@@ -667,16 +680,14 @@ export default function ProfileTable({
       const emailId = values.emailId?.trim();
 
       // sanitize digits only
-      const phoneDigits = String(values.phoneNumber ?? "")
-        .replace(/\D+/g, "");
+      const phoneDigits = String(values.phoneNumber ?? "").replace(/\D+/g, "");
 
       const empDigits =
         values.empId != null && String(values.empId).trim() !== ""
           ? String(values.empId).replace(/\D+/g, "")
           : undefined;
 
-      const experience =
-        values.experienceYears != null ? Number(values.experienceYears) : undefined;
+      const experience = values.experienceYears != null ? Number(values.experienceYears) : undefined;
 
       const locationId = toNum(values.locationId);
       const hbuId = toNum(values.hbuId);
@@ -687,18 +698,18 @@ export default function ProfileTable({
 
       const patch = {};
       if (candidateName != null) patch.candidateName = candidateName; // UPDATED
-      if (emailId != null)       patch.emailId = emailId;             // UPDATED
-      if (phoneDigits)           patch.phoneNumber = phoneDigits;      // UPDATED
+      if (emailId != null) patch.emailId = emailId; // UPDATED
+      if (phoneDigits) patch.phoneNumber = phoneDigits; // UPDATED
 
-      if (experience != null)    patch.experience = experience;
-      if (locationId != null)    patch.locationId = locationId;        // REQUIRED
-      if (hbuId != null)         patch.hbuId = hbuId;                  // optional
-      if (skillClusterId != null)patch.skillClusterId = skillClusterId; // REQUIRED
+      if (experience != null) patch.experience = experience;
+      if (locationId != null) patch.locationId = locationId; // REQUIRED
+      if (hbuId != null) patch.hbuId = hbuId; // optional
+      if (skillClusterId != null) patch.skillClusterId = skillClusterId; // REQUIRED
 
-      patch.primarySkillsIds   = primarySkillsIds;
+      patch.primarySkillsIds = primarySkillsIds;
       patch.secondarySkillsIds = secondarySkillsIds;
 
-      if (empDigits !== undefined) patch.empId = empDigits;            // UPDATED
+      if (empDigits !== undefined) patch.empId = empDigits; // UPDATED
 
       if (values.summary != null) patch.summary = String(values.summary).trim();
 
@@ -718,7 +729,21 @@ export default function ProfileTable({
     }
   };
 
-  // ------- columns (unchanged except for narrow widths & ellipsis) -------
+  // Central download handler with guards + stopPropagation
+  const handleDownloadClick = (e, row) => {
+    e?.stopPropagation?.();
+    if (!onDownload) {
+      message.warning("Download action is not available.");
+      return;
+    }
+    if (!row?.cvFileName || String(row.cvFileName).trim() === "") {
+      message.warning("No CV available for this profile.");
+      return;
+    }
+    onDownload(row);
+  };
+
+  // ------- columns (narrow widths & ellipsis) -------
   const antdColumns = useMemo(() => {
     const base = columns
       .filter((c) => visibleColumns.includes(c.key))
@@ -788,36 +813,57 @@ export default function ProfileTable({
       key: "actions",
       title: <div className="text-center font-semibold">Actions</div>,
       fixed: "right",
-      width: 120,
+      width: 160,
       render: (_, row) => {
         const hasId = !!ensureId(row);
+        const hasCv = !!(row?.cvFileName && String(row.cvFileName).trim() !== "");
         return (
-          <div className="flex items-center justify-center gap-3 text-gray-700">
-            <EyeOutlined
-              className="cursor-pointer hover:text-blue-600"
-              onClick={() => onViewRow?.(row)}
-              title="View"
-            />
-            <EditOutlined
-              className={
-                "hover:text-amber-600 " +
-                (hasId ? "cursor-pointer" : "cursor-not-allowed text-gray-300")
-              }
-              onClick={() => hasId && openEdit(row)}
-              title={hasId ? "Edit" : "Edit (ID missing)"}
-            />
-            <DownloadOutlined
-              className="cursor-pointer hover:text-green-700"
-              onClick={() => onDownload?.(row)}
-              title="Download CV"
-            />
+          <div
+            className="flex items-center justify-center gap-2 text-gray-700"
+            style={{ pointerEvents: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Tooltip title="View">
+              <Button
+                type="text"
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewRow?.(row);
+                }}
+              />
+            </Tooltip>
+
+            <Tooltip title={hasId ? "Edit" : "Edit (ID missing)"}>
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                disabled={!hasId}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (hasId) openEdit(row);
+                }}
+              />
+            </Tooltip>
+
+            <Tooltip title={hasCv ? "Download CV" : "No CV"}>
+              <Button
+                type="text"
+                size="small"
+                icon={<DownloadOutlined />}
+                disabled={!hasCv}
+                onClick={(e) => handleDownloadClick(e, row)}
+              />
+            </Tooltip>
           </div>
         );
       },
     });
 
     return base;
-  }, [columns, visibleColumns, onViewRow, onDownload, openSearch, query, onQueryChange]);
+  }, [columns, visibleColumns, onViewRow, openSearch, query, onQueryChange]);
 
   const pagination = useMemo(
     () => ({
@@ -843,243 +889,218 @@ export default function ProfileTable({
     [serverPage, serverSize, serverTotal, onPageChange, onPageSizeChange]
   );
 
-
   return (
     <>
-    
-    <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* <Table
-        rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
-        dataSource={rows}
-        columns={antdColumns}
-        pagination={false}
-        size="middle"
-        className="profiles-table"
-        scroll={{ x: true }}
-      /> */}
+      <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* ---- Scoped CSS ---- */}
+        <style>{`
+          .profiles-table .ant-table-thead > tr > th {
+            border-bottom: 1px solid #eef0f2;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+          }
+          .profiles-table .ant-table-tbody > tr > td {
+            border-bottom: 1px solid #f3f4f6;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+          }
+          .profiles-table .cell-ellipsis {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #1f2937;
+            max-width: 100%;
+            display: block;
+          }
+          .profiles-table .cell-ellipsis-compact { max-width: 180px; }
+        `}</style>
+      </div>
 
-      {/* ---- Edit Modal ---- */}
-      <Modal
-        open={editOpen}
-        onCancel={closeEdit}
-        title={
-          <div className="flex items-center justify-between pr-6">
-            <span className="text-sm font-semibold">Edit Profile</span>
-          </div>
-        }
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button onClick={closeEdit}>Cancel</Button>
-            <Button
-              type="primary"
-              loading={saving}
-              onClick={handleSave}
-              className="bg-green-700 hover:bg-green-800"
-            >
-              Save
-            </Button>
-          </div>
-        }
-        destroyOnHidden
-        maskClosable
-        width={780}
-      >
-        {/* ================= EDIT FORM WITH SAME VALIDATIONS AS CREATE (UPDATED) ================= */}
-        <Form
-          form={form}
-          layout="vertical"
-          className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3"
+      <div className="">
+        <Table
+          rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
+          dataSource={rows}
+          columns={antdColumns}
+          pagination={pagination}
+          size="middle"
+          className="profiles-table"
+          scroll={{ x: true }}
+        />
+
+        {/* ---- Edit Modal ---- */}
+        <Modal
+          open={editOpen}
+          onCancel={closeEdit}
+          // ✅ Mount form subtree even when modal is closed so the form instance is always connected
+          forceRender
+          destroyOnHidden
+          title={
+            <div className="flex items-center justify-between pr-6">
+              <span className="text-md font-bold">Edit Profile</span>
+            </div>
+          }
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button onClick={closeEdit}>Cancel</Button>
+              <Button
+                type="primary"
+                loading={saving}
+                onClick={handleSave}
+                className="bg-green-700 hover:bg-green-800"
+              >
+                Save
+              </Button>
+            </div>
+          }
+          maskClosable
+          width={780}
         >
-          <Form.Item
-            name="candidateName"
-            label="Candidate Name"
-            rules={[{  whitespace: true, message: "Candidate name is required" }]} // REQUIRED
+          {/* ================= EDIT FORM ================= */}
+          <Form
+            form={form} // <-- connected here; warning gone
+            layout="vertical"
+            className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3"
           >
-            <Input placeholder="Candidate name" />
-          </Form.Item>
-
-          <Form.Item
-            name="emailId"
-            label="Email ID"
-            rules={[
-              {  message: "Email is required" },            // REQUIRED
-              { type: "email", message: "Invalid email address" },         // same as create
-            ]}
-          >
-            <Input placeholder="name@example.com" />
-          </Form.Item>
-
-          {/* Only if row had empId (internal) */}
-          {editRow?.empId != null && String(editRow.empId).trim() !== "" && (
             <Form.Item
-              name="empId"
-              label="Employee ID"
-              // digits only + min 6 (same as create)
-              getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""} // sanitize
+              name="candidateName"
+              label="Candidate Name"
+              rules={[{ whitespace: true, message: "Candidate name is required" }]}
+            >
+              <Input placeholder="Candidate name" />
+            </Form.Item>
+
+            <Form.Item
+              name="emailId"
+              label="Email ID"
               rules={[
-                {
-                  validator: async (_, v) => {
-                    if (v == null || String(v).trim() === "") return Promise.resolve();
-                    const digits = String(v).replace(/\D+/g, "");
-                    if (digits.length < 6) {
-                      return Promise.reject(new Error("Employee ID must be at least 6 digits."));
-                    }
-                    return Promise.resolve();
+                { message: "Email is required" },
+                { type: "email", message: "Invalid email address" },
+              ]}
+            >
+              <Input placeholder="name@example.com" />
+            </Form.Item>
+
+            {editRow?.empId != null && String(editRow.empId).trim() !== "" && (
+              <Form.Item
+                name="empId"
+                label="Employee ID"
+                getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""}
+                rules={[
+                  {
+                    validator: async (_, v) => {
+                      if (v == null || String(v).trim() === "") return Promise.resolve();
+                      const digits = String(v).replace(/\D+/g, "");
+                      if (digits.length < 6) {
+                        return Promise.reject(new Error("Employee ID must be at least 6 digits."));
+                      }
+                      return Promise.resolve();
+                    },
                   },
+                ]}
+              >
+                <Input placeholder="e.g., 128713" inputMode="numeric" />
+              </Form.Item>
+            )}
+
+            <Form.Item name="experienceYears" label="Experience (yrs)">
+              <InputNumber
+                style={{ width: "100%" }}
+                controls={false}
+                min={0}
+                max={60}
+                step={0.5}
+                placeholder="e.g., 4"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="phoneNumber"
+              label="Phone"
+              getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""}
+              rules={[
+                { message: "Please enter phone number" },
+                {
+                  pattern: /^[6-9]\d{9}$/,
+                  message: "For India (+91), enter 10 digits starting with 6–9.",
                 },
               ]}
             >
-              <Input placeholder="e.g., 128713" inputMode="numeric" />
+              <Input placeholder="Digits only (e.g., 9876543210)" inputMode="numeric" />
             </Form.Item>
-          )}
 
-          {/* <Form.Item
-            name="experienceYears"
-            label="Experience (yrs)"
-            rules={[
-              {  message: "Experience is required" },  // REQUIRED
-              // { type: "number", min: 0, max: 60, message: "0 - 60 only" },
-            ]}
-          >
-            <InputNumber style={{ width: "100%" }} controls={false} min={0} max={60} step={0.5} placeholder="e.g., 4" />
-          </Form.Item> */}
-           <Form.Item name="experienceYears" label="Experience (yrs)">
-            <InputNumber style={{ width: "100%" }} controls={false} min={0} max={60} step={0.5} placeholder="e.g., 4" />
-         </Form.Item>
+            <Form.Item
+              name="locationId"
+              label="Location"
+              rules={[{ message: "Select a Location" }]}
+            >
+              <AntdSelect
+                allowClear
+                placeholder="Select location"
+                options={opts.locations}
+                showSearch
+                optionFilterProp="label"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="phoneNumber"
-            label="Phone"
-            // sanitize to digits while typing
-            getValueFromEvent={(e) => e?.target?.value?.replace(/\D+/g, "") ?? ""}
-            rules={[
-              {  message: "Please enter phone number" },   // REQUIRED
-              {
-                // India (+91) rule from create: 10 digits starting with 6–9
-                pattern: /^[6-9]\d{9}$/,
-                message: "For India (+91), enter 10 digits starting with 6–9.",
-              },
-            ]}
-          >
-            <Input placeholder="Digits only (e.g., 9876543210)" inputMode="numeric" />
-          </Form.Item>
+            <Form.Item name="hbuId" label="HBU">
+              <AntdSelect
+                allowClear
+                placeholder="Select HBU"
+                options={opts.hbu}
+                showSearch
+                optionFilterProp="label"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="locationId"
-            label="Location"
-            rules={[{  message: "Select a Location" }]}   // REQUIRED
-          >
-            <AntdSelect
-              allowClear
-              placeholder="Select location"
-              options={opts.locations}
-              showSearch
-              optionFilterProp="label"
-            />
-          </Form.Item>
+            <Form.Item
+              name="skillClusterId"
+              label="Skill Cluster"
+              rules={[{ message: "Select a Skill Cluster" }]}
+            >
+              <AntdSelect
+                allowClear
+                placeholder="Select skill cluster"
+                options={opts.skillCluster}
+                showSearch
+                optionFilterProp="label"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="hbuId"
-            label="HBU"
-            // HBU is optional in your create form; keeping optional here too
-          >
-            <AntdSelect
-              allowClear
-              placeholder="Select HBU"
-              options={opts.hbu}
-              showSearch
-              optionFilterProp="label"
-            />
-          </Form.Item>
+            <Form.Item name="primarySkillsIds" label="Primary Skills" className="md:col-span-2">
+              <AntdSelect
+                mode="multiple"
+                allowClear
+                placeholder="Select primary skills"
+                options={opts.primarySkills}
+                showSearch
+                optionFilterProp="label"
+                maxTagCount="responsive"
+              />
+            </Form.Item>
 
-          <Form.Item
-            name="skillClusterId"
-            label="Skill Cluster"
-            rules={[{  message: "Select a Skill Cluster" }]}  // REQUIRED
-          >
-            <AntdSelect
-              allowClear
-              placeholder="Select skill cluster"
-              options={opts.skillCluster}
-              showSearch
-              optionFilterProp="label"
-            />
-          </Form.Item>
+            <Form.Item name="secondarySkillsIds" label="Secondary Skills" className="md:col-span-2">
+              <AntdSelect
+                mode="multiple"
+                allowClear
+                placeholder="Select secondary skills"
+                options={opts.secondarySkills}
+                showSearch
+                optionFilterProp="label"
+                maxTagCount="responsive"
+              />
+            </Form.Item>
 
-          <Form.Item name="primarySkillsIds" label="Primary Skills" className="md:col-span-2">
-            <AntdSelect
-              mode="multiple"
-              allowClear
-              placeholder="Select primary skills"
-              options={opts.primarySkills}
-              showSearch
-              optionFilterProp="label"
-              maxTagCount="responsive"
-            />
-          </Form.Item>
-
-          <Form.Item name="secondarySkillsIds" label="Secondary Skills" className="md:col-span-2">
-            <AntdSelect
-              mode="multiple"
-              allowClear
-              placeholder="Select secondary skills"
-              options={opts.secondarySkills}
-              showSearch
-              optionFilterProp="label"
-              maxTagCount="responsive"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="summary"
-            label="Summary"
-            rules={[
-              { max: 2000, message: "Max 2000 characters" },  // same as create
-            ]}
-            className="md:col-span-2"
-          >
-            <Input.TextArea rows={3} placeholder="Short summary / remark" maxLength={2000} showCount />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* ---- Scoped CSS ---- */}
-      <style>{`
-        .profiles-table .ant-table-thead > tr > th {
-          border-bottom: 1px solid #eef0f2;
-          padding-top: 8px !important;
-          padding-bottom: 8px !important;
-        }
-        .profiles-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid #f3f4f6;
-          padding-top: 8px !important;
-          padding-bottom: 8px !important;
-        }
-        .profiles-table .cell-ellipsis {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: #1f2937;
-          max-width: 100%;
-          display: block;
-        }
-        .profiles-table .cell-ellipsis-compact { max-width: 180px; }
-      `}</style>
-    </div>
-
-    <div className="" >
-        <Table
-        rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
-        dataSource={rows}
-        columns={antdColumns}
-        pagination={pagination}
-        size="middle"
-        className="profiles-table"
-        scroll={{ x: true }}
-      />
-
-        
-    </div>
+            <Form.Item
+              name="summary"
+              label="Summary"
+              rules={[{ max: 2000, message: "Max 2000 characters" }]}
+              className="md:col-span-2"
+            >
+              <Input.TextArea rows={3} placeholder="Short summary / remark" maxLength={2000} showCount />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
     </>
   );
 }
