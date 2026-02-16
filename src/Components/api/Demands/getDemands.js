@@ -1,10 +1,14 @@
 
 import api from '../client';
 
-export const getDemandsheet = async (page = null, size = null) => {
-  const url = (page == null || size == null)
-    ? '/addNewDemand/demands'
-    : `/addNewDemand/demands?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`;
+
+export const getDemandsheet = async (page = null, size = null, hbuId = null) => {
+  let url = '/addNewDemand/demands';
+  const params = [];
+  if (page != null) params.push(`page=${encodeURIComponent(page)}`);
+  if (size != null) params.push(`size=${encodeURIComponent(size)}`);
+  if (hbuId != null) params.push(`hbuId=${encodeURIComponent(hbuId)}`);
+  if (params.length) url += `?${params.join('&')}`;
 
   const res = await api.get(url);
   console.log('[getDemandsheet] response status:', res.data);

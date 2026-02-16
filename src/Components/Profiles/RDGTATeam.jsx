@@ -139,8 +139,6 @@ function getCurrentUser() {
 function getCurrentRoleName() {
 
 
-
-
   // Try a few likely places the login JSON might be stored
   const fromMem = window.__currentUser?.role?.role || window.__currentUser?.role;
   if (fromMem) return String(fromMem);
