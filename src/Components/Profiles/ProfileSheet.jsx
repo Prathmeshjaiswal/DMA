@@ -319,20 +319,24 @@ export default function ProfileSheet() {
     if (clean(query.location)) filter.locationName = clean(query.location);
     if (clean(query.hbu)) filter.hbuName = clean(query.hbu);
 
-    if (clean(query.primarySkills)) {
-      const names = String(query.primarySkills)
-        .split(/[,\s]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (names.length) filter.primarySkillNames =  names;
+    
+ if (clean(query.primarySkills)) {
+      const raw = clean(query.primarySkills);
+      const names = raw.includes(",")
+        ? raw.split(",").map((s) => s.trim()).filter(Boolean)
+        : [raw];
+      filter.primarySkillNames = names; // <-- matches your backend contract
     }
-    if (clean(query.secondarySkills)) {
-      const names = String(query.secondarySkills)
-        .split(/[,\s]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (names.length) filter.secondarySkillNames =  names;
+
+    
+if (clean(query.secondarySkills)) {
+      const raw = clean(query.secondarySkills);
+      const names = raw.includes(",")
+        ? raw.split(",").map((s) => s.trim()).filter(Boolean)
+        : [raw];
+      filter.secondarySkillNames = names;
     }
+
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
 
