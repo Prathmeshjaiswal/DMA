@@ -321,25 +321,17 @@ export default function ProfileSheet() {
 
     if (clean(query.primarySkills)) {
       const names = String(query.primarySkills)
-        .split(/[\,\s]+/)
+        .split(/[,\s]+/)
         .map((s) => s.trim())
         .filter(Boolean);
-      if (names.length === 1) {
-        filter.primarySkillName = names[0];
-      } else if (names.length > 1) {
-        filter.primarySkillName = names;
-      }
+      if (names.length) filter.primarySkillNames =  names;
     }
     if (clean(query.secondarySkills)) {
       const names = String(query.secondarySkills)
-        .split(/[\,\s]+/)
+        .split(/[,\s]+/)
         .map((s) => s.trim())
         .filter(Boolean);
-      if (names.length === 1) {
-        filter.secondarySkillName = names[0];
-      } else if (names.length > 1) {
-        filter.secondarySkillName = names;
-      }
+      if (names.length) filter.secondarySkillNames =  names;
     }
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
@@ -778,7 +770,7 @@ export default function ProfileSheet() {
                                   Demand #{d.demandId ?? d.id}
                                 </div>
                                 <div className="text-[11px] text-gray-500 text-right">
-                                 {d.createdAt ? formatDateTime(d.createdAt) : formatDateTime(d.attachedDate)}
+                                 {d.attachedDate ? formatDateTime(d.attachedDate) : formatDateTime(d.attachedDate)}
                                 </div>
                               </div>
 
