@@ -1,11 +1,11 @@
 // src/Components/Trackers/ProfileTracker.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { DatePicker, message, Tooltip } from 'antd';
-import { EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { DatePicker, Input, Pagination, message, Tooltip, Button } from 'antd';
+import {EditOutlined,SaveOutlined,CloseOutlined,SearchOutlined,ReloadOutlined,CloseCircleFilled,} from '@ant-design/icons';
 import Layout from '../../Layout';
-import { listProfileTracker, updateProfileTracker } from '../../api/Trackers/tracker';
-import { getDropDownData } from '../../api/Demands/addDemands'; // <-- uses getDropdown from adddemands.js
+import {listProfileTracker,updateProfileTracker,searchProfileTracker,getDropDownData} from '../../api/Trackers/tracker';
+// import { getDropdown } from '../../api/adddemands';
 
 const BACKEND_FMT = 'YYYY-MM-DD';
 
@@ -14,7 +14,6 @@ function parseISODateSafe(value) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
-
 function calculateDaysFrom(attachedDate) {
   const start = parseISODateSafe(attachedDate);
   if (!start) return null;
@@ -23,9 +22,7 @@ function calculateDaysFrom(attachedDate) {
   const diff = Math.floor((end.getTime() - start.getTime()) / msPerDay);
   return diff < 0 ? 0 : diff;
 }
-
-const nameOf = (obj) =>
-  obj && typeof obj === 'object' ? (obj.name ?? '') : (obj ?? '');
+const nameOf = (obj) => (obj && typeof obj === 'object' ? obj.name ?? '' : obj ?? '');
 
 function TdWrapWithTooltip({ text, w }) {
   const display = text ?? '-';
@@ -40,20 +37,49 @@ function TdWrapWithTooltip({ text, w }) {
     </td>
   );
 }
-
 function Pill({ priority }) {
   const p = String(priority ?? '').toUpperCase();
   const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold';
-  if (p === 'P1') return <span className={`${base}`} style={{ background:'#E6FFFA', color:'#065F46', border:'1px solid #99F6E4' }}>P1</span>;
-  if (p === 'P2') return <span className={`${base}`} style={{ background:'#FFF7ED', color:'#92400E', border:'1px solid #FED7AA' }}>P2</span>;
-  if (p === 'P3') return <span className={`${base}`} style={{ background:'#FEF2F2', color:'#991B1B', border:'1px solid #FECACA' }}>P3</span>;
-  return <span className={`${base}`} style={{ background:'#EDF2F7', color:'#2D3748', border:'1px solid #CBD5E0' }}>{p || '-'}</span>;
+  if (p === 'P1')
+    return (
+      <span
+        className={base}
+        style={{ background: '#E6FFFA', color: '#065F46', border: '1px solid #99F6E4' }}
+      >
+        P1
+      </span>
+    );
+  if (p === 'P2')
+    return (
+      <span
+        className={base}
+        style={{ background: '#FFF7ED', color: '#92400E', border: '1px solid #FED7AA' }}
+      >
+        P2
+      </span>
+    );
+  if (p === 'P3')
+    return (
+      <span
+        className={base}
+        style={{ background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' }}
+      >
+        P3
+      </span>
+    );
+  return (
+    <span
+      className={base}
+      style={{ background: '#EDF2F7', color: '#2D3748', border: '1px solid #CBD5E0' }}
+    >
+      {p || '-'}
+    </span>
+  );
 }
-
 function Th({ children, w }) {
   return (
     <th
-      className="px-3 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200"
+      className="px-3 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200 align-bottom"
       style={w ? { width: w } : undefined}
     >
       {children}
@@ -67,33 +93,37 @@ function Td({ children }) {
     </td>
   );
 }
-
 function toDayjs(val) {
   if (!val) return null;
-  // Support raw ISO or yyyy-MM-dd strings
-  return dayjs(val, BACKEND_FMT).isValid() ? dayjs(val, BACKEND_FMT) : (dayjs(val).isValid() ? dayjs(val) : null);
+  return dayjs(val, BACKEND_FMT).isValid()
+    ? dayjs(val, BACKEND_FMT)
+    : dayjs(val).isValid()
+    ? dayjs(val)
+    : null;
 }
-
 function displayDate(value) {
   if (!value) return '';
-  const d = parseISODateSafe(value) ?? (typeof value === 'string' ? dayjs(value, BACKEND_FMT).toDate() : null);
+  const d =
+    parseISODateSafe(value) ??
+    (typeof value === 'string' ? dayjs(value, BACKEND_FMT).toDate() : null);
   if (!d) return String(value);
   return dayjs(d).format(BACKEND_FMT);
 }
-
 function getAttachedDate(row) {
   return row?.attachedDate ?? row?.dateAttached ?? row?.profileAttachedDate ?? null;
 }
 
 export default function ProfileTracker() {
+  // data for current page view
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiErr, setApiErr] = useState(null);
 
+  // edit
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState({});
 
-  // Dropdowns from adddemands.js
+  // dropdowns
   const [dd, setDd] = useState({
     priority: [],
     location: [],
@@ -101,92 +131,218 @@ export default function ProfileTracker() {
     profileTrackerStatus: [],
   });
 
+  // pagination (UI 1-based, API 0-based)
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  // when filtered, we client-side paginate this cached full list
+  const [searchCache, setSearchCache] = useState([]);
+
+  // column filters toggle (visibility of inputs)
+  const [filterOpen, setFilterOpen] = useState({
+    demandCode: false,
+    candidateName: false,
+    empId: false,
+    priority: false,
+    skillCluster: false, // (no control yet)
+    primarySkills: false, // (no control yet)
+    secondarySkills: false, // (no control yet)
+    lob: false,
+    hbu: false,
+    location: false,
+    profileType: false,
+    hiringManager: false,
+    evaluationStatus: false,
+    status: false,
+  });
+
+  // actual filter values
+  const [filters, setFilters] = useState({
+    demandCode: '',
+    candidateName: '',
+    empId: '',
+    priority: '',
+    lob: '',
+    hbu: '',
+    location: '',
+    profileType: '',
+    hiringManager: '',
+    evaluationStatus: '',
+    status: '',
+  });
+
+  const hasActiveFilters = useMemo(
+    () => Object.values(filters).some((v) => v != null && String(v).trim() !== ''),
+    [filters]
+  );
+
+  // load dropdowns once
   useEffect(() => {
     (async () => {
       try {
-        const res = await getDropDownData();
-        // Normalize common keys
+        const res = await getDropdown();
         setDd({
-          priority: res?.priorityList ?? [],
-          location: res?.demandLocationList ?? [],
+          priority: res?.priority ?? res?.priorities ?? [],
+          location: res?.location ?? res?.locations ?? [],
           evaluationStatus: res?.evaluationStatus ?? res?.evaluationStatuses ?? [],
           profileTrackerStatus: res?.profileTrackerStatus ?? res?.statuses ?? [],
         });
       } catch {
-        // If dropdown fetch fails, we still allow manual values from fallback
         setDd((prev) => ({
           ...prev,
-          priority: prev.priority?.length ? prev.priority : [{ name: 'P1' }, { name: 'P2' }, { name: 'P3' }],
+          priority:
+            prev.priority?.length ? prev.priority : [{ name: 'P1' }, { name: 'P2' }, { name: 'P3' }],
         }));
       }
     })();
   }, []);
 
-  const load = async () => {
+  // helper to extract array from any response shape
+  const itemsFrom = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    const data = res?.data ?? res;
+    return (
+      data?.items ??
+      data?.content ??
+      data?.records ??
+      data?.list ??
+      data?.data ??
+      []
+    );
+  };
+
+  // LOAD: if filters active -> call search with only filters, cache, client-paginate
+  //       else -> list with page/size (server-side pagination)
+  const load = async ({ page: p = page, size: s = size } = {}) => {
     try {
       setLoading(true);
       setApiErr(null);
-      const page = await listProfileTracker({ page: 0, size: 100 });
-      const list = Array.isArray(page?.items) ? page.items : [];
-      setRows(list);
+
+      if (hasActiveFilters) {
+        // Build filters-only payload (remove empty)
+        const payload = Object.fromEntries(
+          Object.entries(filters).filter(([, v]) => v != null && String(v).trim() !== '')
+        );
+        const res = await searchProfileTracker(payload); // <-- ONLY FILTERS
+        const all = itemsFrom(res);
+        setSearchCache(all);
+
+        // client-side slice for the current page
+        const start = p * s;
+        const end = start + s;
+        const pageSlice = all.slice(start, end);
+
+        setRows(pageSlice);
+        setTotal(all.length);
+        setPage(p);
+        setSize(s);
+      } else {
+        setSearchCache([]); // clear cache when not filtering
+        const resp = await listProfileTracker(p, s);
+        const items = itemsFrom(resp);
+        const t =
+          resp?.total ??
+          resp?.totalElements ??
+          resp?.data?.total ??
+          resp?.page?.totalElements ??
+          items.length;
+
+        setRows(items);
+        setTotal(Number.isFinite(t) ? t : items.length);
+        setPage(Number.isFinite(resp?.page) ? resp.page : p);
+        setSize(Number.isFinite(resp?.size) ? resp.size : s);
+      }
     } catch (e) {
       const msg = e?.response?.data?.message || e?.message || 'Failed to load tracker';
       setApiErr(msg);
+      setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
+  // first load
   useEffect(() => {
-    load();
+    load({ page: 0, size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const applyFilters = (resetToFirst = true) => {
+    const nextPage = resetToFirst ? 0 : page;
+    load({ page: nextPage, size });
+  };
+
+  // pagination change
+  const onPageChange = (current, pageSize) => {
+    const newPage = current - 1;
+    const newSize = pageSize;
+    setPage(newPage);
+    setSize(newSize);
+
+    if (hasActiveFilters) {
+      // paginate client-side over searchCache
+      const start = newPage * newSize;
+      const end = start + newSize;
+      const slice = searchCache.slice(start, end);
+      setRows(slice);
+      setTotal(searchCache.length);
+    } else {
+      // server-side paging
+      load({ page: newPage, size: newSize });
+    }
+  };
+
+  // open/close a column filter input
+  const toggleFilterOpen = (key) => {
+    setFilterOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+  const clearFilter = (key) => {
+    setFilters((prev) => ({ ...prev, [key]: '' }));
+    setFilterOpen((prev) => ({ ...prev, [key]: false }));
+    applyFilters(true);
+  };
+
+  // editing
   const onEdit = (row) => {
     setEditId(row.id ?? row.key ?? null);
     setEditDraft({
-      // dropdown/editable fields
       priority: row?.demand?.priority?.name ?? row?.priority ?? '',
       location: nameOf(row?.profile?.location) || '',
       evaluationStatus: row?.evaluationStatus ?? '',
       status: row?.profileTrackerStatus?.name ?? row?.status ?? '',
-
-      // editable dates
       profileSharedDate: row?.dateOfProfileShared ? displayDate(row?.dateOfProfileShared) : '',
       interviewDate: row?.interviewDate ? displayDate(row?.interviewDate) : '',
       decisionDate: row?.decisionDate ? displayDate(row?.decisionDate) : '',
     });
   };
-
   const onCancel = () => {
     setEditId(null);
     setEditDraft({});
   };
-
   const onSave = async (row) => {
     const id = row.id ?? row.key;
     if (id == null) {
       message.error('Missing row id');
       return;
     }
-
     const payload = {
-      // dropdowns -> names
       priority: editDraft.priority || null,
       location: editDraft.location || null,
       evaluationStatus: editDraft.evaluationStatus || null,
       status: editDraft.status || null,
-
-      // dates -> yyyy-MM-dd (or null)
-      profileSharedDate: editDraft.profileSharedDate ? dayjs(editDraft.profileSharedDate).format(BACKEND_FMT) : null,
+      profileSharedDate: editDraft.profileSharedDate
+        ? dayjs(editDraft.profileSharedDate).format(BACKEND_FMT)
+        : null,
       interviewDate: editDraft.interviewDate ? dayjs(editDraft.interviewDate).format(BACKEND_FMT) : null,
       decisionDate: editDraft.decisionDate ? dayjs(editDraft.decisionDate).format(BACKEND_FMT) : null,
     };
 
     try {
       const updated = await updateProfileTracker({ id, payload });
-      setRows((prev) =>
-        prev.map((r) => ((r.id ?? r.key) === id ? { ...r, ...payload, ...updated } : r))
-      );
+      setRows((prev) => prev.map((r) => ((r.id ?? r.key) === id ? { ...r, ...payload, ...updated } : r)));
       message.success('Row updated');
       onCancel();
     } catch (e) {
@@ -195,7 +351,6 @@ export default function ProfileTracker() {
     }
   };
 
-  // Helpers to render <option/> list from dropdowns
   const renderOptions = (items = []) =>
     (Array.isArray(items) ? items : []).map((o, idx) => {
       const value = o?.name ?? String(o ?? '');
@@ -206,51 +361,323 @@ export default function ProfileTracker() {
       );
     });
 
+  const getDemandCode = (p) => {
+    const lobCode = p?.lob ?? p?.demand?.lob?.code ?? p?.demand?.lob?.name ?? '';
+    const demId = p?.demand?.demandId ?? p?.demandId ?? '';
+    return [lobCode, demId].filter(Boolean).join('-');
+  };
+
+  const FilterHeader = ({ label, colKey }) => (
+    <div className="flex items-center gap-2">
+      <span>{label}</span>
+      <button
+        type="button"
+        className="text-gray-500 hover:text-gray-700"
+        onClick={() => toggleFilterOpen(colKey)}
+        title="Search"
+      >
+        <SearchOutlined />
+      </button>
+    </div>
+  );
+
+  const renderFilterRow = () => (
+    <tr className="bg-gray-50">
+      {/* EDIT col (no filter) */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+
+      {/* Demand Id */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.demandCode ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="LOB-101"
+              value={filters.demandCode}
+              onChange={(e) => setFilters((f) => ({ ...f, demandCode: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-36"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('demandCode')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Candidate Name */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.candidateName ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="Candidate"
+              value={filters.candidateName}
+              onChange={(e) => setFilters((f) => ({ ...f, candidateName: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-40"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('candidateName')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Emp ID */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.empId ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="Emp ID"
+              value={filters.empId}
+              onChange={(e) => setFilters((f) => ({ ...f, empId: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-32"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('empId')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Priority */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.priority ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="h-7 rounded border border-gray-300 bg-white px-2 text-xs"
+              value={filters.priority}
+              onChange={(e) => {
+                setFilters((f) => ({ ...f, priority: e.target.value }));
+                applyFilters(true);
+              }}
+            >
+              <option value="">All</option>
+              {renderOptions(dd.priority)}
+            </select>
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('priority')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Skill Cluster */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+      {/* Primary Skills */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+      {/* Secondary Skills */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+
+      {/* LOB */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.lob ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="LOB"
+              value={filters.lob}
+              onChange={(e) => setFilters((f) => ({ ...f, lob: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-28"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('lob')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* HBU */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.hbu ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="HBU"
+              value={filters.hbu}
+              onChange={(e) => setFilters((f) => ({ ...f, hbu: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-28"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('hbu')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Location */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.location ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="h-7 rounded border border-gray-300 bg-white px-2 text-xs"
+              value={filters.location}
+              onChange={(e) => {
+                setFilters((f) => ({ ...f, location: e.target.value }));
+                applyFilters(true);
+              }}
+            >
+              <option value="">All</option>
+              {renderOptions(dd.location)}
+            </select>
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('location')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Profile Type */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.profileType ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="Internal/External"
+              value={filters.profileType}
+              onChange={(e) => setFilters((f) => ({ ...f, profileType: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-40"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('profileType')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Hiring Manager */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.hiringManager ? (
+          <div className="flex items-center gap-2">
+            <Input
+              size="small"
+              placeholder="Hiring Manager"
+              value={filters.hiringManager}
+              onChange={(e) => setFilters((f) => ({ ...f, hiringManager: e.target.value }))}
+              onPressEnter={() => applyFilters(true)}
+              className="w-40"
+            />
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('hiringManager')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Attached Date */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+      {/* Profile Shared Date */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+      {/* Interview Date */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+      {/* Decision Date */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+
+      {/* Evaluation Status */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.evaluationStatus ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="h-7 rounded border border-gray-300 bg-white px-2 text-xs"
+              value={filters.evaluationStatus}
+              onChange={(e) => {
+                setFilters((f) => ({ ...f, evaluationStatus: e.target.value }));
+                applyFilters(true);
+              }}
+            >
+              <option value="">All</option>
+              {renderOptions(dd.evaluationStatus)}
+            </select>
+            <Button
+              size="small"
+              type="text"
+              icon={<CloseCircleFilled />}
+              onClick={() => clearFilter('evaluationStatus')}
+            />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Status */}
+      <th className="px-3 py-1 border-b border-gray-200">
+        {filterOpen.status ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="h-7 rounded border border-gray-300 bg-white px-2 text-xs"
+              value={filters.status}
+              onChange={(e) => {
+                setFilters((f) => ({ ...f, status: e.target.value }));
+                applyFilters(true);
+              }}
+            >
+              <option value="">All</option>
+              {renderOptions(dd.profileTrackerStatus)}
+            </select>
+            <Button size="small" type="text" icon={<CloseCircleFilled />} onClick={() => clearFilter('status')} />
+          </div>
+        ) : null}
+      </th>
+
+      {/* Aging */}
+      <th className="px-3 py-1 border-b border-gray-200" />
+    </tr>
+  );
+
   return (
     <Layout>
       <div className="p-4">
-        <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
-          Profile Tracker
-        </h2>
+        {/* Top bar with summary + pagination */}
+                <div>
+                  <h1 className="text-lg font-bold">Profile Tracker</h1>
+                </div>
 
         {/* Status */}
         {loading && <div className="text-sm text-gray-700 my-2">Loading…</div>}
-        {apiErr && (
-          <div className="text-sm text-red-600 my-2">Error: {apiErr}</div>
-        )}
+        {apiErr && <div className="text-sm text-red-600 my-2">Error: {apiErr}</div>}
 
-        {/* Results table */}
+        {/* Table */}
         <div className="overflow-x-auto rounded-md border border-gray-200">
           <table className="max-w-[1600px] w-full border-collapse">
             <thead className="bg-gray-50">
               <tr>
                 <Th w={60}>EDIT</Th>
-                <Th w={120}>Demand Id</Th>
+                <Th w={140}>
+                  <FilterHeader label="Demand Id" colKey="demandCode" />
+                </Th>
 
-                {/* New order */}
-                <Th>Candidate Name</Th>
-                <Th>Emp ID</Th>
-                <Th>Priority</Th>
+                <Th>
+                  <FilterHeader label="Candidate Name" colKey="candidateName" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Emp ID" colKey="empId" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Priority" colKey="priority" />
+                </Th>
 
                 <Th w={180}>Skill Cluster</Th>
                 <Th w={220}>Primary Skill</Th>
                 <Th w={220}>Secondary Skill</Th>
 
-                <Th>LOB</Th>
-                <Th>HBU</Th>
-                <Th>Location</Th>
-                <Th>Profile Type</Th>
-                <Th>Hiring Manager</Th>
+                <Th>
+                  <FilterHeader label="LOB" colKey="lob" />
+                </Th>
+                <Th>
+                  <FilterHeader label="HBU" colKey="hbu" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Location" colKey="location" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Profile Type" colKey="profileType" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Hiring Manager" colKey="hiringManager" />
+                </Th>
 
                 <Th>Attached Date</Th>
                 <Th>Profile Shared Date</Th>
                 <Th>Interview Date</Th>
                 <Th>Decision Date</Th>
-                <Th>Evaluation Status</Th>
-                <Th>Status</Th>
+                <Th>
+                  <FilterHeader label="Evaluation Status" colKey="evaluationStatus" />
+                </Th>
+                <Th>
+                  <FilterHeader label="Status" colKey="status" />
+                </Th>
                 <Th>Aging</Th>
               </tr>
+              {renderFilterRow()}
             </thead>
+
             <tbody>
               {(!rows || rows.length === 0) && !loading ? (
                 <tr>
@@ -262,22 +689,15 @@ export default function ProfileTracker() {
                 rows.map((p, idx) => {
                   const key = p.id ?? `${p.demandId ?? 'row'}-${idx}`;
                   const isEdit = editId === (p.id ?? p.key);
-
-                  const lobCode =
-                    p?.lob ??
-                    p?.demand?.lob?.code ??
-                    p?.demand?.lob?.name ??
-                    '';
-                  const demId = p?.demand?.demandId ?? p?.demandId ?? '';
-                  const demandCode = [lobCode, demId].filter(Boolean).join('-');
+                  const demandCode = getDemandCode(p);
 
                   const skillClusterText = p?.demand?.skillCluster?.name ?? '-';
                   const primarySkillsText = Array.isArray(p?.demand?.primarySkills)
                     ? p.demand.primarySkills.map(nameOf).join(', ')
-                    : (p?.demand?.primarySkills ?? '-');
+                    : p?.demand?.primarySkills ?? '-';
                   const secondarySkillsText = Array.isArray(p?.demand?.secondarySkills)
                     ? p.demand.secondarySkills.map(nameOf).join(', ')
-                    : (p?.demand?.secondarySkills ?? '-');
+                    : p?.demand?.secondarySkills ?? '-';
 
                   const attachedDate = getAttachedDate(p);
                   const aging = calculateDaysFrom(attachedDate);
@@ -317,7 +737,7 @@ export default function ProfileTracker() {
                         )}
                       </Td>
 
-                      {/* Demand Id as green button/pill */}
+                      {/* Demand Id as green pill */}
                       <Td>
                         <span className="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-600 px-2 py-0.5 text-xs font-semibold">
                           {demandCode || '-'}
@@ -330,7 +750,7 @@ export default function ProfileTracker() {
                       {/* Emp ID */}
                       <Td>{p?.empId ?? '-'}</Td>
 
-                      {/* Priority (editable via dropdown) */}
+                      {/* Priority (editable dropdown) */}
                       <Td>
                         {!isEdit ? (
                           <Pill priority={p?.demand?.priority?.name ?? p?.priority} />
@@ -356,12 +776,12 @@ export default function ProfileTracker() {
                       <TdWrapWithTooltip text={secondarySkillsText} w={220} />
 
                       {/* LOB */}
-                      <Td>{lobCode || '-'}</Td>
+                      <Td>{p?.lob ?? p?.demand?.lob?.code ?? p?.demand?.lob?.name ?? '-'}</Td>
 
                       {/* HBU */}
                       <Td>{nameOf(p?.demand?.hbu?.name) || '-'}</Td>
 
-                      {/* Location (editable via dropdown) */}
+                      {/* Location (editable dropdown) */}
                       <Td>
                         {!isEdit ? (
                           nameOf(p?.profile?.location) || '-'
@@ -454,7 +874,9 @@ export default function ProfileTracker() {
                           <select
                             className="h-8 rounded border border-gray-300 bg-white px-2 text-sm"
                             value={String(editDraft.evaluationStatus ?? '')}
-                            onChange={(e) => setEditDraft((d) => ({ ...d, evaluationStatus: e.target.value }))}
+                            onChange={(e) =>
+                              setEditDraft((d) => ({ ...d, evaluationStatus: e.target.value }))
+                            }
                           >
                             <option value="">-</option>
                             {renderOptions(dd.evaluationStatus)}
@@ -478,7 +900,7 @@ export default function ProfileTracker() {
                         )}
                       </Td>
 
-                      {/* Aging (non-editable; current date - attached date) */}
+                      {/* Aging */}
                       <Td>{Number.isFinite(aging) ? aging : '-'}</Td>
                     </tr>
                   );
@@ -486,6 +908,19 @@ export default function ProfileTracker() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Bottom pagination for visibility */}
+        <div className="mt-3 flex items-center justify-end">
+          <Pagination
+            current={page + 1}
+            pageSize={size}
+            total={total}
+            showSizeChanger
+            pageSizeOptions={[10, 20, 50, 100]}
+            onChange={onPageChange}
+            showTotal={(t, range) => `${range[0]}-${range[1]} of ${t}`}
+          />
         </div>
       </div>
     </Layout>

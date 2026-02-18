@@ -18,13 +18,21 @@ function normalizePageResponse(raw) {
   return { items: content, page, size, totalElements, totalPages, raw: data };
 }
 
+export const listProfileTracker = async (page = null, size = null) => {
+  const url = (page == null || size == null)
+    ? '/profile-track'
+    : `/profile-track?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`;
 
-export async function listProfileTracker(params = {}) {
-  // Default page/size if not provided
-  const { page = 0, size = 10 } = params;
-  const res = await api.get('/profile-track', { params: { page, size } });
+  const res = await api.get(url);
   return normalizePageResponse(res);
-}
+};
+
+
+export const searchProfileTracker = async ({ q = '', page = 0, size = 10 }) => {
+  const url = `/profile-track/search?q=${encodeURIComponent(q)}&page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`;
+  const res = await api.get(url);
+  return normalizePageResponse(res);
+};
 
 export async function updateProfileTracker({ id, payload }) {
   const url = `/profile-track/${encodeURIComponent(String(id))}/edit`;
@@ -35,3 +43,11 @@ export async function updateProfileTracker({ id, payload }) {
   });
   return res?.data ?? res;
 }
+
+
+export const getDropDownData = async () => {
+  const res = await api.get('/profile-track/dropdowns', {
+    headers: { Accept: 'application/json' },
+  });
+  return res.data?.data ?? res.data ?? res;
+};
