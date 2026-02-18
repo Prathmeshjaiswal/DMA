@@ -1,7 +1,8 @@
 
 import React from "react";
 
-export default function ColumnsPanel({
+
+export default function ColumnsSelector({
   columnsEnabled,
   setColumnsEnabled,
   ALL_COLUMNS,

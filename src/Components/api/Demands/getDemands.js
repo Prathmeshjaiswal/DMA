@@ -6,6 +6,7 @@ export const getDemandsheet = async (page = null, size = null) => {
     ? '/addNewDemand/demands'
     : `/addNewDemand/demands?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}`;
 
+
   const res = await api.get(url);
   console.log('[getDemandsheet] response status:', res.data);
   return res.data;
