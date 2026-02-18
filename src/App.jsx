@@ -25,7 +25,9 @@ import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
 import EditUser from './Components/UserManagement/EditUser.jsx'
 import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
 import RequirePermission from './Components/Auth/RequirePermission.jsx'
-import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx' // <-- adjust path if needed
+import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx'
+import DemandDetailModal from "./Components/DemandsManagement/DemandSheet/DemandDetailModal.jsx";
+ // <-- adjust path if needed
 
 // ⬇️ add a tiny component (inline) for unauthorized page, or create a separate file if you prefer
 const Unauthorized = () => (
@@ -45,8 +47,8 @@ function App() {
           <Route path="/change" element={<PublicRoute><ChangePassword /></PublicRoute>} />
           <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
           <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} />
-          <Route path="/ProfileTracker" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><ProfileTracker /></RequirePermission></ProtectedRoute>} />
-          <Route path="/RDGTATeam" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><RDGTATeam /></RequirePermission></ProtectedRoute>} />
+          <Route path="/ProfileTracker" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Track"><ProfileTracker /></RequirePermission></ProtectedRoute>} />
+          <Route path="/RDGTATeam" element={<ProtectedRoute><RequirePermission module="DashBoard" child="RDG/TA"><RDGTATeam /></RequirePermission></ProtectedRoute>} />
           <Route path="/Report" element={ <ProtectedRoute><RequirePermission module="DashBoard" child="Reports"><Report /></RequirePermission></ProtectedRoute>}/>
           <Route path="/HBU" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><HBU /></RequirePermission></ProtectedRoute>} />
           <Route path="/demands/:demandId" element={<ProtectedRoute><DemandDetails /></ProtectedRoute>} />
@@ -56,10 +58,12 @@ function App() {
          <Route path="/rolemanagement" element={ <ProtectedRoute> <RequirePermission module="Role Management" child="Roles Sheet"> <RoleManagement /> </RequirePermission></ProtectedRoute>}/>
           <Route path="/roleeditor" element={ <ProtectedRoute> <RequirePermission module="Role Management" child="Roles Sheet" action="Create Role"> <RoleEditor /></RequirePermission></ProtectedRoute>}/>
           <Route path="/roleeditor/:id" element={ <ProtectedRoute> <RequirePermission module="Role Management" child="Roles Sheet" action="Edit Role"> <RoleEditor /></RequirePermission></ProtectedRoute>}/>
-          <Route path="/adddemands2" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><AddDemands2/></RequirePermission></ProtectedRoute>}/>
-           <Route path="/adddemands1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><AddDemands1/></RequirePermission></ProtectedRoute>}/>
-          <Route path="/drafts1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><Draft1/></RequirePermission></ProtectedRoute>} />
-          <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="DashBoard"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/>
+          <Route path="/adddemands2" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><AddDemands2/></RequirePermission></ProtectedRoute>}/>
+           <Route path="/adddemands1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><AddDemands1/></RequirePermission></ProtectedRoute>}/>
+          <Route path="/drafts1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><Draft1/></RequirePermission></ProtectedRoute>} />
+          <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/>
+{/*           <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/> */}
+
           <Route path="/profileSheet" element={ <ProtectedRoute><RequirePermission module="DashBoard" child="RDG/TA"><ProfileSheet/></RequirePermission></ProtectedRoute>} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<h2>Page Not Found</h2>} />

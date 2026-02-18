@@ -62,10 +62,6 @@ export async function downloadProfileCv(fileName) {
   return res.data;
 }
 
-/** CREATE (multipart: payload + file)
- * Backend create endpoint consumes MULTIPART_FORM_DATA and binds @RequestPart ProfileCreateRequestDTO.
- * Send payload as a JSON Blob, but DO NOT set Content-Type manually—let Axios set boundary.
- */
 export async function submitProfileCreate(payload, file) {
   if (!file) throw new Error("CV file is required for create.");
 
@@ -81,13 +77,6 @@ export async function submitProfileCreate(payload, file) {
   return res.data;
 }
 
-/** UPDATE (ALWAYS multipart; payload as PLAIN STRING)
- * Backend:
- *  @PutMapping(value="/update/{id}", consumes=MULTIPART_FORM_DATA_VALUE)
- *  updateProfile(@PathVariable Long id,
- *                @RequestPart("payload") String payload,
- *                @RequestPart(value="file", required=false) MultipartFile file)
- */
 export async function submitProfileUpdate(id, payload, file = null) {
   if (!id) throw new Error("Missing profile id");
 
@@ -102,3 +91,4 @@ export async function submitProfileUpdate(id, payload, file = null) {
 
   return res.data;
 }
+

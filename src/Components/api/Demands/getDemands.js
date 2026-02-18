@@ -1,5 +1,6 @@
 
 import api from '../client';
+
 export const getDemandsheet = async (page = null, size = null) => {
   const url = (page == null || size == null)
     ? '/addNewDemand/demands'
@@ -9,6 +10,15 @@ export const getDemandsheet = async (page = null, size = null) => {
   console.log('[getDemandsheet] response status:', res.data);
   return res.data;
 };
+
+
+export async function searchDemands(filter = {}, page = 0, size = 10) {
+  const res = await api.post('/addNewDemand/search', filter, {
+    params: { page, size },
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return res?.data ?? res;
+}
 
 
 const DEMAND_JD_DOWNLOAD_BY_FILENAME = (fileName) =>

@@ -73,7 +73,7 @@ export default function ProfileMenu({ onProfile, onLogout }) {
             </button>
           )}
 
-          <div className="border-t my-1" />
+          <div className="" />
 
           {/* Logout */}
           <button

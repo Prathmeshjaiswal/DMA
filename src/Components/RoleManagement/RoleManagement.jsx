@@ -198,28 +198,12 @@ export default function RoleManagement() {
 
   /** fetchRoles: Load all roles from API and normalize 'active' boolean. */
 
+
 const fetchRoles = async () => {
   setLoading(true);
   setError("");
   try {
     const res = await getroles();
-      const mapped = list.map((role) => {
-        const active =
-          typeof role.active === "boolean"
-            ? role.active
-            : typeof role.isActive === "boolean"
-            ? role.isActive
-            : typeof role.isactive === "boolean"
-            ? role.isactive
-            : typeof role.is_active === "boolean"
-            ? role.is_active
-            : typeof role.enabled === "boolean"
-            ? role.enabled
-            : role.active === 1 ||
-              role.isActive === 1 ||
-              role.isactive === 1 ||
-              role.is_active === 1 ||
-              role.enabled === 1;
 
     // Handle API returning either { data: [...] } or bare array
     const list = asArray(res?.data ?? res);
