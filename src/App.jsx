@@ -25,6 +25,7 @@ import RoleEditor from './Components/RoleManagement/RoleEditor.jsx'
 import EditUser from './Components/UserManagement/EditUser.jsx'
 import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
 import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx'
+import OnboardingList from "./Components/OnBoarding/OnboardingList.jsx"
 
 
 
@@ -223,6 +224,9 @@ function App() {
                 </RequirePermission>
               </ProtectedRoute>
             } />
+
+
+             <Route path="/onboardinglist" element={<ProtectedRoute><OnboardingList/></ProtectedRoute>} />
 
           {/* Unauthorized page */}
           <Route path="/unauthorized" element={<Unauthorized />} />
