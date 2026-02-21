@@ -115,13 +115,13 @@ function App() {
             }
           />
 
-          <Route path="/EditDemand"  element={
-              <ProtectedRoute>
-                <RequirePermission module="User Management" child="Users Sheet">
-                  <EditDemand />
-                </RequirePermission>
-              </ProtectedRoute>
-            } />
+          <Route path="/EditDemand" element={
+            <ProtectedRoute>
+              <RequirePermission module="User Management" child="Users Sheet">
+                <EditDemand />
+              </RequirePermission>
+            </ProtectedRoute>
+          } />
           <Route
             path="/createuser"
             element={
@@ -199,12 +199,12 @@ function App() {
 
           {/* Minimal Drafts route (protected) */}
           <Route path="/drafts1" element={
-              <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
-                  <Draft1 />
-                </RequirePermission>
-              </ProtectedRoute>
-            }/>
+            <ProtectedRoute>
+              <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
+                <Draft1 />
+              </RequirePermission>
+            </ProtectedRoute>
+          } />
 
           {/* ✅ UPDATED: Demands main sheet is also under child "Demands" */}
           <Route
@@ -219,25 +219,25 @@ function App() {
           />
 
           <Route path="/profileSheet" element={
+            <ProtectedRoute>
+              <RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}
+                <ProfileSheet />
+              </RequirePermission>
+            </ProtectedRoute>
+          } />
+
+
+
+          <Route
+            path="/onboardinglist"
+            element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}
-                  <ProfileSheet/>
+                <RequirePermission module="DashBoard" child="Track">
+                  <OnboardingList />
                 </RequirePermission>
               </ProtectedRoute>
-            } />
-
-
-
-<Route
-  path="/onboardinglist"
-  element={
-    <ProtectedRoute>
-      <RequirePermission module="DashBoard" child="Track">
-        <OnboardingList />
-      </RequirePermission>
-    </ProtectedRoute>
-  }
-/>
+            }
+          />
 
 
 

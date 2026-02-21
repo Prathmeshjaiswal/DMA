@@ -911,7 +911,7 @@
 
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal, message, Tabs, Checkbox, Spin, Alert } from "antd"; // *** UPDATED (Spin, Alert)
+import { Button, Modal, message, Tabs, Checkbox, Spin, Alert } from "antd";
 import { PlusOutlined, EyeOutlined, PaperClipOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -932,11 +932,11 @@ import {
   getDemandsByProfileApi,
 } from "../api/Profiles/attachedDemand.js";
 
-// *** UPDATED: reuse onboarding list API (same as in demand modal)
+// Reuse onboarding list API (same as in demand modal)
 import { getAllOnboardings } from "../api/Onboarding/onBoarding";
 
 // --------------------- helpers ---------------------
-/* ---------- role helpers ---------- */
+// ---------- role helpers ----------
 function tryJson(s) { try { return JSON.parse(s); } catch { return null; } }
 function decodeJwt(token) {
   try {
@@ -993,7 +993,7 @@ function getCurrentUserId() {
   return "";
 }
 
-/* ---------- adapters ---------- */
+// ---------- adapters ----------
 const safe = (x) => (Array.isArray(x) ? x : []);
 const asText = (v) => {
   if (v == null) return "";
@@ -1106,7 +1106,7 @@ function adaptRow(item) {
   };
 }
 
-/* ---------- utils ---------- */
+// ---------- utils ----------
 const formatDateTime = (v) => {
   if (!v) return "-";
   try {
@@ -1123,8 +1123,34 @@ const formatDateTime = (v) => {
   }
 };
 
-/* ---------- Onboarding detail helpers (same as Demand modal) ---------- */
-// *** UPDATED: Added these for the new tab
+// ---------- Eval status → tone helpers ----------
+function evalTone(name) {
+  const s = String(name || '').toLowerCase();
+  if (!s) return 'amber';
+  if (s.includes('reject')) return 'red';
+  if (s.includes('select')) return 'green';
+  return 'amber';
+}
+function toneStyles(tone) {
+  // inline styles (works with current Tailwind blocks)
+  switch (tone) {
+    case 'green':
+      return { borderColor: '#16a34a', backgroundColor: '#f0fdf4' }; // green-600 / green-50
+    case 'red':
+      return { borderColor: '#dc2626', backgroundColor: '#fef2f2' }; // red-600 / red-50
+    default:
+      return { borderColor: '#f59e0b', backgroundColor: '#fffbeb' }; // amber-500 / amber-50
+  }
+}
+function toneTextColor(tone) {
+  switch (tone) {
+    case 'green': return '#166534'; // green-700
+    case 'red': return '#991b1b'; // red-700
+    default: return '#92400e'; // amber-700
+  }
+}
+
+// ---------- Onboarding detail helpers (same as Demand modal) ----------
 function fmtYMD(v) {
   if (!v) return "-";
   const d = new Date(v);
@@ -1306,15 +1332,13 @@ export default function ProfileSheet() {
     if (clean(query.location)) filter.locationName = clean(query.location);
     if (clean(query.hbu)) filter.hbuName = clean(query.hbu);
 
-
     if (clean(query.primarySkills)) {
       const raw = clean(query.primarySkills);
       const names = raw.includes(",")
         ? raw.split(",").map((s) => s.trim()).filter(Boolean)
         : [raw];
-      filter.primarySkillNames = names; // <-- matches your backend contract
+      filter.primarySkillNames = names; // <-- matches backend contract
     }
-
 
     if (clean(query.secondarySkills)) {
       const raw = clean(query.secondarySkills);
@@ -1323,7 +1347,6 @@ export default function ProfileSheet() {
         : [raw];
       filter.secondarySkillNames = names;
     }
-
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
 
@@ -1360,7 +1383,7 @@ export default function ProfileSheet() {
         setLoading(false);
       }
     },
-    [page, size, buildServerFilter, adminView]
+    [page, size, buildServerFilter, adminView, currentUserId]
   );
 
   /* initial */
@@ -1372,7 +1395,7 @@ export default function ProfileSheet() {
     setQuery((prev) => ({ ...prev, [key]: value }));
   };
 
-  // *** DEBOUNCED: run fetch 250ms after the latest keystroke, with LATEST query
+  // DEBOUNCED: run fetch 250ms after the latest keystroke, with LATEST query
   useEffect(() => {
     const t = setTimeout(() => fetchServer(0, size), 250);
     return () => clearTimeout(t);
@@ -1433,34 +1456,66 @@ export default function ProfileSheet() {
   /* attachments */
   const loadAttachedFromBackend = useCallback(async (profileId) => {
     try {
-      let list = await getDemandsByProfileApi(profileId);
-      if (!Array.isArray(list)) {
-        const maybeData = list?.data;
-        if (Array.isArray(maybeData)) list = maybeData;
-        else if (Array.isArray(list?.items)) list = list.items;
-        else list = [];
+      // 1) Call backend
+      let res = await getDemandsByProfileApi(profileId);
+
+      // 2) Normalize to an array named `list` (fixes "list is not defined")
+      let list;
+      if (Array.isArray(res)) {
+        list = res;
+      } else if (Array.isArray(res?.data)) {
+        list = res.data;
+      } else if (Array.isArray(res?.items)) {
+        list = res.items;
+      } else if (Array.isArray(res?.content)) {
+        list = res.content;
+      } else {
+        list = [];
       }
+
+      // 3) Build mapped cards with meta + statuses
       const metaIndex = demandMetaRef.current;
       const mapped = list.map((x) => {
         const key = String(x.demandId ?? x.id ?? "");
         const meta = key ? metaIndex[key] : undefined;
+
+        // Pull statuses from the tracker row (x)
+        const evaluationStatusName =
+          x?.evaluationStatus?.name ??
+          x?.evaluationStatus ??
+          null;
+
+        const profileTrackerStatusName =
+          x?.profileTrackerStatus?.name ??
+          x?.profileTrackerStatus ??
+          null;
+
         return {
           trackerId: x.id,
           id: x.demandId ?? x.id,
           demandId: x.demandId ?? x.id,
-          hbu: x.hbu?.name || meta?.hbu || "",
+
+          hbu: x?.hbu?.name || meta?.hbu || "",
           skillCluster: meta?.skillCluster || "",
           primarySkills:
             meta?.primarySkills ||
-            (Array.isArray(x.primarySkills)
+            (Array.isArray(x?.primarySkills)
               ? x.primarySkills.map((r) => r?.name).filter(Boolean).join(", ")
               : ""),
+
           attachedDate: x.attachedDate,
           createdAt: x.createdAt,
-          title: [meta?.skillCluster || "", x.hbu?.name || meta?.hbu || ""]
-            .filter(Boolean).join(" • "),
+          title: [meta?.skillCluster || "", x?.hbu?.name || meta?.hbu || ""]
+            .filter(Boolean)
+            .join(" • "),
+
+          // New fields used for coloring/status display
+          evaluationStatusName,
+          profileTrackerStatusName,
         };
       });
+
+      // 4) Update state
       setAttachedDemands(mapped);
       setAttachMode(mapped.length === 0);
       setSelectedDemandIds(mapped.map((d) => String(d.id)));
@@ -1512,10 +1567,7 @@ export default function ProfileSheet() {
       setDemandMetaById((prev) => ({ ...prev, ...metaEntries }));
 
       const already = new Set(attachedDemands.map((a) => String(a.id)));
-      // No need to filter by HBU here, backend already filtered
-      const filtered = normalized.filter(
-        (d) => !already.has(String(d.id))
-      );
+      const filtered = normalized.filter((d) => !already.has(String(d.id)));
       setMatchingDemands(filtered);
     } catch (err) {
       console.error("loadMatchingDemands error:", err);
@@ -1542,12 +1594,12 @@ export default function ProfileSheet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailOpen, activeViewTab, detailRow]);
 
-  // *** UPDATED: Onboarding list state for the Profile modal
+  // Onboarding list state for the Profile modal
   const [pOnbLoading, setPOnbLoading] = useState(false);
   const [pOnbError, setPOnbError] = useState(null);
   const [pOnboardingList, setPOnboardingList] = useState([]);
 
-  // *** UPDATED: load onboarding by PROFILE id when Onboarding tab is active
+  // Load onboarding by PROFILE id when Onboarding tab is active
   useEffect(() => {
     if (!detailOpen || activeViewTab !== "onboarding" || !detailRow) return;
 
@@ -1597,7 +1649,7 @@ export default function ProfileSheet() {
     return () => { cancelled = true; };
   }, [detailOpen, activeViewTab, detailRow]);
 
-  // *** UPDATED: pick single record (Onboarded > Open/In-Progress > None)
+  // pick single record (Onboarded > Open/In-Progress > None)
   const pOnboardedMatch = useMemo(
     () => (pOnboardingList || []).find(isOnboardedStatus) || null,
     [pOnboardingList]
@@ -1607,7 +1659,7 @@ export default function ProfileSheet() {
     [pOnboardingList]
   );
 
-  // *** UPDATED: produce placeholder with '-' when only open exists
+  // produce placeholder with '-' when only open exists
   const pPlaceholderFromOpen = useMemo(() => {
     if (!pOpenMatch) return null;
     return {
@@ -1640,7 +1692,7 @@ export default function ProfileSheet() {
     setAttachedDemands([]);
     setAttachMode(false);
 
-    // *** UPDATED: reset onboarding state
+    // reset onboarding state
     setPOnboardingList([]);
     setPOnbLoading(false);
     setPOnbError(null);
@@ -1834,6 +1886,7 @@ export default function ProfileSheet() {
                       ) : null}
                     </div>
 
+                    {/* Attached cards */}
                     {!attachMode && attachedDemands.length > 0 && (
                       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
@@ -1843,40 +1896,54 @@ export default function ProfileSheet() {
                           </span>
                         </div>
 
-                        {/* --- inside Demand Details tab -> attachedDemands.map(...) --- */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {attachedDemands.map((d) => (
-                            <div
-                              key={`${String(d.trackerId || d.id)}`}
-                              className="border border-gray-200 rounded-md p-3 shadow-sm bg-white"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="font-semibold text-[13px]">
-                                  Demand #{d.demandId ?? d.id}
+                          {attachedDemands.map((d) => {
+                            const tone = evalTone(d?.evaluationStatusName);
+                            const cardStyle = toneStyles(tone);
+                            const colorText = toneTextColor(tone);
+
+                            return (
+                              <div
+                                key={`${String(d.trackerId || d.id)}`}
+                                className="border rounded-md p-3 shadow-sm"
+                                style={cardStyle}  // ✅ keep color by evaluation status
+                              >
+                                {/* Top row: Demand # + attached date (badge removed) */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="font-semibold text-[13px]" style={{ color: colorText }}>
+                                    Demand #{d.demandId ?? d.id}
+                                  </div>
+
+                                  {/* ✅ ONLY date now (no evaluation text) */}
+                                  <div className="text-[11px] text-gray-600 text-right">
+                                    {d.attachedDate ? formatDateTime(d.attachedDate) : formatDateTime(d.attachedDate)}
+                                  </div>
                                 </div>
-                                <div className="text-[11px] text-gray-500 text-right">
-                                  {d.attachedDate ? formatDateTime(d.attachedDate) : formatDateTime(d.attachedDate)}
+
+                                {/* Body lines */}
+                                {!!d.hbu && (
+                                  <div className="text-[12px] text-gray-700 mt-1">
+                                    <strong>HBU:</strong> {d.hbu}
+                                  </div>
+                                )}
+                                {!!d.skillCluster && (
+                                  <div className="text-[12px] text-gray-700">
+                                    <strong>Skill Cluster:</strong> {d.skillCluster}
+                                  </div>
+                                )}
+                                {!!d.primarySkills && (
+                                  <div className="text-[12px] text-gray-700">
+                                    <strong>Primary:</strong> {d.primarySkills}
+                                  </div>
+                                )}
+
+                                {/* Other status (tracker status) */}
+                                <div className="text-[12px] text-gray-700 mt-1">
+                                  <strong>Status:</strong> {d.profileTrackerStatusName || '—'}
                                 </div>
                               </div>
-
-                              {/* UPDATED: Keep only these three lines in this order */}
-                              {!!d.hbu && (
-                                <div className="text-[12px] text-gray-600 mt-1">{/* UPDATED */}
-                                  <strong>HBU:</strong> {d.hbu}
-                                </div>
-                              )}
-                              {!!d.skillCluster && (
-                                <div className="text-[12px] text-gray-600">{/* UPDATED */}
-                                  <strong>Skill Cluster:</strong> {d.skillCluster}
-                                </div>
-                              )}
-                              {!!d.primarySkills && (
-                                <div className="text-[12px] text-gray-600">{/* UPDATED */}
-                                  <strong>Primary:</strong> {d.primarySkills}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1953,7 +2020,7 @@ export default function ProfileSheet() {
                 ),
               },
 
-              // *** UPDATED: NEW TAB - Onboarding Detail (single section)
+              // NEW TAB - Onboarding Detail (single section)
               {
                 key: "onboarding",
                 label: "Onboarding Detail",
@@ -2015,4 +2082,3 @@ export default function ProfileSheet() {
     </>
   );
 }
-``

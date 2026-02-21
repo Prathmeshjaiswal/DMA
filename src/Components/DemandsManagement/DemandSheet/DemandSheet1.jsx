@@ -1,4 +1,3 @@
-// src/Components/DemandsManagement/DemandSheet1.jsx
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Spin, Alert, Button, message, Pagination } from "antd";
@@ -12,10 +11,6 @@ import DemandDetailModal from "./DemandDetailModal.jsx";
 import { getDemandsheet } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
 import { searchDemands } from "../../api/Demands/getDemands.js";
-
-
-
-
 
 /** Split CSV or spaced text -> ['a','b'] */
 const splitNames = (v) =>
@@ -201,49 +196,55 @@ export default function DemandSheet1() {
     setCurrentPage(1);
   };
 
- const buildFilterPayload = (f) => {
-  // Map UI filters -> backend DTO expected by AddDemandSpecifications.byNames(...)
-  const payload = {
-    // Scalars
-    demandId: f.demandId || undefined,
-    rrNumber: f.rrNumber || undefined,
-    // experience is a free-text field in UI; backend expects 'experienceRange'
-    experienceRange: f.experience || undefined,
+  /** UPDATED: map UI filters to backend DTO (byNames) */
+  const buildFilterPayload = (f) => {
+    // Map UI filters -> backend DTO expected by AddDemandSpecifications.byNames(...)
+    const payload = {
+      // Scalars
+      demandId: f.demandId || undefined,
+      rrNumber: f.rrNumber || undefined,
+      // experience is a free-text field in UI; backend expects 'experienceRange'
+      experienceRange: f.experience || undefined,
 
-    // Many-to-one by NAME (backend expects ...Name)
-    lobName: f.lob || undefined,
-    skillClusterName: f.skillCluster || undefined,
-    priorityName: f.priority || undefined,       // e.g., P1/P2/P3
-    statusName: f.status || undefined,
-    hbuName: f.hbu || undefined,
-    projectManagerName: f.pm || undefined,       // UI label "PM"
-    pmoSpocName: f.pmoSpoc || undefined,
-    pmoName: f.pmo || undefined,
-    bandName: f.band || undefined,
+      // Many-to-one by NAME (backend expects ...Name)
+      lobName: f.lob || undefined,
+      skillClusterName: f.skillCluster || undefined,
+      priorityName: f.priority || undefined,           // P1/P2/P3
+      statusName: f.status || undefined,
+      hbuName: f.hbu || undefined,
+      projectManagerName: f.pm || undefined,          // UI label "PM"
+      pmoSpocName: f.pmoSpoc || undefined,
+      pmoName: f.pmo || undefined,
+      bandName: f.band || undefined,
 
-    // Many-to-many by NAME LIST (split CSV / multi words)
-    primarySkillNames: splitNames(f.primarySkills),
-    secondarySkillNames: splitNames(f.secondarySkills),
-    locationNames: splitNames(f.demandLocation),
+      // ✅ Newly added name filters (backend change)
+      salesSpocName: f.salesSpoc || undefined,
+      demandTypeName: f.demandType || undefined,
+      hiringManagerName: f.hiringManager || undefined,
+      deliveryManagerName: f.deliveryManager || undefined,
 
-    // Dates & keyword (not in your UI yet, leaving out unless you add fields)
-    // receivedFrom: ..., receivedTo: ...,
-    // keyword: f.keyword || undefined,
+      // Many-to-many by NAME LIST (split CSV / multi words)
+      primarySkillNames: splitNames(f.primarySkills),
+      secondarySkillNames: splitNames(f.secondarySkills),
+      locationNames: splitNames(f.demandLocation),
+
+      // Dates & keyword (not in your UI yet)
+      // receivedFrom: ..., receivedTo: ...,
+      // keyword: f.keyword || undefined,
+    };
+
+    // Remove empty lists so backend doesn't treat them as "filter present but empty"
+    if (!payload.primarySkillNames.length) delete payload.primarySkillNames;
+    if (!payload.secondarySkillNames.length) delete payload.secondarySkillNames;
+    if (!payload.locationNames.length) delete payload.locationNames;
+
+    // Drop undefined keys
+    Object.keys(payload).forEach((k) => {
+      if (payload[k] === undefined) delete payload[k];
+    });
+
+    return payload;
   };
-
-  // Remove empty lists so backend doesn't treat them as "filter present but empty"
-  if (!payload.primarySkillNames.length) delete payload.primarySkillNames;
-  if (!payload.secondarySkillNames.length) delete payload.secondarySkillNames;
-  if (!payload.locationNames.length) delete payload.locationNames;
-
-  // Drop undefined keys
-  Object.keys(payload).forEach((k) => {
-    if (payload[k] === undefined) delete payload[k];
-  });
-
-  return payload;
-};
-
 
   const loadDropdowns = async () => {
     try {
@@ -442,3 +443,4 @@ export default function DemandSheet1() {
     </>
   );
 }
+``
