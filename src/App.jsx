@@ -67,6 +67,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/RDGTATeam"
             element={
@@ -226,7 +227,19 @@ function App() {
             } />
 
 
-             <Route path="/onboardinglist" element={<ProtectedRoute><OnboardingList/></ProtectedRoute>} />
+
+<Route
+  path="/onboardinglist"
+  element={
+    <ProtectedRoute>
+      <RequirePermission module="DashBoard" child="Track">
+        <OnboardingList />
+      </RequirePermission>
+    </ProtectedRoute>
+  }
+/>
+
+
 
           {/* Unauthorized page */}
           <Route path="/unauthorized" element={<Unauthorized />} />
