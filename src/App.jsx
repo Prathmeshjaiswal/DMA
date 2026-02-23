@@ -27,6 +27,8 @@ import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
 import RequirePermission from './Components/Auth/RequirePermission.jsx'
 import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx'
 import DemandDetailModal from "./Components/DemandsManagement/DemandSheet/DemandDetailModal.jsx";
+import OnboardingList from "./Components/OnBoarding/OnboardingList.jsx"
+
 
 
 // ⬇️ add a tiny component (inline) for unauthorized page, or create a separate file if you prefer
@@ -64,6 +66,7 @@ function App() {
           <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/>
 {/*           <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/> */}
              <Route path="/onboardinglist" element={<ProtectedRoute><OnboardingList/></ProtectedRoute>} />
+              <Route path="/profileSheet" element={<ProtectedRoute><RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}<ProfileSheet/></RequirePermission></ProtectedRoute>} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<h2>Page Not Found</h2>} />
         </Routes>

@@ -14,7 +14,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
   const [dd, setDd] = useState({
     onboardingStatuses: [],
     wbsTypes: [],
-    bgvStatuses: [],
+//     bgvStatuses: [],
   });
 
   const initial = useMemo(() => {
@@ -22,7 +22,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     return {
       onboardingStatusId: row?.onboardingStatusId ?? null,
       wbsTypeId: row?.wbsTypeId ?? null,
-      bgvStatusId: row?.bgvStatusId ?? null,
+//       bgvStatusId: row?.bgvStatusId ?? null,
       offerDate: row?.offerDate || "",
       dateOfJoining: row?.dateOfJoining || "",
       ctoolId: row?.ctoolId ?? "",
@@ -47,7 +47,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
         setDd({
           onboardingStatuses: a?.onboardingStatuses || [],
           wbsTypes: a?.wbsTypes || [],
-          bgvStatuses: a?.bgvStatuses || [],
+//           bgvStatuses: a?.bgvStatuses || [],
         });
 
         // Auto-map ids from names if ids not present in row
@@ -83,7 +83,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     const e = {};
     if (!form.onboardingStatusId) e.onboardingStatusId = "Required";
     if (!form.wbsTypeId) e.wbsTypeId = "Required";
-    if (!form.bgvStatusId) e.bgvStatusId = "Required";
+//     if (!form.bgvStatusId) e.bgvStatusId = "Required";
     if (!form.offerDate) e.offerDate = "Required";
     if (!form.dateOfJoining) e.dateOfJoining = "Required";
     if (!String(form.ctoolId || "").trim()) e.ctoolId = "Required";
@@ -100,7 +100,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
       const payload = {
         onboardingStatusId: Number(form.onboardingStatusId),
         wbsTypeId: Number(form.wbsTypeId),
-        bgvStatusId: Number(form.bgvStatusId),
+//         bgvStatusId: Number(form.bgvStatusId),
         offerDate: form.offerDate,
         dateOfJoining: form.dateOfJoining,
         ctoolId:
@@ -168,7 +168,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                 {errors.wbsTypeId && <div className={errorCls}>{errors.wbsTypeId}</div>}
               </div>
 
-              {/* BGV Status */}
+{/*               BGV Status */}
               <div>
                 <label className={labelCls}>BGV Status</label>
                 <select

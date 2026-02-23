@@ -12,6 +12,10 @@ export default function ProfileMenu({ onProfile, onLogout }) {
 
   const { hasChild } = usePermissions();
 
+  // Display name and id from localStorage
+  const [displayName, setDisplayName] = useState("User");
+  const [displayId, setDisplayId] = useState("");
+
   /** Close dropdown when clicking outside. */
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -19,10 +23,11 @@ export default function ProfileMenu({ onProfile, onLogout }) {
         setOpen(false);
       }
     };
-
+   setDisplayName(localStorage.getItem("username"));
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
 
   /** go: Navigate to selected page and close menu. */
   const go = (path) => {
@@ -31,28 +36,35 @@ export default function ProfileMenu({ onProfile, onLogout }) {
   };
 
   return (
-    <div className="relative flex item-center gap-1" ref={menuRef}>
-      {/* Profile icon */}
-      <div
-        onClick={() => setOpen((v) => !v)}
-        className="w-10 h-10 rounded-full bg-[#F15B40] text-white flex items-center justify-center cursor-pointer font-bold"
-        aria-label="Profile menu"
-      >
-        <UserOutlined className="text-white text-lg" />
+    <div className="relative flex items-center" ref={menuRef}>
+      {/* Icon + below welcome label */}
+      <div className="flex flex-col items-center">
+        {/* Profile icon */}
+        <div
+          onClick={() => setOpen((v) => !v)}
+          className="w-10 h-10 rounded-full bg-[#F15B40] text-white flex items-center justify-center cursor-pointer font-bold"
+          aria-label="Profile menu"
+          title={`${displayName}${displayId ? ` (${displayId})` : ""}`}
+        >
+          <UserOutlined className="text-white text-lg" />
+        </div>
+
+        {/* Welcome label BELOW the icon (outside the dropdown) */}
+
       </div>
 
       {/* Dropdown toggle arrow */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-white text-xs"
+        className="ml-2 text-white text-xs"
         aria-label="Toggle profile menu"
       >
         ▼
       </button>
 
-      {/* Dropdown menu */}
+      {/* Dropdown menu (unchanged, no welcome inside) */}
       {open && (
-        <div className="absolute right-0 top-11 w-44 bg-white border rounded shadow z-50 text-sm py-1">
+        <div className="absolute right-0 top-12 w-56 bg-white border rounded shadow z-50 text-sm py-1">
           {/* Permission: User Management → Users Sheet */}
           {hasChild("User Management", "Users Sheet") && (
             <button
@@ -72,8 +84,6 @@ export default function ProfileMenu({ onProfile, onLogout }) {
               Roles Management
             </button>
           )}
-
-          <div className="" />
 
           {/* Logout */}
           <button

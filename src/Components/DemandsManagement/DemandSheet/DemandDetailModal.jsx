@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Tabs, Button, message } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 
-import { getProfiles } from "../../api/addprofile.js";
+import { getProfiles } from "../../api/Profiles/addprofile.js";
 import {
   attachProfilesToDemand,
   getAttachedProfilesByDemandId, // <-- fetch attached profiles from backend

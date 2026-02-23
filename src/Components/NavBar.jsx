@@ -1,5 +1,5 @@
 // NavBar.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/cfg3.png";
 import { useAuth } from "./Auth/AuthProvider";
@@ -26,35 +26,69 @@ export default function NavBar({
   const showReports = hasChild("DashBoard", "Reports");
 
   const links = [
-    // Only show Demands if DashBoard child is granted
     showDashboardShortcuts ? { label: "Demands", to: "/demandsheet1" } : null,
-
-    // Reports only if granted
     showReports ? { label: "Reports", to: "/Report" } : null,
-
-    // Only show Reports if user has DashBoard → Reports
     hasChild("DashBoard", "Reports") ? { label: "Reports", to: "/Report" } : null,
-
-    // Only show Users if user has User Management → Users Sheet
     hasChild("User Management", "Users Sheet")
       ? { label: "Users", to: "/UserManagement" }
       : null,
-
     showDashboardShortcuts ? { label: "Track", to: "/ProfileTracker" } : null,
     showDashboardShortcuts ? { label: "RDG", to: "/RDGTeam" } : null,
     showDashboardShortcuts ? { label: "TA", to: "/TATeam" } : null,
   ].filter(Boolean);
 
+  // ====== NEW: Welcome text state (shown in NavBar below the Profile icon) ======
+  const [displayName, setDisplayName] = useState("User");
+  const [displayId, setDisplayId] = useState("");
+
+  useEffect(() => {
+    let name = "";
+    let uid = "";
+
+    try {
+      const userJson = localStorage.getItem("user");
+      if (userJson) {
+        const u = JSON.parse(userJson);
+        name = u?.name ?? u?.username ?? u?.userName ?? name;
+        uid = u?.userId ?? u?.empId ?? u?.id ?? uid;
+      }
+    } catch {
+      // ignore parse errors and fall back to flat keys
+    }
+
+    if (!name) {
+      name =
+        localStorage.getItem("userName") ??
+        localStorage.getItem("username") ??
+        localStorage.getItem("name") ??
+        "";
+    }
+    if (!uid) {
+      uid =
+        localStorage.getItem("userId") ??
+        localStorage.getItem("empId") ??
+        localStorage.getItem("id") ??
+        "";
+    }
+
+    name = String(name || "").trim();
+    uid = String(uid || "").trim();
+
+    setDisplayName(name || "User");
+    setDisplayId(uid);
+  }, []);
+  // ====== /NEW ======
+
   return (
     <div className="mb-10">
       <div className="fixed inset-x-0 top-0 z-40 bg-[#082340] text-white border-b border-white/10 shadow-md">
-        <div className="flex items-center px-3 py-3 gap-3">
+        <div className="flex items-start px-3 py-2 gap-3">
           {/* Hamburger (only when authenticated) */}
           {isAuthenticated ? (
             <button
               onClick={onToggleSidebar}
               aria-label="Toggle Sidebar"
-              className="inline-flex flex-col items-center justify-center w-10 h-10 rounded hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+              className="inline-flex flex-col items-center justify-center w-10 h-10 rounded hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40 mt-0.5"
             >
               <span className=" w-6 h-0.5 bg-white "></span>
               <span className=" w-6 h-0.5 bg-white mt-1"></span>
@@ -82,12 +116,25 @@ export default function NavBar({
             </h1>
           </header>
 
-          {/* Profile menu (only when authenticated) */}
+          {/* Profile area (ProfileMenu + Welcome text BELOW it) */}
           {isAuthenticated ? (
-            <ProfileMenu
-              onLogout={handleLogout}
-              onProfile={() => setShowProfile?.(true)}
-            />
+            <div className="flex flex-col items-end">
+              {/* Keep your existing ProfileMenu (icon + dropdown) */}
+              <ProfileMenu
+                onLogout={handleLogout}
+                onProfile={() => setShowProfile?.(true)}
+              />
+
+              {/* Welcome text BELOW the profile icon (FULL text, wraps, no max-width) */}
+                  <div
+                    className="rounded text-xs text-green-300 shadow-sm  whitespace-normal break-words"
+                    title={`${displayName}${displayId ? ` (${displayId})` : ""}`}
+                  >
+{/*                     <span role="img" aria-label="wave">👋</span> Welcome,&nbsp; */}
+                    <span className="font-medium">{displayName}</span>
+                    {displayId ? <span className="text-green"> ({displayId})</span> : null}
+                  </div>
+            </div>
           ) : (
             <div className="w-10 h-10" />
           )}
@@ -97,7 +144,7 @@ export default function NavBar({
       {/* navbar spacer */}
       <div className="h-2" />
 
-      {/* Profile modal */}
+      {/* Profile modal/drawer (unchanged) */}
       <ProfileModel
         isOpen={!!showProfile}
         onClose={() => setShowProfile?.(false)}
