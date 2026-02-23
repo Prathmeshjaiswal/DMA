@@ -1,16 +1,18 @@
 // src/Components/DemandsManagement/DemandDetailModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal, Tabs, Button, message } from "antd";
+import { Modal, Tabs, Button, message, Spin, Alert } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 
-import { getProfiles } from "../../api/Profiles/addprofile.js";
+import { getProfiles } from "../../api/Profiles/addProfile.js";
 import {
   attachProfilesToDemand,
   getAttachedProfilesByDemandId, // <-- fetch attached profiles from backend
 } from "../../api/Demands/attachment.js";
 
-// ...imports remain the same
+// reuse onboarding list API
+import { getAllOnboardings } from "../../api/Onboarding/onBoarding";
 
+// --------------------- helpers ---------------------
 const nameOf = (obj) =>
   obj && typeof obj === "object" ? (obj.name ?? "") : (obj ?? "");
 
@@ -28,7 +30,7 @@ function profileKey(p) {
   return p?.profileId ?? p?.id ?? null;
 }
 
-/** ---- Helpers ---- */
+/** ---- Generic helpers ---- */
 const BACKEND_FMT = "YYYY-MM-DD";
 function fmtDate(d) {
   if (!d) return "-";
@@ -59,6 +61,101 @@ function isOpenProfileStatus(p) {
   return OPEN_STATUS_SET.has(status);
 }
 
+/* ================== Onboarding Detail section (match Demand Detail look) ================== */
+function fmtYMD(v) {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return String(v);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** INLINE label/value row just like your Demand detail section */
+function RowLabelValue({ label, value }) {
+  return (
+    <div className="leading-tight text-[12px]">
+      <strong className="text-gray-900 whitespace-nowrap">{label}:</strong>{" "}
+      <span className="text-gray-800">{value ?? "-"}</span>
+    </div>
+  );
+}
+
+/**
+ * Props:
+ *  - onboarding: an onboarding object (or null)
+ *  - demandId:   string/number (for display)
+ *  - profileId:  string/number (for display)
+ * Two columns; compact padding; same visual weight as Demand Detail.
+ */
+function OnboardingDetailSection({ onboarding, demandId, profileId }) {
+  const wbsType = onboarding?.wbsType?.name ?? onboarding?.wbsType ?? "-";
+  const bgv = onboarding?.bgvStatus?.name ?? onboarding?.bgvStatus ?? "-";
+  const status = onboarding?.onboardingStatus?.name ?? onboarding?.onboardingStatus ?? "-";
+  const candidateName =
+    onboarding?.profile?.candidateName ??
+    onboarding?.profileName ??
+    null;
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3  shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6   gap-y-2">
+        {/* LEFT */}
+        <div className="space-y-1.5">
+          <RowLabelValue label="Demand ID" value={demandId ?? "-"} />
+          <RowLabelValue label="Candidate ID" value={profileId ?? "-"} />
+          {candidateName ? (
+            <RowLabelValue label="Candidate" value={candidateName} />
+          ) : null}
+          <RowLabelValue label="WBS Type" value={wbsType} />
+          <RowLabelValue label="Offer Date" value={fmtYMD(onboarding?.offerDate)} />
+          <RowLabelValue label="DOJ" value={fmtYMD(onboarding?.dateOfJoining)} />
+          <RowLabelValue label="C-Tool ID" value={onboarding?.ctoolId ?? "-"} />
+        </div>
+
+        {/* RIGHT */}
+        <div className="space-y-1.5">
+          <RowLabelValue label="BGV Status" value={bgv} />
+          <RowLabelValue
+            label="PEV Upload"
+            value={fmtYMD(onboarding?.pevUploadDate ?? onboarding?.pevUpdateDate)}
+          />
+          <RowLabelValue label="VP Tagging" value={fmtYMD(onboarding?.vpTagging)} />
+          <RowLabelValue label="Tech Select" value={fmtYMD(onboarding?.techSelectDate)} />
+          <RowLabelValue label="HSBC Onboard" value={fmtYMD(onboarding?.hsbcOnboardingDate)} />
+          <RowLabelValue label="Onboarding Status" value={status} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============== Demand id normalization helpers for matching ============== */
+/** Extract numeric demand id from strings like "MSS-104" or "ET100"; fallback to the original */
+function toDemandIdComparable(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (/^\d+$/.test(s)) return s; // already numeric
+  const m = s.match(/(\d+)\s*$/); // capture trailing number (e.g., MSS-104 -> 104)
+  return m ? m[1] : s;
+}
+
+/** Try to read a comparable demand id from the demand row in this modal */
+function getComparableDemandIdFromRow(row) {
+  const candidates = [
+    row?.displayDemandId,
+    row?.demandId, // often "MSS-104"
+    row?.code,
+    row?.id, // PK fallback
+  ];
+  for (const c of candidates) {
+    const n = toDemandIdComparable(c);
+    if (n != null) return n;
+  }
+  return null;
+}
+
 /** ---- Profile Card ---- */
 function ProfileCard({ p }) {
   const candidateName = toTitleCase(p?.candidateName ?? "-");
@@ -72,8 +169,7 @@ function ProfileCard({ p }) {
     Array.isArray(p?.secondarySkills) && p.secondarySkills.length
       ? p.secondarySkills.map(nameOf).join(", ")
       : null;
-//
-//   const createdAtDisplay = p?.createdAt ? fmtDate(p.createdAt) : "-";
+
   const attachedDateDisplay = p?.attachedDate ?? "-";
 
   const statusName = getStatusName(p);
@@ -86,7 +182,7 @@ function ProfileCard({ p }) {
 
   return (
     <div className="rounded-lg border border-gray-200 p-3 shadow-sm">
-      {/* Header: name on left, STATUS on right (createdAt removed) */}
+      {/* Header: name on left, STATUS on right */}
       <div className="flex items-center justify-between">
         <div className="font-semibold text-gray-800">{candidateName}</div>
         <span
@@ -102,7 +198,7 @@ function ProfileCard({ p }) {
         </span>
       </div>
 
-      {/* Body: two columns - left (skills + attached date) / right (HBU + experience) */}
+      {/* Body: two columns */}
       <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
         {/* LEFT */}
         <div className="col-span-1 whitespace-normal break-words">
@@ -122,18 +218,13 @@ function ProfileCard({ p }) {
         {/* RIGHT */}
         <div className="col-span-1">
           <div className="mb-1">
-            <strong>HBU:</strong> {hbuName}
+            <strong>HBU:</strong> {nameOf(p?.hbu) || "-"}
           </div>
           <div className="mb-1">
-            <strong>Experience:</strong> {experienceText}
+            <strong>Experience:</strong>{" "}
+            {p?.experience != null && p?.experience !== "" ? `${p.experience} Yrs` : "-"}
           </div>
         </div>
-
-        {/* Full width timeline */}
-{/*         <div className="col-span-2 text-xs text-gray-600 mt-1"> */}
-{/*           <strong>Created → Attached:</strong> {createdAtDisplay} →{" "} */}
-{/*           {attachedDateDisplay} */}
-{/*         </div> */}
       </div>
     </div>
   );
@@ -141,7 +232,6 @@ function ProfileCard({ p }) {
 
 /** Attach button row in "Attach Profile" mode */
 function ProfileRow({ p, selected, onToggle }) {
-  // Server attachment (locked)
   const isServerAttached = !!(p?.attachedDate || p?.profileAttachedDate || p?.dateAttached);
   const isSelected = !!selected;
 
@@ -152,11 +242,11 @@ function ProfileRow({ p, selected, onToggle }) {
   if (isServerAttached) {
     label = "Attached";
     btnType = "primary";
-    disabled = true; // already attached on server -> disabled
+    disabled = true;
   } else if (isSelected) {
     label = "Attached";
     btnType = "primary";
-    disabled = false; // selected locally -> allow unselect
+    disabled = false; // allow unselect
   }
 
   const handleClick = disabled ? undefined : () => onToggle?.(p);
@@ -168,7 +258,7 @@ function ProfileRow({ p, selected, onToggle }) {
           {toTitleCase(p?.candidateName ?? "-")}
         </div>
         <div className="text-xs text-gray-500">
-          Exp: {p?.experience ?? "-"}&nbsp;Yrs&nbsp;•&nbsp; HBU: {nameOf(p?.hbu) || "-"}&nbsp;•&nbsp; Loc:{" "}
+          Exp: {p?.experience ?? "-"}&nbsp;Yrs&nbsp;•&nbsp; HBU: {nameOf(p?.hbu) || "-"}&nbsp;•&nbsp; Loc{" "}
           {nameOf(p?.location) || "-"}
         </div>
       </div>
@@ -187,6 +277,7 @@ function ProfileRow({ p, selected, onToggle }) {
   );
 }
 
+// ====================== main component ======================
 export default function DemandDetailModal({
   open,
   onClose,
@@ -209,6 +300,14 @@ export default function DemandDetailModal({
   const [profileSubTab, setProfileSubTab] = useState("open");
 
   const demandPkId = row?.id ?? null;
+
+  // ===== Onboarding state (list) =====
+  const [onbLoading, setOnbLoading] = useState(false);
+  const [onbError, setOnbError] = useState(null);
+  const [onboardingList, setOnboardingList] = useState([]); // store ALL matches
+
+  // *** UPDATED: derived single record to display in Onboarding tab
+  const currentDemandComparable = useMemo(() => getComparableDemandIdFromRow(row), [row]);
 
   // Seed selection using stable profile identity
   useEffect(() => {
@@ -315,9 +414,7 @@ export default function DemandDetailModal({
     [attachedProfiles]
   );
 
-  /** ---- Header ----
-   * Move demand status chip next to the heading (right of "Demand Details — demandId").
-   */
+  /** ---- Header ---- */
   const header = (
     <div className="flex items-center justify-between pr-2">
       <div className="flex items-center gap-3 text-gray-800">
@@ -325,7 +422,6 @@ export default function DemandDetailModal({
         <span className="font-semibold">
           Demand Details — {row?.demandId}
         </span>
-        {/* moved statusChip here (right of headline) */}
         {statusChip ? (
           <span
             className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
@@ -340,11 +436,147 @@ export default function DemandDetailModal({
           </span>
         ) : null}
       </div>
-
-      {/* right side now empty as requested (chip moved) */}
       <div />
     </div>
   );
+
+  // Load ALL matching onboardings for this demand; collect matches
+  useEffect(() => {
+    if (!open) return;
+
+    setOnbError(null);
+    setOnbLoading(true);
+    setOnboardingList([]);
+
+    const comparable = getComparableDemandIdFromRow(row);
+
+    if (!comparable) {
+      setOnbLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // 1) Optionally collect attached profileIds for this demand (best-effort filter)
+        let attachedIds = new Set();
+        try {
+          if (row?.id) {
+            const resAttached = await getAttachedProfilesByDemandId(row.id);
+            const list = extractList(resAttached);
+            (list || []).forEach((p) => {
+              const pid = p?.profileId ?? p?.id ?? p?.profile?.profileId ?? null;
+              if (pid != null) attachedIds.add(String(pid));
+            });
+          }
+        } catch {
+          // best-effort only
+        }
+
+        // 2) Page through onboarding list, COLLECT matches for this demand
+        let page = 0;
+        const size = 50;
+        const MAX_PAGES = 20;
+        const matches = [];
+
+        while (!cancelled && page < MAX_PAGES) {
+          const res = await getAllOnboardings(page, size);
+          const list = Array.isArray(res?.content) ? res.content : [];
+          const last = Boolean(res?.last);
+
+          for (const r of list) {
+            const rDemandId = r?.demand?.demandId ?? r?.demandId ?? null;
+            const rProfileId = r?.profile?.profileId ?? r?.profileId ?? null;
+
+            const rDemandComparable = toDemandIdComparable(rDemandId);
+
+            const demandMatch =
+              rDemandComparable != null &&
+              comparable != null &&
+              String(rDemandComparable) === String(comparable);
+
+            const profileOk =
+              attachedIds.size === 0
+                ? true
+                : attachedIds.has(String(rProfileId ?? ""));
+
+            if (demandMatch && profileOk) {
+              matches.push(r);
+            }
+          }
+
+          if (last) break;
+          page += 1;
+        }
+
+        if (!cancelled) setOnboardingList(matches);
+      } catch (e) {
+        if (!cancelled) setOnbError(e?.response?.data?.message || e?.message || "Failed to load onboarding.");
+      } finally {
+        if (!cancelled) setOnbLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, row]);
+
+  // ---------- Helpers to classify onboarding status ----------
+  const isOnboardedStatus = (rec) => {
+    const s =
+      (rec?.onboardingStatus?.name ?? rec?.onboardingStatus ?? "")
+        .toString()
+        .trim()
+        .toUpperCase();
+    // Covers "ONBOARDED", "ON-BOARDED", "ONBOARD"
+    return s.includes("ONBOARD");
+  };
+  const isOpenOnboardingStatus = (rec) => {
+    const s =
+      (rec?.onboardingStatus?.name ?? rec?.onboardingStatus ?? "")
+        .toString()
+        .trim()
+        .toUpperCase();
+    // Covers "IN PROGRESS", "IN-PROGRESS", "PENDING"
+    return s.includes("PROGRESS") || s.includes("PENDING") || s.includes("INPROGRESS");
+  };
+
+  // *** UPDATED: choose **one** record to display in Onboarding tab
+  const onboardedMatch = useMemo(
+    () => (onboardingList || []).find(isOnboardedStatus) || null,
+    [onboardingList]
+  );
+  const openMatch = useMemo(
+    () => (onboardingList || []).find(isOpenOnboardingStatus) || null,
+    [onboardingList]
+  );
+
+  // *** UPDATED: prepare a placeholder record (all fields "-") when only openMatch exists
+  const placeholderFromOpen = useMemo(() => {
+    if (!openMatch) return null;
+    // Keep demand/profile identity to show context; scrub dates/fields to '-'
+    return {
+      offerDate: null,
+      dateOfJoining: null,
+      ctoolId: null,
+      pevUploadDate: null,
+      vpTagging: null,
+      techSelectDate: null,
+      hsbcOnboardingDate: null,
+      bgvStatus: null,
+      onboardingStatus: openMatch?.onboardingStatus ?? { name: "In Progress" },
+      wbsType: null,
+      demand: {
+        demandId: openMatch?.demand?.demandId ?? currentDemandComparable ?? "-",
+      },
+      profile: {
+        profileId: openMatch?.profile?.profileId ?? "-",
+        candidateName: openMatch?.profile?.candidateName ?? null,
+      },
+    };
+  }, [openMatch, currentDemandComparable]);
 
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={980} title={header}>
@@ -354,7 +586,6 @@ export default function DemandDetailModal({
             activeKey={tab}
             onChange={(k) => {
               setTab(k);
-              // reset attach mode when leaving profile tab
               if (k !== "profile") setAttachMode(false);
             }}
             items={[
@@ -363,8 +594,7 @@ export default function DemandDetailModal({
                 label: "Demand Detail",
                 children: (
                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                    {/* details grid unchanged */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-2 text-sm">
                       <div><strong>RR:</strong> {row.rrNumber || "-"}</div>
                       <div><strong>Pod/Programme:</strong> {row.prodProgramName || "-"}</div>
                       <div><strong>LOB:</strong> {row.lob || "-"}</div>
@@ -401,7 +631,6 @@ export default function DemandDetailModal({
                       activeKey={profileSubTab}
                       onChange={(k) => {
                         setProfileSubTab(k);
-                        // When switching tab, exit attach mode
                         setAttachMode(false);
                       }}
                       items={[
@@ -437,14 +666,12 @@ export default function DemandDetailModal({
                           </Button>
                         </div>
                       ) : (
-                        // Archived tab: no attach controls
                         <div />
                       )}
                     </div>
 
                     {/* Body */}
                     {profileSubTab === "archived" ? (
-                      // ARCHIVED LIST (view only)
                       <>
                         {loadingAttached ? (
                           <div className="text-gray-500 text-sm px-2 py-6">
@@ -461,7 +688,6 @@ export default function DemandDetailModal({
                         )}
                       </>
                     ) : !attachMode ? (
-                      // OPEN LIST (attached on server)
                       <>
                         {loadingAttached ? (
                           <div className="text-gray-500 text-sm px-2 py-6">
@@ -478,7 +704,6 @@ export default function DemandDetailModal({
                         )}
                       </>
                     ) : (
-                      // ATTACH MODE LIST (Open tab only)
                       <>
                         <div className="rounded-md border border-gray-100 p-2">
                           {loadingProfiles ? (
@@ -510,6 +735,42 @@ export default function DemandDetailModal({
                   </div>
                 ),
               },
+
+              // ======================= Onboarding Detail (SINGLE SECTION) =======================
+              // *** UPDATED: remove inner tabs; show either onboarded record, or placeholder for open, or nothing
+              {
+                key: "onboarding",
+                label: "Onboarding Detail",
+                children: (
+                  <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm text-sm">
+                    {onbLoading ? (
+                      <div className="py-6 flex items-center justify-center">
+                        <Spin size="small" />
+                      </div>
+                    ) : onbError ? (
+                      <Alert type="error" showIcon message={onbError} />
+                    ) : onboardedMatch ? (
+                      <OnboardingDetailSection
+                        onboarding={onboardedMatch}
+                        demandId={row?.demandId ?? row?.id ?? "-"}
+                        profileId={onboardedMatch?.profile?.profileId ?? "-"}
+                      />
+                    ) : placeholderFromOpen ? (
+                      <OnboardingDetailSection
+                        onboarding={placeholderFromOpen}
+                        demandId={row?.demandId ?? row?.id ?? "-"}
+                        profileId={placeholderFromOpen?.profile?.profileId ?? "-"}
+                      />
+                    ) : (
+                      <div className="text-gray-600 text-sm py-4 text-center">
+                        Not onboarded yet.
+                      </div>
+                    )}
+                  </div>
+                ),
+              },
+              // ==========================================================================
+
               {
                 key: "history",
                 label: "History",

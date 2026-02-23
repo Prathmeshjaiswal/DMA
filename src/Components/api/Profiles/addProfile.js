@@ -36,7 +36,7 @@ function normalizePageResponse(raw) {
 /** List profiles (server-side pagination) — cache buster + no-cache headers */
 export async function getProfiles(page = 0, size = 10) {
   const res = await api.get("/profiles", {
-    params: { page, size, _t: Date.now() }, // cache buster
+    params: { page, size}, // cache buster
     headers: {
       "Cache-Control": "no-cache",
       Pragma: "no-cache",

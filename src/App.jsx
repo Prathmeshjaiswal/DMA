@@ -67,6 +67,15 @@ function App() {
 {/*           <Route path="/demandsheet1" element={<ProtectedRoute><RequirePermission module="DashBoard" child="Demands"><DemandSheet1/>  </RequirePermission></ProtectedRoute>}/> */}
              <Route path="/onboardinglist" element={<ProtectedRoute><OnboardingList/></ProtectedRoute>} />
               <Route path="/profileSheet" element={<ProtectedRoute><RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}<ProfileSheet/></RequirePermission></ProtectedRoute>} />
+
+{/*           <Route path="/EditDemand" element={ */}
+{/*             <ProtectedRoute> */}
+{/*               <RequirePermission module="User Management" child="Users Sheet"> */}
+{/*                 <EditDemand /> */}
+{/*               </RequirePermission> */}
+{/*             </ProtectedRoute> */}
+{/*           } /> */}
+
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<h2>Page Not Found</h2>} />
         </Routes>

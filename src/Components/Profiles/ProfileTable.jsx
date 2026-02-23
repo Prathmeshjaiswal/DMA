@@ -312,7 +312,7 @@ export default function ProfileTable({
               />
             </Tooltip>
 
-            <Tooltip title={hasCv ? fileName : "No CV"}>
+            <Tooltip title={hasCv ? `Download CV (${fileName} )`: "No CV"}>
               <Button
                 type="text"
                 size="small"
