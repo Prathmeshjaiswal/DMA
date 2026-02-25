@@ -2227,7 +2227,7 @@ export default function ProfileTracker() {
       // Pull fresh data so we see backend’s derived status
       await load(page, size, filterPayload);
 
-      message.success('Row updated');
+      message.success('Demand updated');
       onCancel();
     } catch (e) {
       message.error(
