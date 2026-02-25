@@ -1,13 +1,14 @@
 
-
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal, message, Tabs, Checkbox, Spin, Alert } from "antd";
-import { PlusOutlined, EyeOutlined, PaperClipOutlined } from "@ant-design/icons";
+import { Button, message } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 import Layout from "../Layout.jsx";
 import ProfileTable from "./ProfileTable.jsx";
+// src/Components/Profiles/ProfileSheet.jsx
+import ProfileView from "./ProfileView.jsx"
 
 import {
   getProfiles,
@@ -17,27 +18,27 @@ import {
   searchProfilesApi,
 } from "../api/Profiles/addProfile.js";
 
-import { getDemandsheet } from "../api/Demands/getDemands.js";
-import {
-  attachDemandsToProfileApi,
-  getDemandsByProfileApi,
-} from "../api/Profiles/attachedDemand.js";
-
-// Reuse onboarding list API (same as in demand modal)
-import { getAllOnboardings } from "../api/Onboarding/onBoarding";
-
-// --------------------- helpers ---------------------
+/* --------------------- helpers --------------------- */
 // ---------- role helpers ----------
-function tryJson(s) { try { return JSON.parse(s); } catch { return null; } }
+function tryJson(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
 function decodeJwt(token) {
   try {
     const base64 = token.split(".")[1];
     const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(json);
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 function getCurrentRoleName() {
-  const mem = (window.__currentUser && (window.__currentUser.role?.role || window.__currentUser.role)) || null;
+  const mem =
+    (window.__currentUser && (window.__currentUser.role?.role || window.__currentUser.role)) || null;
   if (mem) return String(mem);
   const candidates = [
     tryJson(localStorage.getItem("loginResponse")),
@@ -93,8 +94,7 @@ const asText = (v) => {
   return String(v);
 };
 function adaptOptions(dto = {}) {
-  const toOpt = (arr) =>
-    safe(arr).map((x) => ({ label: String(x?.name ?? ""), value: String(x?.id ?? "") }));
+  const toOpt = (arr) => safe(arr).map((x) => ({ label: String(x?.name ?? ""), value: String(x?.id ?? "") }));
   return {
     externalInternal: toOpt(dto.externalInternals),
     hbu: toOpt(dto.hbus),
@@ -112,7 +112,10 @@ const resolveLabel = (optsArr, id) => {
 const resolveLabelsFromIds = (optsArr, ids = []) => {
   if (!Array.isArray(optsArr) || !Array.isArray(ids)) return "";
   const set = new Set(ids.map((v) => String(v)));
-  return optsArr.filter((o) => set.has(String(o.value))).map((o) => o.label).join(", ");
+  return optsArr
+    .filter((o) => set.has(String(o.value)))
+    .map((o) => o.label)
+    .join(", ");
 };
 
 function adaptRow(item) {
@@ -137,26 +140,35 @@ function adaptRow(item) {
   const locationId = pick("locationId") ?? (item?.location && Number(item.location.id)) ?? undefined;
   const hbuId = pick("hbuId") ?? (item?.hbu && Number(item.hbu.id)) ?? undefined;
   const skillClusterId = pick("skillClusterId") ?? (item?.skillCluster && Number(item.skillCluster.id)) ?? undefined;
-  const externalInternalId = pick("externalInternalId") ?? (item?.externalInternal && Number(item.externalInternal.id)) ?? undefined;
+  const externalInternalId =
+    pick("externalInternalId") ?? (item?.externalInternal && Number(item.externalInternal.id)) ?? undefined;
 
   const primarySkillsArray = (() => {
     const ids = safe(pick("primarySkillsIds", "primarySkillIds")).map(Number);
     if (ids.length) return ids;
-    return safe(item?.primarySkills).map((s) => Number(s?.id)).filter(Boolean);
+    return safe(item?.primarySkills)
+      .map((s) => Number(s?.id))
+      .filter(Boolean);
   })();
   const secondarySkillsArray = (() => {
     const ids = safe(pick("secondarySkillsIds", "secondarySkillIds")).map(Number);
     if (ids.length) return ids;
-    return safe(item?.secondarySkills).map((s) => Number(s?.id)).filter(Boolean);
+    return safe(item?.secondarySkills)
+      .map((s) => Number(s?.id))
+      .filter(Boolean);
   })();
 
   const primarySkills =
     asText(pick("primarySkillsText")) ||
-    safe(pick("primarySkills", "primarySkillNames")).map((n) => n?.name ?? n).join(", ") ||
+    safe(pick("primarySkills", "primarySkillNames"))
+      .map((n) => n?.name ?? n)
+      .join(", ") ||
     "";
   const secondarySkills =
     asText(pick("secondarySkillsText")) ||
-    safe(pick("secondarySkills", "secondarySkillNames")).map((n) => n?.name ?? n).join(", ") ||
+    safe(pick("secondarySkills", "secondarySkillNames"))
+      .map((n) => n?.name ?? n)
+      .join(", ") ||
     "";
 
   const summary = asText(pick("summary", "remark", "notes"));
@@ -197,143 +209,16 @@ function adaptRow(item) {
   };
 }
 
-// ---------- utils ----------
-const formatDateTime = (v) => {
-  if (!v) return "-";
-  try {
-    const d = new Date(v);
-    return d.toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return String(v);
-  }
-};
-
-// ---------- Eval status → tone helpers ----------
-function evalTone(name) {
-  const s = String(name || '').toLowerCase();
-  if (!s) return 'amber';
-  if (s.includes('reject')) return 'red';
-  if (s.includes('select')) return 'green';
-  return 'amber';
-}
-function toneStyles(tone) {
-  // inline styles (works with current Tailwind blocks)
-  switch (tone) {
-    case 'green':
-      return { borderColor: '#16a34a', backgroundColor: '#f0fdf4' }; // green-600 / green-50
-    case 'red':
-      return { borderColor: '#dc2626', backgroundColor: '#fef2f2' }; // red-600 / red-50
-    default:
-      return { borderColor: '#f59e0b', backgroundColor: '#fffbeb' }; // amber-500 / amber-50
-  }
-}
-function toneTextColor(tone) {
-  switch (tone) {
-    case 'green': return '#166534'; // green-700
-    case 'red': return '#991b1b'; // red-700
-    default: return '#92400e'; // amber-700
-  }
-}
-
-// ---------- Onboarding detail helpers (same as Demand modal) ----------
-function fmtYMD(v) {
-  if (!v) return "-";
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return String(v);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-function RowLabelValue({ label, value }) {
-  return (
-    <div className="leading-tight text-[12px]">
-      <strong className="text-gray-900 whitespace-nowrap">{label}:</strong>{" "}
-      <span className="text-gray-800">{value ?? "-"}</span>
-    </div>
-  );
-}
-function OnboardingDetailSection({ onboarding, demandId, profileId }) {
-  const wbsType = onboarding?.wbsType?.name ?? onboarding?.wbsType ?? "-";
-  const bgv = onboarding?.bgvStatus?.name ?? onboarding?.bgvStatus ?? "-";
-  const status = onboarding?.onboardingStatus?.name ?? onboarding?.onboardingStatus ?? "-";
-  const candidateName =
-    onboarding?.profile?.candidateName ??
-    onboarding?.profileName ??
-    null;
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-        {/* LEFT */}
-        <div className="space-y-1.5">
-          <RowLabelValue label="Demand ID" value={demandId ?? "-"} />
-          <RowLabelValue label="Candidate ID" value={profileId ?? "-"} />
-          {candidateName ? <RowLabelValue label="Candidate" value={candidateName} /> : null}
-          <RowLabelValue label="WBS Type" value={wbsType} />
-          <RowLabelValue label="Offer Date" value={fmtYMD(onboarding?.offerDate)} />
-          <RowLabelValue label="DOJ" value={fmtYMD(onboarding?.dateOfJoining)} />
-          <RowLabelValue label="C-Tool ID" value={onboarding?.ctoolId ?? "-"} />
-        </div>
-
-        {/* RIGHT */}
-        <div className="space-y-1.5">
-          <RowLabelValue label="BGV Status" value={bgv} />
-          <RowLabelValue
-            label="PEV Upload"
-            value={fmtYMD(onboarding?.pevUploadDate ?? onboarding?.pevUpdateDate)}
-          />
-          <RowLabelValue label="VP Tagging" value={fmtYMD(onboarding?.vpTagging)} />
-          <RowLabelValue label="Tech Select" value={fmtYMD(onboarding?.techSelectDate)} />
-          <RowLabelValue label="HSBC Onboard" value={fmtYMD(onboarding?.hsbcOnboardingDate)} />
-          <RowLabelValue label="Onboarding Status" value={status} />
-        </div>
-      </div>
-    </div>
-  );
-}
-const isOnboardedStatus = (rec) => {
-  const s =
-    (rec?.onboardingStatus?.name ?? rec?.onboardingStatus ?? "")
-      .toString()
-      .trim()
-      .toUpperCase();
-  return s.includes("ONBOARD"); // covers: ONBOARDED, ON-BOARDED, ONBOARD
-};
-const isOpenOnboardingStatus = (rec) => {
-  const s =
-    (rec?.onboardingStatus?.name ?? rec?.onboardingStatus ?? "")
-      .toString()
-      .trim()
-      .toUpperCase();
-  return s.includes("PROGRESS") || s.includes("PENDING") || s.includes("INPROGRESS");
-};
-
+/* --------------------- component --------------------- */
 export default function ProfileSheet() {
   const navigate = useNavigate();
 
-  /* modal */
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailRow, setDetailRow] = useState(null);
-  const [activeViewTab, setActiveViewTab] = useState("profile");
+  // view modal (now separated)
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewRow, setViewRow] = useState(null);
+  const [viewInitialTab, setViewInitialTab] = useState("profile");
 
-  /* attach */
-  const [matchingDemands, setMatchingDemands] = useState([]);
-  const [selectedDemandIds, setSelectedDemandIds] = useState([]);
-  const [attachedDemands, setAttachedDemands] = useState([]);
-  const [attachMode, setAttachMode] = useState(false);
-
-  const [demandMetaById, setDemandMetaById] = useState({});
-  const demandMetaRef = useRef({});
-  useEffect(() => { demandMetaRef.current = demandMetaById; }, [demandMetaById]);
-
-  /* role */
+  // role
   const roleName = getCurrentRoleName();
   const adminView = isAdminRole(roleName);
   const showEmpId = isRDGRole(roleName) || isAdminRole(roleName);
@@ -365,7 +250,7 @@ export default function ProfileSheet() {
     "hbu",
   ];
 
-  /* paging */
+  // paging + data
   const [rows, setRows] = useState([]);
   const [visibleColumns] = useState(defaultVisible);
   const [loading, setLoading] = useState(false);
@@ -376,15 +261,15 @@ export default function ProfileSheet() {
   const [dropdownOptions, setDropdownOptions] = useState({});
   const [query, setQuery] = useState({});
 
-  /* dropdowns */
+  // dropdowns
   const loadDropdowns = useCallback(async () => {
     try {
       const dto = await getProfileDropdowns();
       setDropdownOptions(adaptOptions(dto));
-    } catch { }
+    } catch {}
   }, []);
 
-  /* build filter (EXACT phone/emp/email; contains name; exact/range experience) */
+  // filter
   const buildServerFilter = useCallback(() => {
     const filter = {};
     const clean = (s) => String(s ?? "").trim();
@@ -392,18 +277,15 @@ export default function ProfileSheet() {
     if (clean(query.candidateName)) filter.candidateName = clean(query.candidateName);
     if (clean(query.emailId)) filter.emailId = clean(query.emailId);
 
-    // empId exact, ignore placeholder '-'
     if (clean(query.empId) && clean(query.empId) !== "-") {
       filter.empId = clean(query.empId);
     }
 
-    // phone: digits only (exact)
     if (query.phoneNumber != null) {
       const digits = clean(query.phoneNumber).replace(/\D+/g, "");
       if (digits) filter.phoneNumber = Number(digits);
     }
 
-    // experience: single -> exact (min=max), range "x-y"
     if (clean(query.experienceYears)) {
       const s = clean(query.experienceYears);
       if (s.includes("-")) {
@@ -425,17 +307,12 @@ export default function ProfileSheet() {
 
     if (clean(query.primarySkills)) {
       const raw = clean(query.primarySkills);
-      const names = raw.includes(",")
-        ? raw.split(",").map((s) => s.trim()).filter(Boolean)
-        : [raw];
-      filter.primarySkillNames = names; // <-- matches backend contract
+      const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
+      filter.primarySkillNames = names;
     }
-
     if (clean(query.secondarySkills)) {
       const raw = clean(query.secondarySkills);
-      const names = raw.includes(",")
-        ? raw.split(",").map((s) => s.trim()).filter(Boolean)
-        : [raw];
+      const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
       filter.secondarySkillNames = names;
     }
 
@@ -446,21 +323,19 @@ export default function ProfileSheet() {
     return filter;
   }, [query, adminView, currentUserId]);
 
-  /* fetch */
+  // fetch
   const fetchServer = useCallback(
     async (nextPage = page, nextSize = size) => {
       setLoading(true);
       try {
         const filter = buildServerFilter();
-        // Always use searchProfilesApi for non-admins to enforce user-based filtering
         const forceSearch = !adminView;
         const hasAnyFilter = Object.keys(filter).length > (adminView ? 0 : 1);
-        const resp = (hasAnyFilter || forceSearch)
+        const resp = hasAnyFilter || forceSearch
           ? await searchProfilesApi(filter, nextPage, nextSize)
           : await getProfiles(nextPage, nextSize);
 
         const adapted = Array.isArray(resp.items) ? resp.items.map((it) => adaptRow(it)) : [];
-        // Frontend filter: for non-admins, only show profiles created by current user
         const filteredRows = adminView
           ? adapted
           : adapted.filter((row) => String(row.createdByUserId) === String(currentUserId));
@@ -477,26 +352,31 @@ export default function ProfileSheet() {
     [page, size, buildServerFilter, adminView, currentUserId]
   );
 
-  /* initial */
-  useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
-  useEffect(() => { fetchServer(0, size); /* eslint-disable-next-line */ }, []);
+  // initial
+  useEffect(() => {
+    loadDropdowns();
+  }, [loadDropdowns]);
+  useEffect(() => {
+    fetchServer(0, size);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /* header search — set query only; DEBOUNCE actual fetch */
-  const handleQueryChange = (key, value) => {
-    setQuery((prev) => ({ ...prev, [key]: value }));
-  };
-
-  // DEBOUNCED: run fetch 250ms after the latest keystroke, with LATEST query
+  // search debounce
+  const handleQueryChange = (key, value) => setQuery((prev) => ({ ...prev, [key]: value }));
   useEffect(() => {
     const t = setTimeout(() => fetchServer(0, size), 250);
     return () => clearTimeout(t);
   }, [query, size, fetchServer]);
 
-  /* pagination */
-  const handlePageChange = (nextPage) => { fetchServer(nextPage, size); };
-  const handlePageSizeChange = (nextSize) => { fetchServer(0, nextSize); };
+  // pagination
+  const handlePageChange = (nextPage) => {
+    fetchServer(nextPage, size);
+  };
+  const handlePageSizeChange = (nextSize) => {
+    fetchServer(0, nextSize);
+  };
 
-  /* inline update */
+  // inline update
   const handleSavePatch = async (id, patch) => {
     if (!id) throw new Error("Profile id not found for update");
     await submitProfileUpdate(id, patch, null);
@@ -544,317 +424,11 @@ export default function ProfileSheet() {
     await fetchServer(page, size);
   };
 
-  /* attachments */
-  const loadAttachedFromBackend = useCallback(async (profileId) => {
-    try {
-      // 1) Call backend
-      let res = await getDemandsByProfileApi(profileId);
-
-      // 2) Normalize to an array named `list` (fixes "list is not defined")
-      let list;
-      if (Array.isArray(res)) {
-        list = res;
-      } else if (Array.isArray(res?.data)) {
-        list = res.data;
-      } else if (Array.isArray(res?.items)) {
-        list = res.items;
-      } else if (Array.isArray(res?.content)) {
-        list = res.content;
-      } else {
-        list = [];
-      }
-
-      // 3) Build mapped cards with meta + statuses
-      const metaIndex = demandMetaRef.current;
-      const mapped = list.map((x) => {
-        const key = String(x.demandId ?? x.id ?? "");
-        const meta = key ? metaIndex[key] : undefined;
-
-        // Pull statuses from the tracker row (x)
-        const evaluationStatusName =
-          x?.evaluationStatus?.name ??
-          x?.evaluationStatus ??
-          null;
-
-        const profileTrackerStatusName =
-          x?.profileTrackerStatus?.name ??
-          x?.profileTrackerStatus ??
-          null;
-
-        return {
-          trackerId: x.id,
-          id: x.demandId ?? x.id,
-          demandId: x.demandId ?? x.id,
-
-          hbu: x?.hbu?.name || meta?.hbu || "",
-          skillCluster: meta?.skillCluster || "",
-          primarySkills:
-            meta?.primarySkills ||
-            (Array.isArray(x?.primarySkills)
-              ? x.primarySkills.map((r) => r?.name).filter(Boolean).join(", ")
-              : ""),
-
-          attachedDate: x.attachedDate,
-          createdAt: x.createdAt,
-          title: [meta?.skillCluster || "", x?.hbu?.name || meta?.hbu || ""]
-            .filter(Boolean)
-            .join(" • "),
-
-          // New fields used for coloring/status display
-          evaluationStatusName,
-          profileTrackerStatusName,
-        };
-      });
-
-      // 4) Update state
-      setAttachedDemands(mapped);
-      setAttachMode(mapped.length === 0);
-      setSelectedDemandIds(mapped.map((d) => String(d.id)));
-    } catch (err) {
-      console.error("Failed to load demands by profile:", err);
-      message.error(err?.message || "Failed to load attached demands");
-      setAttachedDemands([]);
-      setAttachMode(true);
-    }
-  }, []);
-
-  const loadMatchingDemands = useCallback(async (row) => {
-    if (!row) { setMatchingDemands([]); return; }
-    // Try to get hbuId from row (prefer id over name)
-    const hbuId = row.hbuId || row.hbu_id || row.hbu_id_fk || null;
-
-    try {
-      // Pass hbuId to backend for filtering
-      const resp = await getDemandsheet(0, 200, hbuId);
-      const list =
-        Array.isArray(resp?.data?.content) ? resp.data.content :
-          Array.isArray(resp?.content) ? resp.content :
-            Array.isArray(resp) ? resp :
-              [];
-
-      const normalized = list.map((d) => {
-        const id = d.id ?? d.demandId ?? d.displayDemandId ?? Math.random();
-        const nameOf = (obj) => (obj && typeof obj === "object" ? (obj.name ?? "") : String(obj ?? ""));
-        const join = (arr) => (Array.isArray(arr) ? arr.map((x) => nameOf(x)).filter(Boolean).join(", ") : nameOf(arr));
-        return {
-          id,
-          demandId: d.displayDemandId ?? d.demandId ?? String(id),
-          hbu: nameOf(d.hbu),
-          skillCluster: nameOf(d.skillCluster),
-          primarySkills: join(d.primarySkills),
-          title: [nameOf(d.skillCluster), nameOf(d.hbu)].filter(Boolean).join(" • "),
-        };
-      });
-
-      const metaEntries = {};
-      for (const n of normalized) {
-        const key = String(n.id);
-        metaEntries[key] = {
-          hbu: n.hbu || "",
-          skillCluster: n.skillCluster || "",
-          primarySkills: n.primarySkills || "",
-        };
-      }
-      setDemandMetaById((prev) => ({ ...prev, ...metaEntries }));
-
-      const already = new Set(attachedDemands.map((a) => String(a.id)));
-      const filtered = normalized.filter((d) => !already.has(String(d.id)));
-      setMatchingDemands(filtered);
-    } catch (err) {
-      console.error("loadMatchingDemands error:", err);
-      message.error(err?.message || "Failed to load matching demands");
-      setMatchingDemands([]);
-    }
-  }, [attachedDemands]);
-
+  // open modal from table — keep same behavior (open on "Demand" tab)
   const onViewRow = (row) => {
-    setDetailRow(row);
-    setDetailOpen(true);
-    setActiveViewTab("demand");
-  };
-  useEffect(() => {
-    if (detailOpen && activeViewTab === "demand" && detailRow) {
-      const rawId = detailRow.id ?? detailRow.profileId;
-      const numericProfileId = Number(rawId);
-      if (!numericProfileId || Number.isNaN(numericProfileId)) {
-        message.warning("Cannot load attachments without a valid profile id");
-        return;
-      }
-      loadAttachedFromBackend(numericProfileId).then(() => loadMatchingDemands(detailRow));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailOpen, activeViewTab, detailRow]);
-
-  // Onboarding list state for the Profile modal
-  const [pOnbLoading, setPOnbLoading] = useState(false);
-  const [pOnbError, setPOnbError] = useState(null);
-  const [pOnboardingList, setPOnboardingList] = useState([]);
-
-  // Load onboarding by PROFILE id when Onboarding tab is active
-  useEffect(() => {
-    if (!detailOpen || activeViewTab !== "onboarding" || !detailRow) return;
-
-    const rawId = detailRow.profileId ?? detailRow.id;
-    const profileId = Number(rawId);
-    if (!profileId || Number.isNaN(profileId)) {
-      setPOnboardingList([]);
-      return;
-    }
-
-    let cancelled = false;
-    setPOnbError(null);
-    setPOnbLoading(true);
-    setPOnboardingList([]);
-
-    (async () => {
-      try {
-        let page = 0;
-        const size = 50;
-        const MAX_PAGES = 20;
-        const matches = [];
-
-        while (!cancelled && page < MAX_PAGES) {
-          const res = await getAllOnboardings(page, size);
-          const list = Array.isArray(res?.content) ? res.content : [];
-          const last = Boolean(res?.last);
-
-          for (const r of list) {
-            const rProfileId = r?.profile?.profileId ?? r?.profileId ?? null;
-            if (String(rProfileId ?? "") === String(profileId)) {
-              matches.push(r);
-            }
-          }
-
-          if (last) break;
-          page += 1;
-        }
-
-        if (!cancelled) setPOnboardingList(matches);
-      } catch (e) {
-        if (!cancelled) setPOnbError(e?.response?.data?.message || e?.message || "Failed to load onboarding.");
-      } finally {
-        if (!cancelled) setPOnbLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [detailOpen, activeViewTab, detailRow]);
-
-  // pick single record (Onboarded > Open/In-Progress > None)
-  const pOnboardedMatch = useMemo(
-    () => (pOnboardingList || []).find(isOnboardedStatus) || null,
-    [pOnboardingList]
-  );
-  const pOpenMatch = useMemo(
-    () => (pOnboardingList || []).find(isOpenOnboardingStatus) || null,
-    [pOnboardingList]
-  );
-
-  // produce placeholder with '-' when only open exists
-  const pPlaceholderFromOpen = useMemo(() => {
-    if (!pOpenMatch) return null;
-    return {
-      offerDate: null,
-      dateOfJoining: null,
-      ctoolId: null,
-      pevUploadDate: null,
-      vpTagging: null,
-      techSelectDate: null,
-      hsbcOnboardingDate: null,
-      bgvStatus: null,
-      onboardingStatus: pOpenMatch?.onboardingStatus ?? { name: "In Progress" },
-      wbsType: null,
-      demand: {
-        demandId: pOpenMatch?.demand?.demandId ?? pOpenMatch?.demandId ?? "-",
-      },
-      profile: {
-        profileId: pOpenMatch?.profile?.profileId ?? "-",
-        candidateName: pOpenMatch?.profile?.candidateName ?? null,
-      },
-    };
-  }, [pOpenMatch]);
-
-  const closeDetails = () => {
-    setDetailOpen(false);
-    setDetailRow(null);
-    setActiveViewTab("profile");
-    setMatchingDemands([]);
-    setSelectedDemandIds([]);
-    setAttachedDemands([]);
-    setAttachMode(false);
-
-    // reset onboarding state
-    setPOnboardingList([]);
-    setPOnbLoading(false);
-    setPOnbError(null);
-  };
-
-  const toggleSelect = (id, checked) => {
-    const rowId = String(id);
-    setSelectedDemandIds((prev) => {
-      const s = new Set(prev.map(String));
-      if (checked) s.add(rowId); else s.delete(rowId);
-      return Array.from(s);
-    });
-  };
-
-  const attachSelected = async () => {
-    if (!detailRow) return;
-
-    const rawId = detailRow.id ?? detailRow.profileId;
-    const profileId = Number(rawId);
-    if (!profileId || Number.isNaN(profileId)) {
-      message.error("Invalid profile id for attachment");
-      return;
-    }
-
-    const ids = Array.from(new Set(
-      selectedDemandIds.map((x) => Number(x)).filter((n) => !Number.isNaN(n))
-    ));
-    if (ids.length === 0) {
-      message.warning("Select at least one demand to attach");
-      return;
-    }
-
-    try {
-      await attachDemandsToProfileApi(profileId, ids);
-      message.success("Demands attached to profile");
-
-      const selSet = new Set(selectedDemandIds.map(String));
-      const selectedObjs = matchingDemands.filter((d) => selSet.has(String(d.id)));
-      const nowIso = new Date().toISOString();
-      const optimisticCards = selectedObjs.map((n) => ({
-        trackerId: `tmp-${n.id}-${Date.now()}`,
-        id: n.id,
-        demandId: n.demandId ?? n.id,
-        hbu: n.hbu || "",
-        skillCluster: n.skillCluster || "",
-        primarySkills: n.primarySkills || "",
-        attachedDate: n.attachedDate || nowIso,
-        createdAt: nowIso,
-        title: [n.skillCluster || "", n.hbu || ""].filter(Boolean).join(" • "),
-      }));
-
-      setAttachedDemands((prev) => {
-        const map = new Map(prev.map((x) => [String(x.id), x]));
-        for (const c of optimisticCards) map.set(String(c.id), c);
-        return Array.from(map.values());
-      });
-
-      setMatchingDemands((prev) => prev.filter((d) => !selSet.has(String(d.id))));
-      setSelectedDemandIds([]);
-      setAttachMode(false);
-
-      await loadAttachedFromBackend(profileId);
-      if (detailRow) loadMatchingDemands(detailRow);
-    } catch (err) {
-      console.error("attachSelected error:", err);
-      const backendMsg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Failed to attach demands";
-      message.error(backendMsg);
-    }
+    setViewRow(row);
+    setViewInitialTab("demand");
+    setViewOpen(true);
   };
 
   return (
@@ -906,270 +480,18 @@ export default function ProfileSheet() {
         </div>
       </Layout>
 
-      {/* DETAILS MODAL */}
-      <Modal
-        open={detailOpen}
-        onCancel={closeDetails}
-        footer={null}
+      {/* DETAILS MODAL (separated) */}
+      <ProfileView
+        open={viewOpen}
+        onClose={() => {
+          setViewOpen(false);
+          setViewRow(null);
+          setViewInitialTab("profile");
+        }}
+        profile={viewRow}
         width={900}
-        zIndex={2000}
-        getContainer={false}
-        destroyOnHidden
-        maskClosable
-        title={
-          <div className="flex items-center justify-between pr-10">
-            <div className="flex items-center gap-2 text-gray-800">
-              <EyeOutlined />
-              <span className="text-sm font-bold">Profile View</span>
-            </div>
-          </div>
-        }
-      >
-        {detailRow ? (
-          <Tabs
-            activeKey={activeViewTab}
-            onChange={setActiveViewTab}
-            items={[
-              {
-                key: "profile",
-                label: "Profile Details",
-                children: (
-                  <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-1">
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold mb-3">Basic Info</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                        <div><strong>Candidate:</strong> {detailRow.candidateName || "-"}</div>
-                        <div><strong>Email:</strong> {detailRow.emailId || "-"}</div>
-                        <div><strong>Phone:</strong> {detailRow.phoneNumber || "-"}</div>
-                        <div><strong>Experience:</strong> {detailRow.experienceYears || "-"}</div>
-                        <div><strong>Location:</strong> {detailRow.location || "-"}</div>
-                        <div><strong>HBU:</strong> {detailRow.hbu || "-"}</div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold mb-3">Skills</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                        <div><strong>Skill Cluster:</strong> {detailRow.skillCluster || "-"}</div>
-                        <div><strong>Primary Skills:</strong> {detailRow.primarySkills || "-"}</div>
-                        <div className="sm:col-span-2"><strong>Secondary Skills:</strong> {detailRow.secondarySkills || "-"}</div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <h3 className="text-sm font-semibold mb-3">Summary</h3>
-                      <div>{detailRow.summary || "-"}</div>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                key: "demand",
-                label: "Demand Details",
-                children: (
-                  <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-sm">Demands</h4>
-                      {!attachMode && attachedDemands.length > 0 ? (
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => setAttachMode(true)}>
-                          Attach Demand
-                        </Button>
-                      ) : null}
-                    </div>
-
-                    {/* Attached cards */}
-                    {!attachMode && attachedDemands.length > 0 && (
-                      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-sm">Attached Demands</h4>
-                          <span className="text-[12px] text-gray-500">
-                            {attachedDemands.length} attached
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {attachedDemands.map((d) => {
-                            const tone = evalTone(d?.evaluationStatusName);
-                            const cardStyle = toneStyles(tone);
-                            const colorText = toneTextColor(tone);
-
-                            return (
-                              <div
-                                key={`${String(d.trackerId || d.id)}`}
-                                className="border rounded-md p-3 shadow-sm"
-                                style={cardStyle}  // ✅ keep color by evaluation status
-                              >
-                                {/* Top row: Demand # + attached date (badge removed) */}
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="font-semibold text-[13px]" style={{ color: colorText }}>
-                                    Demand #{d.demandId ?? d.id}
-                                  </div>
-
-                                  {/* ✅ ONLY date now (no evaluation text) */}
-                                  <div className="text-[11px] text-gray-600 text-right">
-                                    {d.attachedDate ? formatDateTime(d.attachedDate) : formatDateTime(d.attachedDate)}
-                                  </div>
-                                </div>
-
-                                {/* Body lines */}
-                                {!!d.hbu && (
-                                  <div className="text-[12px] text-gray-700 mt-1">
-                                    <strong>HBU:</strong> {d.hbu}
-                                  </div>
-                                )}
-                                {!!d.skillCluster && (
-                                  <div className="text-[12px] text-gray-700">
-                                    <strong>Skill Cluster:</strong> {d.skillCluster}
-                                  </div>
-                                )}
-                                {!!d.primarySkills && (
-                                  <div className="text-[12px] text-gray-700">
-                                    <strong>Primary:</strong> {d.primarySkills}
-                                  </div>
-                                )}
-
-                                {/* Other status (tracker status) */}
-                                <div className="text-[12px] text-gray-700 mt-1">
-                                  <strong>Status:</strong> {d.profileTrackerStatusName || '—'}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {(attachMode || attachedDemands.length === 0) && (
-                      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-sm font-semibold">Attach Demands</h3>
-                          <div className="flex items-center gap-2">
-                            {attachedDemands.length > 0 && (
-                              <Button onClick={() => setAttachMode(false)}>Back</Button>
-                            )}
-                            <Button
-                              type="default"
-                              icon={<PaperClipOutlined />}
-                              onClick={attachSelected}
-                              className="bg-gray-900 text-white hover:bg-black"
-                            >
-                              Attach
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="border border-gray-200 rounded-md">
-                          {Array.isArray(matchingDemands) && matchingDemands.length > 0 ? (
-                            <div className="divide-y divide-gray-200">
-                              {matchingDemands.map((item) => {
-                                const rowId = String(item.id);
-                                const checked = selectedDemandIds.map(String).includes(rowId);
-                                const toggle = (next) => toggleSelect(rowId, next);
-                                const cbId = `attach-demand-${rowId}`;
-
-                                return (
-                                  <div
-                                    key={rowId}
-                                    className="px-3 py-2 hover:bg-gray-50"
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "flex-start",
-                                      gap: 12,
-                                      paddingLeft: 12,
-                                      paddingRight: 12,
-                                    }}
-                                  >
-                                    <Checkbox
-                                      id={cbId}
-                                      checked={checked}
-                                      onChange={(e) => toggle(e.target.checked)}
-                                    />
-                                    <label
-                                      htmlFor={cbId}
-                                      className="min-w-0 cursor-pointer select-none flex-1"
-                                      onClick={() => toggle(!checked)}
-                                    >
-                                      <div className="font-medium">Demand #{item.demandId ?? item.id}</div>
-                                      <div className="text-gray-700">{item.title}</div>
-                                      <div className="text-gray-500 text-[12px]">
-                                        Primary: {item.primarySkills || "-"}
-                                      </div>
-                                    </label>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 text-sm px-3 py-6">
-                              No matching demands (HBU) for this profile.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ),
-              },
-
-              // NEW TAB - Onboarding Detail (single section)
-              {
-                key: "onboarding",
-                label: "Onboarding Detail",
-                children: (
-                  <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm text-sm">
-                    {pOnbLoading ? (
-                      <div className="py-6 flex items-center justify-center">
-                        <Spin size="small" />
-                      </div>
-                    ) : pOnbError ? (
-                      <Alert type="error" showIcon message={pOnbError} />
-                    ) : pOnboardedMatch ? (
-                      <OnboardingDetailSection
-                        onboarding={pOnboardedMatch}
-                        demandId={pOnboardedMatch?.demand?.demandId ?? pOnboardedMatch?.demandId ?? "-"}
-                        profileId={pOnboardedMatch?.profile?.profileId ?? detailRow?.profileId ?? detailRow?.id ?? "-"}
-                      />
-                    ) : pPlaceholderFromOpen ? (
-                      <OnboardingDetailSection
-                        onboarding={pPlaceholderFromOpen}
-                        demandId={pPlaceholderFromOpen?.demand?.demandId ?? "-"}
-                        profileId={pPlaceholderFromOpen?.profile?.profileId ?? detailRow?.profileId ?? detailRow?.id ?? "-"}
-                      />
-                    ) : (
-                      <div className="text-gray-600 text-sm py-4 text-center">
-                        Not onboarded yet.
-                      </div>
-                    )}
-                  </div>
-                ),
-              },
-
-              {
-                key: "history",
-                label: "History",
-                children: (
-                  <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-1">
-                    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                        <div><strong>Created By (User ID):</strong> {detailRow.createdByUserId || "-"}</div>
-                        <div><strong>Created At:</strong> {formatDateTime(detailRow.createdAt)}</div>
-                        <div><strong>Updated By (User ID):</strong> {detailRow.updatedByUserId || "-"}</div>
-                        <div><strong>Updated At:</strong> {formatDateTime(detailRow.updatedAt)}</div>
-                        <div>
-                          <strong>Status:</strong>{" "}
-                          {String(detailRow.isActive ?? "") === "" ? "-" : detailRow.isActive ? "Active" : "Inactive"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ),
-              },
-            ]}
-          />
-        ) : (
-          <div className="text-center text-gray-500 py-6">No details available</div>
-        )}
-      </Modal>
+        initialTab={viewInitialTab}
+      />
     </>
   );
 }
