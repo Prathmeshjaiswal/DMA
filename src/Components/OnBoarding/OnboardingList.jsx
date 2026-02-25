@@ -1,4 +1,4 @@
-// src/pages/OnboardingList.jsx
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Layout from "../Layout";
 import {
@@ -17,8 +17,9 @@ import { EditOutlined, EyeOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   getAllOnboardings,
   searchOnboardings,
-  getOnboardingDropdowns, // ✅ dropdown API
+  getOnboardingDropdowns, // dropdown API
 } from "../api/Onboarding/onBoarding";
+import { searchProfileTracker } from "../api/Trackers/tracker"; // ✅ fetch Decision Date
 import OnboardingEditModal from "./OnboardingEditModal";
 
 /* ---------------- helpers ---------------- */
@@ -122,7 +123,8 @@ function normalizeOnboardingRow(item = {}) {
     item?.demand?.demandDisplayId ??
     null;
 
-  const demand = {
+  // ✅ local object for demand (avoid "demand is not defined")
+  const demandObj = {
     demandId,
     demandNumber,
     demandPkId,
@@ -166,6 +168,11 @@ function normalizeOnboardingRow(item = {}) {
   const dateOfJoining = item?.dateOfJoining ?? item?.doj ?? null;
   const profileSharedDate =
     item?.profileTracker?.profileSharedDate ?? item?.profileSharedDate ?? null;
+
+  // ✅ capture tracker decision date if present in payload
+  const decisionDate =
+    item?.profileTracker?.decisionDate ?? item?.decisionDate ?? null;
+
   const pevUploadDate = item?.pevUploadDate ?? item?.pevUpdateDate ?? null;
   const vpTagging = item?.vpTagging ?? item?.vpTaggingDate ?? null;
   const techSelectDate = item?.techSelectDate ?? null;
@@ -182,7 +189,7 @@ function normalizeOnboardingRow(item = {}) {
   return {
     ...item,
     onboardingId,
-    demand,
+    demand: demandObj,
     profile,
     wbsType,
     bgvStatus,
@@ -190,6 +197,7 @@ function normalizeOnboardingRow(item = {}) {
     offerDate,
     dateOfJoining,
     profileSharedDate,
+    decisionDate,        // keep around if API provides
     pevUploadDate,
     vpTagging,
     techSelectDate,
@@ -199,7 +207,14 @@ function normalizeOnboardingRow(item = {}) {
 }
 
 function normalizeOnboardingList(list) {
-  return Array.isArray(list) ? list.map((x) => normalizeOnboardingRow(x)) : [];
+  if (!Array.isArray(list)) return [];
+  try {
+    return list.map((x) => normalizeOnboardingRow(x));
+  } catch (e) {
+    console.error("normalizeOnboardingRow failed:", e);
+    message.error(e?.message || "Failed to normalize onboarding row");
+    return [];
+  }
 }
 
 const ensureId = (row) =>
@@ -207,10 +222,10 @@ const ensureId = (row) =>
 
 /* Demand pill: prefer displayDemandId; else LOB-demandNumber (then fallback to demandId) */
 function demandCode(row) {
-  const disp = row?.demand?.displayDemandId ?? row?.displayDemandId;
+  const disp = row?.demand?.displayDemandId ?? row?.displayDemandId ?? null;
   if (disp) return disp;
 
-  const lob = nameOf(row?.demand?.lob);
+  const lob = nameOf(row?.demand?.lob ?? null);
   const num = row?.demand?.demandNumber ?? row?.demand?.demandId ?? null;
 
   if (lob && num != null) return `${lob}-${num}`;
@@ -358,6 +373,7 @@ export default function OnboardingList() {
   // Edit modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
+  const [editDecisionBaseline, setEditDecisionBaseline] = useState(""); // ✅ baseline for modal
 
   // View details modal state
   const [viewOpen, setViewOpen] = useState(false);
@@ -505,7 +521,7 @@ export default function OnboardingList() {
     return f;
   }, [query]);
 
-  // ✅ FIXED: stabilize fetchServer (do not depend on page/size)
+  // fetch list
   const fetchServer = useCallback(
     async (nextPage, nextSize) => {
       setLoading(true);
@@ -544,7 +560,7 @@ export default function OnboardingList() {
         setLoading(false);
       }
     },
-    [buildServerFilter] // ❗️only depends on filter builder
+    [buildServerFilter]
   );
 
   // initial load
@@ -553,23 +569,68 @@ export default function OnboardingList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ FIXED: debounce on query/size only (not on changing fetchServer identity)
+  // debounce on query/size
   useEffect(() => {
     const t = setTimeout(() => fetchServer(0, size), 250);
     return () => clearTimeout(t);
-  }, [query, size, fetchServer]); // fetchServer is now stable
+  }, [query, size, fetchServer]);
 
   // column query change
   const handleQueryChange = (key, value) => {
     setQuery((prev) => ({ ...prev, [key]: value }));
   };
 
-  function openEdit(row) {
+  // ✅ fetch baseline Decision Date for the editing row (from Profile Tracker)
+  async function fetchDecisionBaseline(row) {
+    try {
+      const demandNumber =
+        row?.demand?.demandId ?? row?.demand?.demandNumber ?? row?.demandId ?? row?.demandNumber;
+      const candidateName = row?.profile?.candidateName ?? row?.candidateName ?? "";
+
+      if (!demandNumber || !candidateName) return row?.decisionDate ?? "";
+
+      const resp = await searchProfileTracker({
+        filter: {
+          demandNumber: Number(demandNumber),
+          candidateName: String(candidateName),
+        },
+        page: 0,
+        size: 10,
+      });
+
+      const items = Array.isArray(resp?.items) ? resp.items
+                   : Array.isArray(resp?.content) ? resp.content
+                   : [];
+
+      // choose the latest non-null decisionDate among exact matches
+      const best = items
+        .filter(it =>
+          (it?.demand?.demandId ?? it?.demandId) == demandNumber &&
+          (it?.profile?.candidateName ?? it?.candidateName ?? "") === candidateName &&
+          it?.decisionDate
+        )
+        .reduce((acc, it) => {
+          const d = String(it.decisionDate);
+          return (!acc || d > acc) ? d : acc;
+        }, "");
+
+      return best || (row?.decisionDate ?? "");
+    } catch {
+      return row?.decisionDate ?? "";
+    }
+  }
+
+  // open modal with baseline present
+  async function openEdit(row) {
     const id = ensureId(row);
     if (!id) {
       message.warning("Cannot edit: onboarding ID not found.");
       return;
     }
+
+    const baseline = await fetchDecisionBaseline(row);
+    setEditDecisionBaseline(baseline || "");
+
     setEditRow({
       onboardingId: id,
       displayDemandId: row?.demand?.displayDemandId ?? demandCode(row),
@@ -585,6 +646,7 @@ export default function OnboardingList() {
       onboardingStatusId: row?.onboardingStatus?.id ?? null,
       wbsTypeId: row?.wbsType?.id ?? null,
       bgvStatusId: row?.bgvStatus?.id ?? null,
+
       offerDate: row?.offerDate ?? "",
       dateOfJoining: row?.dateOfJoining ?? "",
       ctoolId: row?.ctoolId ?? "",
@@ -592,12 +654,17 @@ export default function OnboardingList() {
       vpTagging: row?.vpTagging ?? "",
       techSelectDate: row?.techSelectDate ?? "",
       hsbcOnboardingDate: row?.hsbcOnboardingDate ?? "",
+
+      // keep on row as well (modal will prefer prop)
+      decisionDate: row?.decisionDate ?? "",
     });
     setEditOpen(true);
   }
+
   function closeEdit() {
     setEditOpen(false);
     setEditRow(null);
+    setEditDecisionBaseline("");
   }
 
   function openView(row) {
@@ -992,6 +1059,9 @@ export default function OnboardingList() {
           {errorMsg && (
             <div className="mb-2">
               <Alert type="error" showIcon message={errorMsg} />
+              {/* If AntD warns about 'message' deprecation, you can switch to:
+                <Alert type="error" showIcon title="Error" description={errorMsg} />
+              */}
             </div>
           )}
 
@@ -1045,6 +1115,7 @@ export default function OnboardingList() {
             open={editOpen}
             onClose={closeEdit}
             row={editRow}
+            decisionBaseline={editDecisionBaseline} // ✅ pass baseline
             onUpdated={() => fetchServer(page, size)}
           />
 
@@ -1055,7 +1126,6 @@ export default function OnboardingList() {
             footer={null}
             width={900}
             zIndex={2000}
-            destroyOnClose
             title={
               <div className="flex items-center gap-2">
                 <EyeOutlined />
