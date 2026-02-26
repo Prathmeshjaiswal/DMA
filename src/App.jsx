@@ -8,7 +8,7 @@ import RDGTATeam from "./Components/Profiles/RDGTATeam.jsx"
 import Report from "./Components/DemandsManagement/Report.jsx"
 import HBU from "./Components/DemandsManagement/HBU.jsx"
 import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
-import DashBoard from "./Components/DemandsManagement/DashBoard.jsx"
+import DashBoard from "./Components/DashBoard.jsx"
 import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import CreateUser from "./Components/UserManagement/CreateUser.jsx"

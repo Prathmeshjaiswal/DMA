@@ -543,7 +543,7 @@ export default function AddDemands2() {
                         <input
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
+                          pattern="\d{6}"
                           value={rrNumbers[idx] ?? ''}
                           onChange={(e) => onChangeRR(idx, e.target.value)}
                           placeholder="RR No."
