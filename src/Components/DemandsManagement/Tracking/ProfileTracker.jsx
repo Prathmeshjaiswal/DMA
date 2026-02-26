@@ -1,4 +1,5 @@
- 
+
+// ---------------------------------------------------------------
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { DatePicker, message, Tooltip, Pagination } from 'antd';
@@ -10,19 +11,19 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import Layout from '../../Layout';
- 
+
 import {
   listProfileTracker,
   updateProfileTracker,
   getProfileTrackerDropdowns,
   searchProfileTracker,
 } from '../../api/Trackers/tracker';
- 
+
 import { downloadDemandJDByFileName } from '../../api/Demands/getDemands';
 import { downloadProfileCv } from '../../api/Profiles/addProfile';
- 
+
 const BACKEND_FMT = 'YYYY-MM-DD';
- 
+
 /* ----------------------- helpers ----------------------- */
 function parseISODateSafe(value) {
   if (!value) return null;
@@ -151,6 +152,15 @@ function getAttachedDate(row) {
     null
   );
 }
+function getDemandCreationDate(row) {
+  // Try common keys; fallback to demandReceivedDate if creation date not present
+  return (
+    row?.demand?.demandCreationDate ||
+    row?.demand?.createdDate ||
+    row?.demand?.demandReceivedDate ||
+    null
+  );
+}
 function getRowId(r) {
   return (
     r?.id ??
@@ -215,7 +225,7 @@ function demandLocationNamesText(row) {
   }
   return nameOf(d?.location) || nameOf(row?.profile?.location) || '-';
 }
- 
+
 /* ---------- click handlers ---------- */
 async function handleJdDownload(fileName, e) {
   e?.stopPropagation?.();
@@ -245,7 +255,7 @@ async function handleCvDownload(fileName, e) {
     hide();
   }
 }
- 
+
 /* ===================== FILTER & PAGINATION ===================== */
 const DEFAULT_FILTERS = {
   demandNumber: '',
@@ -271,7 +281,7 @@ const DEFAULT_FILTERS = {
   agingMin: '',
   agingMax: '',
 };
- 
+
 function useDebounced(value, delay = 300) {
   const [v, setV] = useState(value);
   useEffect(() => {
@@ -280,63 +290,63 @@ function useDebounced(value, delay = 300) {
   }, [value, delay]);
   return v;
 }
- 
+
 const splitNames = (v) =>
   String(v ?? '')
     .split(/[,;\n]/)
     .map((s) => s.trim())
     .filter(Boolean);
- 
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
- 
+
 function isValidDateStr(v) {
   const s = String(v ?? '').trim();
   return DATE_RE.test(s) && dayjs(s, BACKEND_FMT, true).isValid();
 }
- 
+
 function sanitizeDateInput(v) {
   return String(v ?? '')
     .replace(/[^\d-]/g, '')
     .slice(0, 10);
 }
- 
+
 function buildFilterPayload(f, dd) {
   const payload = {};
- 
+
   if (f.demandNumber && /^\d+$/.test(String(f.demandNumber).trim())) {
     payload.demandNumber = Number(String(f.demandNumber).trim());
   }
- 
+
   if (f.priorityName) payload.priorityName = f.priorityName;
   if (f.skillClusterName) payload.skillClusterName = f.skillClusterName;
   if (f.lobName) payload.lobName = f.lobName;
   if (f.hbuName) payload.hbuName = f.hbuName;
   if (f.externalInternalName) payload.externalInternalName = f.externalInternalName;
   if (f.hiringManagerName) payload.hiringManagerName = f.hiringManagerName;
- 
+
   const prim = splitNames(f.demandPrimarySkillNames);
   if (prim.length) payload.demandPrimarySkillNames = prim;
- 
+
   const sec = splitNames(f.demandSecondarySkillNames);
   if (sec.length) payload.demandSecondarySkillNames = sec;
- 
+
   const loc = splitNames(f.demandLocationNames);
   if (loc.length) payload.demandLocationNames = loc;
- 
+
   if (f.candidateName) payload.candidateName = f.candidateName;
- 
+
   if (f.profileTrackerStatusId) {
     const found = dd.profileTrackerStatuses.find(
       (x) => String(x.id) === String(f.profileTrackerStatusId)
     );
     if (found?.name) payload.profileTrackerStatusName = found.name;
   }
- 
+
   const passDate = (k) => {
     const raw = String(f[k] ?? '').trim();
     if (isValidDateStr(raw)) payload[k] = raw;
   };
- 
+
   [
     'profileSharedDateFrom',
     'profileSharedDateTo',
@@ -347,10 +357,10 @@ function buildFilterPayload(f, dd) {
     'decisionDateFrom',
     'decisionDateTo',
   ].forEach(passDate);
- 
+
   const aMin = f.agingMin !== '' ? Number(f.agingMin) : null;
   const aMax = f.agingMax !== '' ? Number(f.agingMax) : null;
- 
+
   if ((aMin !== null && Number.isFinite(aMin)) || (aMax !== null && Number.isFinite(aMax))) {
     const today = dayjs();
     const from = Number.isFinite(aMax)
@@ -362,12 +372,12 @@ function buildFilterPayload(f, dd) {
     if (from) payload.attachedDateFrom = from;
     if (to) payload.attachedDateTo = to;
   }
- 
+
   return payload;
 }
- 
+
 /* ---------- Header controls ---------- */
- 
+
 function HeaderWithSearch({
   label,
   keyName,
@@ -409,7 +419,7 @@ function HeaderWithSearch({
     </div>
   );
 }
- 
+
 function HeaderDateRange({
   keyFrom,
   keyTo,
@@ -471,7 +481,7 @@ function HeaderDateRange({
     </div>
   );
 }
- 
+
 function HeaderSelect({
   label,
   keyName,
@@ -522,7 +532,7 @@ function HeaderSelect({
     </div>
   );
 }
- 
+
 function HeaderNumberRange({
   keyMin,
   keyMax,
@@ -581,39 +591,40 @@ function HeaderNumberRange({
     </div>
   );
 }
- 
+
 export default function ProfileTracker() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiErr, setApiErr] = useState(null);
- 
+
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState({});
   const [editErrors, setEditErrors] = useState({
+    attachedDate: '',
     profileSharedDate: '',
     interviewDate: '',
     decisionDate: '',
   });
- 
+
   const [dd, setDd] = useState({
     profileTrackerStatuses: [],
   });
- 
+
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) =>
     setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
   const debouncedFilters = useDebounced(filters);
- 
+
   const filterPayload = useMemo(
     () => buildFilterPayload(debouncedFilters, dd),
     [debouncedFilters, dd]
   );
- 
+
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
   const [total, setTotal] = useState(0);
- 
+
   useEffect(() => {
     (async () => {
       try {
@@ -629,15 +640,15 @@ export default function ProfileTracker() {
       }
     })();
   }, []);
- 
+
   const load = async (pg = page, sz = size, payload = filterPayload) => {
     try {
       setLoading(true);
       setApiErr(null);
- 
+
       const hasFilter =
         payload && Object.keys(payload).length > 0;
- 
+
       const resp = hasFilter
         ? await searchProfileTracker({
             filter: payload,
@@ -648,17 +659,17 @@ export default function ProfileTracker() {
             page: pg,
             size: sz,
           });
- 
+
       const items = Array.isArray(resp?.items)
         ? resp.items
         : [];
       const totalElements = Number(
         resp?.totalElements ?? items.length ?? 0
       );
- 
+
       setRows(items);
       setTotal(totalElements);
- 
+
       setPage(pg);
       setSize(sz);
     } catch (e) {
@@ -673,53 +684,92 @@ export default function ProfileTracker() {
       setLoading(false);
     }
   };
- 
+
   useEffect(() => {
     load(0, size, filterPayload);
     // eslint-disable-next-line
   }, []);
- 
+
   useEffect(() => {
     load(0, size, filterPayload);
   }, [filterPayload]);
- 
+
   const onPageChange = (current, pageSize) => {
     load(current - 1, pageSize, filterPayload);
   };
- 
+
   const onShowSizeChange = (current, pageSize) => {
     load(0, pageSize, filterPayload);
   };
- 
-  /* ====== DATE ORDER VALIDATION: Profile Shared < Interview < Decision ====== */
+
+  /* ====== DATE ORDER VALIDATION: demandCreation ≤ attached ≤ shared ≤ interview ≤ decision (all inclusive) ====== */
   const parseYmd = (s) => {
     const t = String(s || '').trim();
     if (!t) return null;
     const d = new Date(t);
     return Number.isNaN(d.getTime()) ? null : d;
   };
-  const lt = (a, b) => (a && b ? a.getTime() < b.getTime() : false);
-  // const lte = (a, b) => (a && b ? a.getTime() <= b.getTime() : false); // use if you want non-strict
- 
-  function validateTrackerDates(draft) {
-    const e = { profileSharedDate: '', interviewDate: '', decisionDate: '' };
- 
+
+  function validateTrackerDates(draft, minDate, attachedDateValue) {
+    const e = {
+      attachedDate: '',
+      profileSharedDate: '',
+      interviewDate: '',
+      decisionDate: '',
+    };
+
+    const dAttached = parseYmd(attachedDateValue);
     const dShared = parseYmd(draft?.profileSharedDate);
     const dInterview = parseYmd(draft?.interviewDate);
     const dDecision = parseYmd(draft?.decisionDate);
- 
-    if (dShared && dInterview && !lt(dShared, dInterview)) {
-      e.profileSharedDate = 'Must be before Interview Date';
-      e.interviewDate = 'Must be after Profile Shared Date';
+
+    const min = parseYmd(minDate); // demand creation date (or received date fallback)
+
+    const lte = (a, b) => (a && b ? a.getTime() <= b.getTime() : true); // allow equal / ignore if missing
+
+    const minText =
+      typeof minDate === 'string'
+        ? minDate
+        : min
+        ? dayjs(min).format(BACKEND_FMT)
+        : '';
+
+    // Rule 1: Everything ≥ Demand Creation Date (inclusive)
+    if (min) {
+      if (dAttached && !lte(min, dAttached)) {
+        e.attachedDate = `Attached Date must be ≥ Demand Creation Date (${minText})`;
+      }
+      if (dShared && !lte(min, dShared)) {
+        e.profileSharedDate = `Must be ≥ Demand Creation Date (${minText})`;
+      }
+      if (dInterview && !lte(min, dInterview)) {
+        e.interviewDate = `Must be ≥ Demand Creation Date (${minText})`;
+      }
+      if (dDecision && !lte(min, dDecision)) {
+        e.decisionDate = `Must be ≥ Demand Creation Date (${minText})`;
+      }
     }
-    if (dInterview && dDecision && !lt(dInterview, dDecision)) {
-      e.interviewDate = 'Must be before Decision Date';
-      e.decisionDate = 'Must be after Interview Date';
+
+    // Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
+    if (dAttached && dShared && !lte(dAttached, dShared)) {
+      e.profileSharedDate = e.profileSharedDate || 'Profile Shared must be ≥ Attached Date';
     }
-    const valid = !e.profileSharedDate && !e.interviewDate && !e.decisionDate;
+    if (dShared && dInterview && !lte(dShared, dInterview)) {
+      e.interviewDate = e.interviewDate || 'Interview must be ≥ Profile Shared';
+    }
+    if (dInterview && dDecision && !lte(dInterview, dDecision)) {
+      e.decisionDate = e.decisionDate || 'Decision must be ≥ Interview Date';
+    }
+
+    const valid =
+      !e.attachedDate &&
+      !e.profileSharedDate &&
+      !e.interviewDate &&
+      !e.decisionDate;
+
     return { valid, errors: e };
   }
- 
+
   // ✅ keep original values to detect true changes
   const onEdit = (row) => {
     const original = {
@@ -734,7 +784,7 @@ export default function ProfileTracker() {
         ? displayDate(row.decisionDate)
         : '',
     };
- 
+
     setEditId(getRowId(row));
     setEditDraft({
       statusId: original.statusId ?? '',
@@ -743,37 +793,53 @@ export default function ProfileTracker() {
       decisionDate: original.decisionDate,
       __original: original, // snapshot for diff
     });
-    setEditErrors({ profileSharedDate: '', interviewDate: '', decisionDate: '' });
+    setEditErrors({
+      attachedDate: '',
+      profileSharedDate: '',
+      interviewDate: '',
+      decisionDate: '',
+    });
   };
- 
+
   const onCancel = () => {
     setEditId(null);
     setEditDraft({});
-    setEditErrors({ profileSharedDate: '', interviewDate: '', decisionDate: '' });
+    setEditErrors({
+      attachedDate: '',
+      profileSharedDate: '',
+      interviewDate: '',
+      decisionDate: '',
+    });
   };
- 
-  // ✅ send only changed fields; block if invalid ordering
+
+  //  send only changed fields; block if invalid ordering
   const onSave = async (row) => {
-    // Validate ordering first
-    const { valid, errors } = validateTrackerDates(editDraft);
+    const demandCreationStr =
+      getDemandCreationDate(row) ? displayDate(getDemandCreationDate(row)) : '';
+    const attachedDateStr = getAttachedDate(row) ? displayDate(getAttachedDate(row)) : '';
+
+    // Validate full chain first
+    const { valid, errors } = validateTrackerDates(editDraft, demandCreationStr, attachedDateStr);
     if (!valid) {
       setEditErrors(errors);
-      message.error('Please fix date order: Profile Shared < Interview < Decision');
+      message.error(
+        'Fix date rules: demandCreation ≤ attached ≤ shared ≤ interview ≤ decision (all inclusive)'
+      );
       return;
     }
- 
+
     const id = getRowId(row);
     if (id == null) {
       message.error('Missing row id');
       return;
     }
- 
+
     const normId = (v) =>
       v === '' || v === null || v === undefined ? null : Number(v);
- 
+
     const orig = editDraft.__original || {};
     const payload = {};
- 
+
     // Dates: include only if changed (string compare on YYYY-MM-DD)
     if (
       editDraft.profileSharedDate &&
@@ -793,26 +859,26 @@ export default function ProfileTracker() {
     ) {
       payload.decisionDate = dayjs(editDraft.decisionDate).format(BACKEND_FMT);
     }
- 
+
     // Status: only if changed vs original
     const curStatusId = normId(editDraft.statusId);
     const origStatusId = normId(orig.statusId);
     if (curStatusId !== origStatusId) {
       payload.profileTrackerStatusId = curStatusId;
     }
- 
+
     if (Object.keys(payload).length === 0) {
       message.warning('No changes to save');
       return;
     }
- 
+
     try {
       await updateProfileTracker({ id, payload });
- 
+
       // Pull fresh data so we see backend’s derived status
       await load(page, size, filterPayload);
- 
-      message.success('Row updated');
+
+      message.success('Demand updated');
       onCancel();
     } catch (e) {
       message.error(
@@ -822,14 +888,14 @@ export default function ProfileTracker() {
       );
     }
   };
- 
-return (
+
+  return (
     <Layout>
       <div className="p-4">
         <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
           Profile Tracker
         </h2>
- 
+
         {loading && (
           <div className="text-sm text-gray-700 my-2">
             Loading…
@@ -840,13 +906,13 @@ return (
             Error: {apiErr}
           </div>
         )}
- 
+
         <div className="overflow-x-auto rounded-md border border-gray-200">
           <table className="max-w-[1600px] w-full border-collapse">
             <thead className="bg-gray-50">
               <tr>
                 <Th w={60}>EDIT</Th>
- 
+
                 <Th w={180}>
                   <HeaderWithSearch
                     label="Demand Number"
@@ -857,7 +923,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="Candidate Name"
@@ -868,7 +934,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="Priority"
@@ -879,7 +945,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th w={180}>
                   <HeaderWithSearch
                     label="Skill Cluster"
@@ -890,7 +956,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th w={220}>
                   <HeaderWithSearch
                     label="Primary Skill"
@@ -901,7 +967,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th w={220}>
                   <HeaderWithSearch
                     label="Secondary Skill"
@@ -912,7 +978,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="LOB"
@@ -923,7 +989,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="HBU"
@@ -934,7 +1000,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="Location"
@@ -945,7 +1011,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="External/Internal"
@@ -956,7 +1022,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderWithSearch
                     label="Hiring Manager"
@@ -967,7 +1033,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderDateRange
                     label="Attached Date"
@@ -979,7 +1045,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderDateRange
                     label="Profile Shared Date"
@@ -991,7 +1057,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderDateRange
                     label="Interview Date"
@@ -1003,7 +1069,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderDateRange
                     label="Decision Date"
@@ -1015,7 +1081,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 {/* ONLY ONE STATUS SELECT REMAINS */}
                 <Th>
                   <HeaderSelect
@@ -1028,7 +1094,7 @@ return (
                     toggle={toggleSearch}
                   />
                 </Th>
- 
+
                 <Th>
                   <HeaderNumberRange
                     label="Aging"
@@ -1042,7 +1108,7 @@ return (
                 </Th>
               </tr>
             </thead>
- 
+
             <tbody>
               {!rows?.length && !loading ? (
                 <tr>
@@ -1057,11 +1123,11 @@ return (
                 rows.map((p) => {
                   const rowId = getRowId(p);
                   const isEdit = editId === rowId;
- 
+
                   const demandCode =
                     p?.demand?.displayDemandId ||
                     `${p?.demand?.lob?.name ?? ''}-${p?.demand?.demandId}`;
- 
+
                   const skillClusterText =
                     p?.demand?.skillCluster?.name ?? '-';
                   const primarySkillsText = Array.isArray(
@@ -1071,7 +1137,7 @@ return (
                         .map(nameOf)
                         .join(', ')
                     : p?.demand?.primarySkills ?? '-';
- 
+
                   const secondarySkillsText = Array.isArray(
                     p?.demand?.secondarySkills
                   )
@@ -1079,17 +1145,23 @@ return (
                         .map(nameOf)
                         .join(', ')
                     : p?.demand?.secondarySkills ?? '-';
- 
+
                   const attachedDate = getAttachedDate(p);
                   const aging = calculateDaysFrom(attachedDate);
- 
+
                   const candidateName =
                     p?.profile?.candidateName ?? '-';
                   const empId = p?.profile?.empId;
- 
+
                   const jdFileName = getJdFileName(p);
                   const cvFileName = getCvFileName(p);
- 
+
+                  // --- BASE DATES FOR VALIDATION (inside rows.map) ---
+                  const demandCreationStr = getDemandCreationDate(p)
+                    ? displayDate(getDemandCreationDate(p))
+                    : '';
+                  const attachedDateStr = attachedDate ? displayDate(attachedDate) : '';
+
                   return (
                     <tr key={rowId} className="even:bg-gray-50/50">
                       <Td>
@@ -1120,7 +1192,7 @@ return (
                           </div>
                         )}
                       </Td>
- 
+
                       <Td>
                         <div className="flex items-center justify-between gap-2 min-h-[44px]">
                           <span className="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-600 px-2 py-0.5 text-xs font-semibold">
@@ -1158,7 +1230,7 @@ return (
                           </div>
                         </div>
                       </Td>
- 
+
                       <Td>
                         <div className="flex items-center justify-between gap-2 min-h-[44px]">
                           <div className="flex flex-col leading-tight">
@@ -1203,7 +1275,7 @@ return (
                           </div>
                         </div>
                       </Td>
- 
+
                       <Td>
                         <Pill
                           priority={
@@ -1212,7 +1284,7 @@ return (
                           }
                         />
                       </Td>
- 
+
                       <TdWrapWithTooltip
                         text={skillClusterText}
                         w={180}
@@ -1225,21 +1297,32 @@ return (
                         text={secondarySkillsText}
                         w={220}
                       />
- 
+
                       <Td>{p?.demand?.lob?.name || '-'}</Td>
                       <Td>{p?.demand?.hbu?.name || '-'}</Td>
- 
+
                       <Td>{demandLocationNamesText(p)}</Td>
- 
+
                       <Td>
                         {nameOf(p?.profile?.externalInternal) || '-'}
                       </Td>
                       <Td>
                         {p?.demand?.hiringManager?.name ?? '-'}
                       </Td>
- 
-                      <Td>{displayDate(attachedDate) || '-'}</Td>
- 
+
+                      {/* Attached Date + (show rule error in edit mode if any) */}
+                      <Td>
+                        <div className="flex flex-col">
+                          <span>{displayDate(attachedDate) || '-'}</span>
+                          {isEdit && editErrors.attachedDate ? (
+                            <div className="text-xs text-red-600 mt-1 leading-tight whitespace-normal">
+                              {editErrors.attachedDate}
+                            </div>
+                          ) : null}
+                        </div>
+                      </Td>
+
+                      {/* Profile Shared Date */}
                       <Td>
                         {!isEdit ? (
                           displayDate(p?.profileSharedDate) || '-'
@@ -1259,7 +1342,11 @@ return (
                                       ? d.format(BACKEND_FMT)
                                       : '',
                                   };
-                                  const { errors } = validateTrackerDates(next);
+                                  const { errors } = validateTrackerDates(
+                                    next,
+                                    demandCreationStr,
+                                    attachedDateStr
+                                  );
                                   setEditErrors(errors);
                                   return next;
                                 })
@@ -1274,7 +1361,8 @@ return (
                           </>
                         )}
                       </Td>
- 
+
+                      {/* Interview Date */}
                       <Td>
                         {!isEdit ? (
                           displayDate(p?.interviewDate) || '-'
@@ -1294,7 +1382,11 @@ return (
                                       ? d.format(BACKEND_FMT)
                                       : '',
                                   };
-                                  const { errors } = validateTrackerDates(next);
+                                  const { errors } = validateTrackerDates(
+                                    next,
+                                    demandCreationStr,
+                                    attachedDateStr
+                                  );
                                   setEditErrors(errors);
                                   return next;
                                 })
@@ -1309,7 +1401,8 @@ return (
                           </>
                         )}
                       </Td>
- 
+
+                      {/* Decision Date */}
                       <Td>
                         {!isEdit ? (
                           displayDate(p?.decisionDate) || '-'
@@ -1329,7 +1422,11 @@ return (
                                       ? d.format(BACKEND_FMT)
                                       : '',
                                   };
-                                  const { errors } = validateTrackerDates(next);
+                                  const { errors } = validateTrackerDates(
+                                    next,
+                                    demandCreationStr,
+                                    attachedDateStr
+                                  );
                                   setEditErrors(errors);
                                   return next;
                                 })
@@ -1344,7 +1441,7 @@ return (
                           </>
                         )}
                       </Td>
- 
+
                       {/* FINAL REMAINING STATUS COLUMN */}
                       <Td>
                         {!isEdit ? (
@@ -1376,7 +1473,7 @@ return (
                           </select>
                         )}
                       </Td>
- 
+
                       <Td>{formatAging(aging)}</Td>
                     </tr>
                   );
@@ -1385,7 +1482,7 @@ return (
             </tbody>
           </table>
         </div>
- 
+
         <div className="mt-3 flex items-center justify-end">
           <Pagination
             current={page + 1}

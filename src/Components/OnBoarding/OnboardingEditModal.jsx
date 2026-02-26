@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getOnboardingDropdowns, editOnboarding } from '../api/Onboarding/onBoarding';
 
@@ -87,7 +88,42 @@ function eq(a, b) {
   return String(a ?? '') === String(b ?? '');
 }
 
-export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
+/* ---------- get decision date baseline from Profile Tracker ---------- */
+function getProfileDecisionDateFromRow(row) {
+  const candidates = [
+    row?.decisionDate,
+    row?.profileTracker?.decisionDate,
+    row?.tracker?.decisionDate,
+    row?.profile?.decisionDate,
+    row?.onboarding?.decisionDate,
+  ];
+  for (const c of candidates) {
+    const n = normalizeYMD(c);
+    if (n && /^\d{4}-\d{2}-\d{2}$/.test(n)) return n;
+  }
+  return '';
+}
+function toDateOrNull(s) {
+  if (!s) return null;
+  const n = normalizeYMD(s);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(n)) return null;
+  const d = new Date(n);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function gteDate(aStr, bStr) {
+  const a = toDateOrNull(aStr);
+  const b = toDateOrNull(bStr);
+  if (!a || !b) return true; // if any missing, don't fail hard
+  return a.getTime() >= b.getTime();
+}
+
+export default function OnboardingEditModal({
+  open,
+  onClose,
+  row,
+  onUpdated,
+  decisionBaseline: decisionBaselineProp,
+}) {
   const [loadingDD, setLoadingDD] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -118,10 +154,14 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
   }, [row]);
 
   const [form, setForm] = useState(initial || {});
-  // Keep a snapshot to compute deltas for partial update
   const initialRef = useRef(initial || null);
 
-  // ---------- Load dropdowns + backfill missing IDs & default onboarding status ----------
+  // ---------- Decision baseline ----------
+  const decisionBaseline = useMemo(() => {
+    return decisionBaselineProp || (row ? getProfileDecisionDateFromRow(row) : '');
+  }, [decisionBaselineProp, row]);
+
+  // ---------- Load dropdowns + backfill ----------
   useEffect(() => {
     if (!open) return;
     setErrors({});
@@ -152,13 +192,12 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
             if (m) patch.bgvStatusId = m.id;
           }
           if (!patch.onboardingStatusId) {
-            const inProgId =
-              findIdByName(a?.onboardingStatuses, 'name', 'progress') ??
-              findIdByName(a?.onboardingStatuses, 'name', 'in progress');
-            if (inProgId) patch.onboardingStatusId = inProgId;
+            const inProg = findIdByName(a?.onboardingStatuses, 'name', 'progress')
+              ?? findIdByName(a?.onboardingStatuses, 'name', 'in progress');
+            if (inProg) patch.onboardingStatusId = inProg;
           }
+          // keep initial snapshot sanitized for consistent compare
           patch.ctoolId = sanitizeCtool(patch.ctoolId);
-          // also update initialRef with sanitized base so delta compares are consistent
           initialRef.current = { ...patch };
           return patch;
         });
@@ -169,34 +208,25 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, row]);
 
-  function setField(name, value) {
-    setForm(prev => ({ ...prev, [name]: value }));
-  }
-
   // ---------- Derived gating ----------
   const ctoolClean = sanitizeCtool(form.ctoolId);
   const ctoolLen = ctoolClean.length;
-  const ctoolValid = /^\d{6,8}$/.test(ctoolClean);      // keep 6–8 digits rule
-  const ctoolTooShort = ctoolLen > 0 && ctoolLen < 6;   // inline hint
+  const ctoolValid = /^\d{6,8}$/.test(ctoolClean);
+  const ctoolTooShort = ctoolLen > 0 && ctoolLen < 6;
 
-  // No field disablement based on C-Tool
-  const profileType = String(form.profileExternalInternal || '').trim().toLowerCase();
-  const isInternal = profileType.includes('internal');
+  const profileTypeStr = String(form.profileExternalInternal || '').trim().toLowerCase();
+  const isInternal = profileTypeStr.includes('internal');
   const isExternal = !isInternal;
 
-  // BGV no longer gates anything
+  // BGV name + completion flag
   const bgvName = nameById(dd.bgvStatuses, form.bgvStatusId).toLowerCase();
-  const bgvCompleted = bgvName.includes('complete'); // informational only
-
-  // Fields are editable regardless of C-Tool or BGV
-  const canEditOthers = true;
-  const canEditPevHsbc = true; // <- always enabled now
+  const bgvCompleted = bgvName.includes('complete'); // 'Completed' / 'Complete'
 
   const needOffer = isExternal;
   const needDoj = isExternal;
 
-  // For "Completed", require C-Tool 6–8 + other fields (no BGV dependency)
-  const allForComplete =
+  // Common required fields for Completed; base for Onboarded
+  const baseRequiredFilled =
     ctoolValid &&
     form.wbsTypeId &&
     (needOffer ? form.offerDate : true) &&
@@ -204,17 +234,36 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     form.pevUploadDate &&
     form.hsbcOnboardingDate;
 
-  const inProgId =
-    findIdByName(dd.onboardingStatuses, 'name', 'progress') ??
-    findIdByName(dd.onboardingStatuses, 'name', 'in progress');
-  const completeId =
-    findIdByName(dd.onboardingStatuses, 'name', 'complete') ??
-    findIdByName(dd.onboardingStatuses, 'name', 'completed');
+  // For Completed: base fields (no BGV dependency)
+  const allForComplete = baseRequiredFilled;
 
+  // For Onboarded: base fields + BGV Completed
+  const allForOnboarded = baseRequiredFilled && bgvCompleted;
+
+  // Status IDs
+  const inProgId = useMemo(() =>
+    findIdByName(dd.onboardingStatuses, 'name', 'progress') ??
+    findIdByName(dd.onboardingStatuses, 'name', 'in progress'),
+  [dd.onboardingStatuses]);
+
+  const completeId = useMemo(() =>
+    findIdByName(dd.onboardingStatuses, 'name', 'complete') ??
+    findIdByName(dd.onboardingStatuses, 'name', 'completed'),
+  [dd.onboardingStatuses]);
+
+  const onboardedId = useMemo(() =>
+    findIdByName(dd.onboardingStatuses, 'name', 'onboarded') ??
+    findIdByName(dd.onboardingStatuses, 'name', 'on boarded'),
+  [dd.onboardingStatuses]);
+
+  // Auto-revert invalid target statuses
   useEffect(() => {
     if (!open) return;
     setForm((prev) => {
       if (!allForComplete && completeId && String(prev.onboardingStatusId) === String(completeId)) {
+        return { ...prev, onboardingStatusId: inProgId ?? prev.onboardingStatusId };
+      }
+      if (!allForOnboarded && onboardedId && String(prev.onboardingStatusId) === String(onboardedId)) {
         return { ...prev, onboardingStatusId: inProgId ?? prev.onboardingStatusId };
       }
       if (!prev.onboardingStatusId && inProgId) {
@@ -223,23 +272,84 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
       return prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, allForComplete, completeId, inProgId]);
+  }, [open, allForComplete, allForOnboarded, completeId, onboardedId, inProgId]);
 
   if (!open || !row) return null;
 
   // ---------- Validation ----------
-  function validate() {
+  function validate(formArg = form) {
     const e = {};
-    if (!form.onboardingStatusId) e.onboardingStatusId = "Onboarding status is required.";
+    if (!formArg.onboardingStatusId) e.onboardingStatusId = "Onboarding status is required.";
 
-    // Enforce only for Completed; BGV removed from requirements
-    if (completeId && String(form.onboardingStatusId) === String(completeId) && !allForComplete) {
+    // Optional: explicit C-Tool error (so Save blocks if invalid)
+    const cleanCtool = sanitizeCtool(formArg.ctoolId);
+    if (cleanCtool && !/^\d{6,8}$/.test(cleanCtool)) {
+      e.ctoolId = "C-Tool ID must be 6–8 digits.";
+    }
+
+    // Decision baseline: all dates must be >= baseline
+    if (decisionBaseline) {
+      // compact message under fields
+      const msg = (label) => ` Decision Date (${decisionBaseline}).`;
+      const checks = [
+        { key: 'offerDate', label: 'Offer Date' },
+        { key: 'dateOfJoining', label: 'Date of Joining' },
+        { key: 'pevUploadDate', label: 'PEV Upload Date' },
+        { key: 'vpTagging', label: 'VP Tagging Date' },
+        { key: 'techSelectDate', label: 'Tech Select Date' },
+        { key: 'hsbcOnboardingDate', label: 'HSBC Onboarding Date' },
+      ];
+      for (const { key, label } of checks) {
+        const val = formArg[key];
+        if (val && !gteDate(val, decisionBaseline)) {
+          e[key] = msg(label);
+        }
+      }
+    }
+
+    // Re-evaluate base + BGV locally
+    const profileTypeLocal = String(formArg.profileExternalInternal || '').trim().toLowerCase();
+    const isExternalLocal = !profileTypeLocal.includes('internal');
+    const baseRequiredLocal =
+      /^\d{6,8}$/.test(sanitizeCtool(formArg.ctoolId)) &&
+      formArg.wbsTypeId &&
+      (isExternalLocal ? formArg.offerDate : true) &&
+      (isExternalLocal ? formArg.dateOfJoining : true) &&
+      formArg.pevUploadDate &&
+      formArg.hsbcOnboardingDate;
+
+    // Completed gate
+    if (completeId && String(formArg.onboardingStatusId) === String(completeId) && !baseRequiredLocal) {
       e.onboardingStatusId =
         "Cannot mark as Completed until required fields are filled: C-Tool (6–8), WBS Type, " +
-        (isExternal ? "Offer Date, DOJ, " : "") +
+        (isExternalLocal ? "Offer Date, DOJ, " : "") +
         "PEV Upload Date, and HSBC Onboarding Date.";
     }
+
+    // Onboarded: base + BGV Completed
+    const bgvNameLocal = nameById(dd.bgvStatuses, formArg.bgvStatusId).toLowerCase();
+    const bgvDoneLocal = bgvNameLocal.includes('complete');
+    if (onboardedId && String(formArg.onboardingStatusId) === String(onboardedId)) {
+      if (!baseRequiredLocal) {
+        e.onboardingStatusId =
+          "Cannot mark as Onboarded until required fields are filled: C-Tool (6–8), WBS Type, " +
+          (isExternalLocal ? "Offer Date, DOJ, " : "") +
+          "PEV Upload Date, and HSBC Onboarding Date.";
+      } else if (!bgvDoneLocal) {
+        e.onboardingStatusId = "Cannot mark as Onboarded until BGV Status is Completed.";
+      }
+    }
+
     return e;
+  }
+
+  // live updates with validation
+  function setField(name, value) {
+    setForm(prev => {
+      const next = { ...prev, [name]: value };
+      setErrors(validate(next));
+      return next;
+    });
   }
 
   // ---------- Partial payload builder ----------
@@ -250,51 +360,39 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     if (!eq(base?.onboardingStatusId, curr.onboardingStatusId)) {
       patch.onboardingStatusId = curr.onboardingStatusId ? Number(curr.onboardingStatusId) : null;
     }
-
     // wbsTypeId
     if (!eq(base?.wbsTypeId, curr.wbsTypeId)) {
       patch.wbsTypeId = curr.wbsTypeId ? Number(curr.wbsTypeId) : null;
     }
-
-    // bgvStatusId (still allowed to update, but no validation dependency)
+    // bgvStatusId
     if (!eq(base?.bgvStatusId, curr.bgvStatusId)) {
       patch.bgvStatusId = curr.bgvStatusId ? Number(curr.bgvStatusId) : null;
     }
-
-    // offerDate (external)
+    // offerDate
     if (!eq(base?.offerDate, curr.offerDate)) {
-      if (isExternal) {
-        patch.offerDate = curr.offerDate || null;
-      }
+      patch.offerDate = curr.offerDate || null;
     }
-
-    // dateOfJoining (external)
+    // dateOfJoining
     if (!eq(base?.dateOfJoining, curr.dateOfJoining)) {
-      if (isExternal) {
-        patch.dateOfJoining = curr.dateOfJoining || null;
-      }
+      patch.dateOfJoining = curr.dateOfJoining || null;
     }
-
-    // ctoolId (send only if valid 6–8; otherwise omit so backend retains old)
-    if (!eq(base?.ctoolId, curr.ctoolId)) {
-      if (ctoolValid) patch.ctoolId = Number(sanitizeCtool(curr.ctoolId));
-    }
-
+    // ✅ C-Tool: compare sanitized; send as string; allow null to clear; NEVER Number()
+   // ctoolId (allow update regardless of other fields)
+if (!eq(base?.ctoolId, curr.ctoolId)) {
+  patch.ctoolId = Number(sanitizeCtool(curr.ctoolId));
+}
     // pevUploadDate
     if (!eq(base?.pevUploadDate, curr.pevUploadDate)) {
       patch.pevUploadDate = curr.pevUploadDate || null;
     }
-
     // vpTagging
     if (!eq(base?.vpTagging, curr.vpTagging)) {
       patch.vpTagging = curr.vpTagging || null;
     }
-
     // techSelectDate
     if (!eq(base?.techSelectDate, curr.techSelectDate)) {
       patch.techSelectDate = curr.techSelectDate || null;
     }
-
     // hsbcOnboardingDate
     if (!eq(base?.hsbcOnboardingDate, curr.hsbcOnboardingDate)) {
       patch.hsbcOnboardingDate = curr.hsbcOnboardingDate || null;
@@ -311,7 +409,6 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
     const base = initialRef.current || {};
     const patch = buildPartialPayload(base, { ...form, ctoolId: ctoolClean });
 
-    // If nothing changed, short-circuit
     if (!Object.keys(patch).length) {
       onClose && onClose();
       return;
@@ -353,13 +450,19 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                   className={inputCls}
                   value={form.onboardingStatusId ?? ""}
                   onChange={(e) => setField('onboardingStatusId', e.target.value)}
-//                   disabled={!allForComplete && !!completeId}
                 >
                   <option value="">Select status</option>
                   {(dd.onboardingStatuses || []).map((s) => {
                     const isCompletedOpt = completeId && String(s.id) === String(completeId);
+                    const isOnboardedOpt = onboardedId && String(s.id) === String(onboardedId);
+                    const disableCompleted = isCompletedOpt && !allForComplete;
+                    const disableOnboarded = isOnboardedOpt && !allForOnboarded; // base fields + BGV Completed
                     return (
-                      <option key={s.id} value={s.id} disabled={!allForComplete && isCompletedOpt}>
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={disableCompleted || disableOnboarded}
+                      >
                         {s.name}
                       </option>
                     );
@@ -383,7 +486,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                 </select>
               </div>
 
-              {/* BGV Status (still editable, but no gating) */}
+              {/* BGV Status */}
               <div>
                 <label className={labelCls}>BGV Status</label>
                 <select
@@ -410,8 +513,9 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                   onChange={(e) => setField('ctoolId', sanitizeCtool(e.target.value))}
                   placeholder="e.g. 123456"
                 />
-                {ctoolTooShort && <div className={errorCls}>C-Tool ID must be 6–8 digits.</div>}
-                {errors.ctoolId && <div className={errorCls}>{errors.ctoolId}</div>}
+                {(ctoolTooShort || errors.ctoolId) && (
+                  <div className={errorCls}>C-Tool ID must be 6–8 digits.</div>
+                )}
               </div>
 
               {/* DOJ — only for External */}
@@ -422,6 +526,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                     value={form.dateOfJoining}
                     onValue={(v) => setField('dateOfJoining', v)}
                   />
+                  {errors.dateOfJoining && <div className={errorCls}>{errors.dateOfJoining}</div>}
                 </div>
               )}
 
@@ -433,17 +538,18 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                     value={form.offerDate}
                     onValue={(v) => setField('offerDate', v)}
                   />
+                  {errors.offerDate && <div className={errorCls}>{errors.offerDate}</div>}
                 </div>
               )}
 
-              {/* PEV Upload Date (always enabled) */}
+              {/* PEV Upload Date */}
               <div>
                 <label className={labelCls}>PEV Upload Date</label>
                 <DateInput
                   value={form.pevUploadDate}
                   onValue={(v) => setField('pevUploadDate', v)}
-                  disabled={!canEditPevHsbc}
                 />
+                {errors.pevUploadDate && <div className={errorCls}>{errors.pevUploadDate}</div>}
               </div>
 
               {/* VP Tagging Date */}
@@ -453,6 +559,7 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                   value={form.vpTagging}
                   onValue={(v) => setField('vpTagging', v)}
                 />
+                {errors.vpTagging && <div className={errorCls}>{errors.vpTagging}</div>}
               </div>
 
               {/* Tech Select Date */}
@@ -462,17 +569,23 @@ export default function OnboardingEditModal({ open, onClose, row, onUpdated }) {
                   value={form.techSelectDate}
                   onValue={(v) => setField('techSelectDate', v)}
                 />
+                {errors.techSelectDate && <div className={errorCls}>{errors.techSelectDate}</div>}
               </div>
 
-              {/* HSBC Onboarding Date (always enabled) */}
+              {/* HSBC Onboarding Date */}
               <div>
                 <label className={labelCls}>HSBC Onboarding Date</label>
                 <DateInput
                   value={form.hsbcOnboardingDate}
                   onValue={(v) => setField('hsbcOnboardingDate', v)}
-                  disabled={!canEditPevHsbc}
                 />
+                {errors.hsbcOnboardingDate && <div className={errorCls}>{errors.hsbcOnboardingDate}</div>}
               </div>
+
+              {/* Optional: show baseline
+              <div className="md:col-span-2 text-xs text-gray-500">
+                Decision Date (from Profile Tracker): {decisionBaseline || '-'}
+              </div> */}
             </div>
           )}
         </div>
