@@ -943,7 +943,7 @@
 
 
 // src/Components/DemandsManagement/AddNewDemand/AddDemands1.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Layout from "../../Layout.jsx";
 import Select, { components } from "react-select";
 import { message, Spin } from "antd";
@@ -968,6 +968,9 @@ import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
 
 // ------------------------ helpers ------------------------
 const todayStr = () => format(new Date(), "dd-MMM-yyyy");
+
+// NEW: Local storage key for step-1 form persistence
+const STORAGE_KEY = "addDemands1_form_v2"; // NEW
 
 // react-select checkbox option renderer
 const CheckboxOption = (props) => (
@@ -1021,8 +1024,8 @@ const toYyyyMmDd = (d) => {
 const buildDraftCreateRequest = (form) => ({
   hbuId: toNum(form.hbu),
   // NOTE: some backends expect hbuSpocId. Keeping both for safety if server ignores unknowns.
-  hbuSpocId: toNum(form.hbuSpoc),      // NEW (aligns with your sample body)
-  hubSpocId: toNum(form.hbuSpoc),      // legacy key (kept if backend expects this)
+  hbuSpocId: toNum(form.hbuSpoc), // NEW (aligns with your sample body)
+  hubSpocId: toNum(form.hbuSpoc), // legacy key (kept if backend expects this)
   bandId: toNum(form.band),
   priorityId: toNum(form.priority),
   lobId: toNum(form.lob),
@@ -1037,7 +1040,7 @@ const buildDraftCreateRequest = (form) => ({
   deliveryManagerId: toNum(form.deliveryManager),
   skillClusterId: toNum(form.skillCluster?.value ?? form.skillCluster),
   pmoId: toNum(form.pmo),
-  projectManagerId: toNum(form.pm), // NEW: matches your sample body
+  projectManagerId: toNum(form.pm), // matches your sample body
 
   experience: form.experience ?? "5-7",
   remark: form.remark ?? "Saving as draft from Step-1 (mix file + text)",
@@ -1054,8 +1057,8 @@ const buildDraftCreateRequest = (form) => ({
 
   rrDrafts: Array.isArray(form.rrDrafts) ? form.rrDrafts : [],
 
-  // NEW: Karat flag (1/0). If backend expects boolean, switch to true/false.
-  karatFlag: String(form.karat).toLowerCase() === "yes" ? 1 : 0, // NEW
+  // Karat flag (1/0). If backend expects boolean, switch to true/false.
+  karatFlag: String(form.karat).toLowerCase() === "yes" ? 1 : 0, // ✅ CRITICAL
 });
 
 /** Inline component: Select with “Other” mode in the SAME space. */
@@ -1166,8 +1169,11 @@ export default function AddDemands1() {
     remark: "",
     rrDrafts: [],
 
-    karat: "no", // NEW: default
+    karat: "no", // default
   });
+
+  // NEW: one-time ref to avoid double hydration races in strict mode
+  const hydratedFromLocal = useRef(false); // NEW
 
   // dropdowns
   useEffect(() => {
@@ -1234,6 +1240,28 @@ export default function AddDemands1() {
     }));
   };
 
+  // ---------- NEW: HYDRATE FROM LOCAL STORAGE (runs once, BEFORE draft hydration) ----------
+  useEffect(() => {
+    if (hydratedFromLocal.current) return;
+    hydratedFromLocal.current = true;
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          // Only merge known keys to avoid surprises
+          setForm((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to restore Step-1 form from localStorage", err);
+    }
+  }, []); // NEW
+
   // ---------- HYDRATE FROM DRAFT (if draftId exists) ----------
   useEffect(() => {
     const idNum = Number(draftId);
@@ -1291,11 +1319,12 @@ export default function AddDemands1() {
           remark: data?.remark ?? prev.remark,
           rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : prev.rrDrafts,
 
-          // NEW: map karatFlag back to UI 'karat'
+          // UPDATED: map karatFlag back to UI 'karat' only if server provides it;
+          // otherwise keep what we already have (from localStorage or default)
           karat:
             data?.karatFlag != null
               ? (Number(data.karatFlag) === 1 || data.karatFlag === true ? "yes" : "no")
-              : (prev.karat ?? "no"),
+              : prev.karat ?? "no",
         }));
 
         localStorage.setItem("step1DraftId", String(idNum));
@@ -1330,19 +1359,17 @@ export default function AddDemands1() {
       }
 
       // -------------------- DEFAULTS: Location type + Pune preselect --------------------
-      // UPDATED: set default locationType AND try to preselect "Pune" if available
       if (!prev.locationType) {
         next.locationType = "onshore";
       }
 
-      // UPDATED: default demandLocation -> Pune (onshore) if present; else first onshore
       if ((!prev.demandLocation || prev.demandLocation.length === 0) && options?.onshoreLocation?.length) {
         const puneOpt = options.onshoreLocation.find((o) => o.label?.toLowerCase() === "pune");
         const chosen = puneOpt || options.onshoreLocation[0];
         next.demandLocation = chosen?.value != null ? [Number(chosen.value)] : [];
       }
 
-      // NEW: default karat to "no" if empty
+      // NEW: default karat to "no" only if empty (will not override local storage or draft)
       if (!prev.karat) {
         next.karat = "no";
       }
@@ -1352,9 +1379,19 @@ export default function AddDemands1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation, options?.offshoreLocation]);
 
+  // ===== NEW: Persist form to localStorage on every change =====
+  useEffect(() => {
+    try {
+      // Persist only serializable primitive values / simple objects already in form
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    } catch (err) {
+      console.warn("Failed to persist Step-1 form to localStorage", err);
+    }
+  }, [form]); // NEW
+
   // ===== pill radios (LOB, Timeline, Type) =====
   const PillRadios = ({ name, optionsList, value, onChange }) => (
-    <div className="flex flex-wrap gap-3 mt-1"> {/* UPDATED: consistent spacing under labels */}
+    <div className="flex flex-wrap gap-3 mt-1">
       {safe(optionsList).map((o) => {
         const val = String(o.value);
         const active = String(value) === val;
@@ -1426,7 +1463,7 @@ export default function AddDemands1() {
       return message.warning("No. of Positions must be at least 1.");
     if (!form.skillCluster) return message.warning("Skill Cluster is required.");
     if (!form.demandReceivedDate) return message.warning("Demand Received Date is required.");
-    if (!form.karat) return message.warning("Karat is required."); // NEW: explicit guard
+    if (!form.karat) return message.warning("Karat is required.");
 
     setLoading(true);
     try {
@@ -1454,14 +1491,20 @@ export default function AddDemands1() {
       const finalDraftId = Number(serverDTO?.draftId ?? effDraftId) || effDraftId || null;
 
       const forStep2 = {
-        ...request, // what we sent
+        ...request, // what we sent (contains karatFlag)
         ...serverDTO,
         draftId: finalDraftId,
         noOfPositions: form.noOfPositions,
       };
 
-      // ➜ Navigate to Step‑2 page with required data
-      navigate("/addDemands2", { state: { draftId: finalDraftId, form1Data: forStep2 } });
+      // UPDATED: Carry karatFlag explicitly to Step‑2 as well
+      navigate("/addDemands2", {
+        state: {
+          draftId: finalDraftId,
+          karatFlag: request.karatFlag, // ✅ ensure Step-2 can submit it
+          form1Data: forStep2,          // (also includes karatFlag)
+        },
+      });
     } catch (err) {
       console.error("[Step1] error:", err);
       const msg = err?.response?.data?.message || err?.message || "Step 1 failed.";
@@ -1701,7 +1744,7 @@ export default function AddDemands1() {
           {/* ========= Demand Details ========= */}
           <section>
             <SectionHeader icon={<ScheduleOutlined />} title="Demand Details" helper="Timeline, type & locations." />
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 px-3 pb-3">
+            <div className="grid grid-cols-1 md-grid-cols-4 md:grid-cols-4 gap-5 px-3 pb-3">
               <div>
                 <label className={`${labelCls} mb-2 block`}>Demand Timeline</label>
                 <PillRadios
@@ -1722,9 +1765,9 @@ export default function AddDemands1() {
                 />
               </div>
 
-              <div className="flex flex-col items-start"> {/* UPDATED: ensure vertical stacking & left alignment */}
+              <div className="flex flex-col items-start">
                 <label className={`${labelCls} mb-1 block`}>Karat</label>
-                <div className="mt-1"> {/* UPDATED: ensures pills sit right below the label */}
+                <div className="mt-1">
                   <PillRadios
                     name="karat"
                     optionsList={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]}
@@ -1797,7 +1840,9 @@ export default function AddDemands1() {
                   <button
                     type="button"
                     className={`px-2 py-0.5 rounded border text-xs ${
-                      form.locationType === "onshore" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      form.locationType === "onshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
                     }`}
                     onClick={() => setForm((prev) => ({ ...prev, locationType: "onshore", demandLocation: [] }))}
                   >
@@ -1806,7 +1851,9 @@ export default function AddDemands1() {
                   <button
                     type="button"
                     className={`px-2 py-0.5 rounded border text-xs ${
-                      form.locationType === "offshore" ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      form.locationType === "offshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
                     }`}
                     onClick={() => setForm((prev) => ({ ...prev, locationType: "offshore", demandLocation: [] }))}
                   >
