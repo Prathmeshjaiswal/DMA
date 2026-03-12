@@ -967,6 +967,15 @@ import { getDropDownData, submitStep1 } from "../../api/Demands/addDemands.js";
 import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
 
 // ------------------------ helpers ------------------------
+
+// Build react-select value for multi-select from numeric IDs
+const toSelectValues = (ids, optionList) =>
+  Array.isArray(ids)
+    ? optionList.filter(o => ids.map(Number).includes(Number(o.value)))
+    : [];
+
+
+
 const todayStr = () => format(new Date(), "dd-MMM-yyyy");
 
 // ✅ INITIAL (blank) form
@@ -1031,12 +1040,12 @@ const SectionHeader = ({ icon, title, helper }) => (
 const toOptions = (list) =>
   Array.isArray(list)
     ? list
-        .map((x) =>
-          x && typeof x === "object"
-            ? { value: Number(x.id), label: String(x.name ?? "").trim() }
-            : null
-        )
-        .filter((o) => o && o.label)
+      .map((x) =>
+        x && typeof x === "object"
+          ? { value: Number(x.id), label: String(x.name ?? "").trim() }
+          : null
+      )
+      .filter((o) => o && o.label)
     : [];
 
 const safe = (arr) => (Array.isArray(arr) ? arr : []);
@@ -1252,9 +1261,9 @@ export default function AddDemands1() {
           noOfPositions: String(data?.numberOfPositions ?? prev.noOfPositions ?? "1"),
           skillCluster: data?.skillCluster
             ? {
-                value: Number(data.skillCluster.id ?? data.skillClusterId),
-                label: String(data.skillCluster.name ?? ""),
-              }
+              value: Number(data.skillCluster.id ?? data.skillClusterId),
+              label: String(data.skillCluster.name ?? ""),
+            }
             : prev.skillCluster,
           primarySkills: Array.isArray(data?.primarySkills)
             ? data.primarySkills.map((s) => ({ value: Number(s.id), label: String(s.name) }))
@@ -1360,10 +1369,9 @@ export default function AddDemands1() {
           <label
             key={val}
             className={`px-3 py-2 rounded-md border cursor-pointer text-sm
-              ${
-                active
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "border-gray-300 text-gray-700 hover:border-gray-400"
+              ${active
+                ? "bg-gray-900 text-white border-gray-900"
+                : "border-gray-300 text-gray-700 hover:border-gray-400"
               }`}
           >
             <input
@@ -1391,10 +1399,9 @@ export default function AddDemands1() {
           <label
             key={val}
             className={`px-3 py-2 rounded-md border cursor-pointer text-sm
-              ${
-                checked
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "border-gray-300 text-gray-700 hover:border-gray-400"
+              ${checked
+                ? "bg-gray-900 text-white border-gray-900"
+                : "border-gray-300 text-gray-700 hover:border-gray-400"
               }`}
           >
             <input
@@ -1793,7 +1800,7 @@ export default function AddDemands1() {
                 )}
               </div>
 
-              <div>
+              {/* <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Location</label>
                 <div className="flex gap-2 mb-2">
                   <button
@@ -1833,6 +1840,72 @@ export default function AddDemands1() {
                   }
                 />
                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2 pl-22">
+                  <EnvironmentOutlined />
+                  <span>Select one or more locations.</span>
+                </div>
+              </div> */}
+
+              <div>
+                <label className={`${labelCls} mb-1 block`}>Demand Location</label>
+
+                {/* Onshore / Offshore toggle */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "onshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      }`}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        locationType: "onshore",
+                        demandLocation: [], // reset selection when switching type
+                      }))
+                    }
+                  >
+                    Onshore
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "offshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      }`}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        locationType: "offshore",
+                        demandLocation: [], // reset selection when switching type
+                      }))
+                    }
+                  >
+                    Offshore
+                  </button>
+                </div>
+
+                {/* Dynamic dropdown for locations */}
+                <Select
+                  className="mt-1 "
+                  placeholder={`Select ${form.locationType === 'onshore' ? 'Onshore' : 'Offshore'} location(s)`}
+                  options={form.locationType === "onshore" ? safe(options?.onshoreLocation) : safe(options?.offshoreLocation)}
+                  isMulti
+                  isClearable
+                  closeMenuOnSelect={false}
+                  hideSelectedOptions
+                  components={{ Option: CheckboxOption }}
+                  value={
+                    form.locationType === "onshore"
+                      ? toSelectValues(form.demandLocation, safe(options?.onshoreLocation))
+                      : toSelectValues(form.demandLocation, safe(options?.offshoreLocation))
+                  }
+                  onChange={(selected) => {
+                    const arr = Array.isArray(selected) ? selected.map((o) => Number(o.value)) : [];
+                    setForm((prev) => ({ ...prev, demandLocation: arr }));
+                  }}
+                />
+
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
                   <EnvironmentOutlined />
                   <span>Select one or more locations.</span>
                 </div>
