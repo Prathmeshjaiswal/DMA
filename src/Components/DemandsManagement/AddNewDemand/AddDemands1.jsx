@@ -969,8 +969,45 @@ import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
 // ------------------------ helpers ------------------------
 const todayStr = () => format(new Date(), "dd-MMM-yyyy");
 
-// NEW: Local storage key for step-1 form persistence
-const STORAGE_KEY = "addDemands1_form_v2"; // NEW
+// ✅ INITIAL (blank) form
+const INITIAL_FORM = () => ({
+  lob: "",
+  noOfPositions: "1",
+  skillCluster: null,
+  primarySkills: [],
+  secondarySkills: [],
+  hiringManager: "",
+  hiringManagerOther: "",
+  deliveryManager: "",
+  deliveryManagerOther: "",
+  pm: "",
+  pmOther: "",
+  salesSpoc: "",
+  salesSpocOther: "",
+  pmoSpoc: "",
+  pmoSpocOther: "",
+  pmo: "",
+  pmoOther: "",
+  hbu: "",
+  hbuOther: "",
+  hbuSpoc: "",
+  hbuSpocOther: "",
+
+  demandTimeline: "",
+  demandType: "",
+  demandLocation: [],
+  band: "",
+  priority: "",
+  externalInternal: "",
+  status: "",
+  pod: "",
+  demandReceivedDate: todayStr(),
+  experience: "",
+  remark: "",
+  rrDrafts: [],
+
+  karat: "no", // default toggle for UI only
+});
 
 // react-select checkbox option renderer
 const CheckboxOption = (props) => (
@@ -1023,9 +1060,8 @@ const toYyyyMmDd = (d) => {
 // Build EXACT payload for Step‑1 draft
 const buildDraftCreateRequest = (form) => ({
   hbuId: toNum(form.hbu),
-  // NOTE: some backends expect hbuSpocId. Keeping both for safety if server ignores unknowns.
-  hbuSpocId: toNum(form.hbuSpoc), // NEW (aligns with your sample body)
-  hubSpocId: toNum(form.hbuSpoc), // legacy key (kept if backend expects this)
+  hbuSpocId: toNum(form.hbuSpoc),
+  hubSpocId: toNum(form.hbuSpoc), // legacy key (if backend still reads it)
   bandId: toNum(form.band),
   priorityId: toNum(form.priority),
   lobId: toNum(form.lob),
@@ -1040,7 +1076,7 @@ const buildDraftCreateRequest = (form) => ({
   deliveryManagerId: toNum(form.deliveryManager),
   skillClusterId: toNum(form.skillCluster?.value ?? form.skillCluster),
   pmoId: toNum(form.pmo),
-  projectManagerId: toNum(form.pm), // matches your sample body
+  projectManagerId: toNum(form.pm),
 
   experience: form.experience ?? "5-7",
   remark: form.remark ?? "Saving as draft from Step-1 (mix file + text)",
@@ -1057,8 +1093,8 @@ const buildDraftCreateRequest = (form) => ({
 
   rrDrafts: Array.isArray(form.rrDrafts) ? form.rrDrafts : [],
 
-  // Karat flag (1/0). If backend expects boolean, switch to true/false.
-  karatFlag: String(form.karat).toLowerCase() === "yes" ? 1 : 0, // ✅ CRITICAL
+  // Send 1/0 to backend
+  karatFlag: String(form.karat).toLowerCase() === "yes" ? 1 : 0,
 });
 
 /** Inline component: Select with “Other” mode in the SAME space. */
@@ -1124,56 +1160,15 @@ export default function AddDemands1() {
   const [dropdowns, setDropdowns] = useState(null);
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
 
-  // draftId from navigation or storage
+  // ✅ ONLY take draftId from navigation state (not from localStorage)
   const [draftId, setDraftId] = useState(() => {
     const fromNav = location?.state?.draftId;
-    const fromStorage = localStorage.getItem("step1DraftId");
-    const n = Number(fromNav ?? fromStorage);
+    const n = Number(fromNav);
     return Number.isFinite(n) && n > 0 ? n : null;
   });
 
-  // Step-1 form
-  const [form, setForm] = useState({
-    lob: "",
-    noOfPositions: "1",
-    skillCluster: null,
-    primarySkills: [],
-    secondarySkills: [],
-    hiringManager: "",
-    hiringManagerOther: "",
-    deliveryManager: "",
-    deliveryManagerOther: "",
-    pm: "",
-    pmOther: "",
-    salesSpoc: "",
-    salesSpocOther: "",
-    pmoSpoc: "",
-    pmoSpocOther: "",
-    pmo: "",
-    pmoOther: "",
-    hbu: "",
-    hbuOther: "",
-    hbuSpoc: "",
-    hbuSpocOther: "",
-
-    demandTimeline: "",
-    demandType: "",
-    demandLocation: [],
-    band: "",
-    priority: "",
-    externalInternal: "",
-    status: "",
-    pod: "",
-    demandReceivedDate: todayStr(),
-    experience: "",
-    remark: "",
-    rrDrafts: [],
-
-    karat: "no", // default
-  });
-
-  // NEW: one-time ref to avoid double hydration races in strict mode
-  const hydratedFromLocal = useRef(false); // NEW
+  // ✅ Start with a fresh blank form every time (unless editing a draft)
+  const [form, setForm] = useState(() => INITIAL_FORM());
 
   // dropdowns
   useEffect(() => {
@@ -1220,7 +1215,7 @@ export default function AddDemands1() {
       pmo: toOptions(d.pmoList),
       pmoSpoc: toOptions(d.pmoSpocList),
 
-      // Add both onshore and offshore location options
+      // Onshore & Offshore
       onshoreLocation: toOptions(d.onshoreLocationList),
       offshoreLocation: toOptions(d.offshoreLocationList),
       demandLocation: toOptions(d.demandLocationList),
@@ -1240,29 +1235,7 @@ export default function AddDemands1() {
     }));
   };
 
-  // ---------- NEW: HYDRATE FROM LOCAL STORAGE (runs once, BEFORE draft hydration) ----------
-  useEffect(() => {
-    if (hydratedFromLocal.current) return;
-    hydratedFromLocal.current = true;
-
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === "object") {
-          // Only merge known keys to avoid surprises
-          setForm((prev) => ({
-            ...prev,
-            ...parsed,
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn("Failed to restore Step-1 form from localStorage", err);
-    }
-  }, []); // NEW
-
-  // ---------- HYDRATE FROM DRAFT (if draftId exists) ----------
+  // ✅ EDIT mode only: hydrate from server draft (NO localStorage)
   useEffect(() => {
     const idNum = Number(draftId);
     if (!Number.isFinite(idNum) || idNum <= 0) return;
@@ -1319,15 +1292,12 @@ export default function AddDemands1() {
           remark: data?.remark ?? prev.remark,
           rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : prev.rrDrafts,
 
-          // UPDATED: map karatFlag back to UI 'karat' only if server provides it;
-          // otherwise keep what we already have (from localStorage or default)
+          // Map karatFlag back to UI radio if provided
           karat:
             data?.karatFlag != null
               ? (Number(data.karatFlag) === 1 || data.karatFlag === true ? "yes" : "no")
               : prev.karat ?? "no",
         }));
-
-        localStorage.setItem("step1DraftId", String(idNum));
       } catch (e) {
         console.error("load draft error:", e);
         message.error("Failed to load draft for editing.");
@@ -1337,12 +1307,12 @@ export default function AddDemands1() {
     })();
   }, [draftId]);
 
-  // Defaults for Demand Type + Timeline — only if not set
+  // ✅ Defaults — only these are preselected for NEW demand
   useEffect(() => {
     setForm((prev) => {
       const next = { ...prev };
 
-      // demandType default -> "New"
+      // Demand Type -> "New"
       if (!prev.demandType && options?.demandType?.length) {
         const newOpt =
           options.demandType.find((o) => o.label?.toLowerCase() === "new") ||
@@ -1350,7 +1320,7 @@ export default function AddDemands1() {
         next.demandType = String(newOpt?.value ?? "");
       }
 
-      // demandTimeline default -> "Current"
+      // Demand Timeline -> "Current"
       if (!prev.demandTimeline && options?.demandTimeline?.length) {
         const curOpt =
           options.demandTimeline.find((o) => o.label?.toLowerCase() === "current") ||
@@ -1358,18 +1328,17 @@ export default function AddDemands1() {
         next.demandTimeline = String(curOpt?.value ?? "");
       }
 
-      // -------------------- DEFAULTS: Location type + Pune preselect --------------------
+      // Location type default -> onshore, and preselect "Pune" (or first onshore option)
       if (!prev.locationType) {
         next.locationType = "onshore";
       }
-
       if ((!prev.demandLocation || prev.demandLocation.length === 0) && options?.onshoreLocation?.length) {
         const puneOpt = options.onshoreLocation.find((o) => o.label?.toLowerCase() === "pune");
         const chosen = puneOpt || options.onshoreLocation[0];
         next.demandLocation = chosen?.value != null ? [Number(chosen.value)] : [];
       }
 
-      // NEW: default karat to "no" only if empty (will not override local storage or draft)
+      // Keep karat default "no" unless changed
       if (!prev.karat) {
         next.karat = "no";
       }
@@ -1379,15 +1348,7 @@ export default function AddDemands1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation, options?.offshoreLocation]);
 
-  // ===== NEW: Persist form to localStorage on every change =====
-  useEffect(() => {
-    try {
-      // Persist only serializable primitive values / simple objects already in form
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    } catch (err) {
-      console.warn("Failed to persist Step-1 form to localStorage", err);
-    }
-  }, [form]); // NEW
+  // (No localStorage hydration or persistence anymore)
 
   // ===== pill radios (LOB, Timeline, Type) =====
   const PillRadios = ({ name, optionsList, value, onChange }) => (
@@ -1452,8 +1413,8 @@ export default function AddDemands1() {
   );
 
   // Build payload and call API:
-  // - If draftId exists -> PUT via updateDraft (payload only; no files, NO rrDrafts)
-  // - Else -> POST via submitStep1 (normal flow)
+  // - If draftId exists -> PUT via updateDraft
+  // - Else -> POST via submitStep1
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -1483,7 +1444,6 @@ export default function AddDemands1() {
         if (Number.isFinite(newId) && newId > 0) {
           effDraftId = newId;
           setDraftId(newId);
-          localStorage.setItem("step1DraftId", String(newId));
         }
       }
 
@@ -1491,18 +1451,17 @@ export default function AddDemands1() {
       const finalDraftId = Number(serverDTO?.draftId ?? effDraftId) || effDraftId || null;
 
       const forStep2 = {
-        ...request, // what we sent (contains karatFlag)
+        ...request, // includes karatFlag
         ...serverDTO,
         draftId: finalDraftId,
         noOfPositions: form.noOfPositions,
       };
 
-      // UPDATED: Carry karatFlag explicitly to Step‑2 as well
       navigate("/addDemands2", {
         state: {
           draftId: finalDraftId,
-          karatFlag: request.karatFlag, // ✅ ensure Step-2 can submit it
-          form1Data: forStep2,          // (also includes karatFlag)
+          karatFlag: request.karatFlag,
+          form1Data: forStep2,
         },
       });
     } catch (err) {
