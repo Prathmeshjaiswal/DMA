@@ -734,32 +734,42 @@ export default function ProfileTracker() {
         ? dayjs(min).format(BACKEND_FMT)
         : '';
 
-    // Rule 1: Everything ≥ Demand Creation Date (inclusive)
-    if (min) {
-      if (dAttached && !lte(min, dAttached)) {
-        e.attachedDate = `Attached Date must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dShared && !lte(min, dShared)) {
-        e.profileSharedDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dInterview && !lte(min, dInterview)) {
-        e.interviewDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dDecision && !lte(min, dDecision)) {
-        e.decisionDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
-    }
+   // Rule 1: Everything ≥ Demand Creation Date (inclusive)
+if (min) {
+  if (dAttached && !lte(min, dAttached)) {
+    // show only the reference field + date
+    e.attachedDate = `Demand Creation Date (${minText})`;
+  }
+  if (dShared && !lte(min, dShared)) {
+    e.profileSharedDate = `Demand Creation Date (${minText})`;
+  }
+  if (dInterview && !lte(min, dInterview)) {
+    e.interviewDate = `Demand Creation Date (${minText})`;
+  }
+  if (dDecision && !lte(min, dDecision)) {
+    e.decisionDate = `Demand Creation Date (${minText})`;
+  }
+}
 
-    // Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
-    if (dAttached && dShared && !lte(dAttached, dShared)) {
-      e.profileSharedDate = e.profileSharedDate || 'Profile Shared must be ≥ Attached Date';
-    }
-    if (dShared && dInterview && !lte(dShared, dInterview)) {
-      e.interviewDate = e.interviewDate || 'Interview must be ≥ Profile Shared';
-    }
-    if (dInterview && dDecision && !lte(dInterview, dDecision)) {
-      e.decisionDate = e.decisionDate || 'Decision must be ≥ Interview Date';
-    }
+// Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
+// For chain violations, show only the *previous step* name + its date
+if (dAttached && dShared && !lte(dAttached, dShared)) {
+  e.profileSharedDate =
+    e.profileSharedDate ||
+    `Should be on or after (${displayDate(attachedDateValue)})`;
+}
+
+if (dShared && dInterview && !lte(dShared, dInterview)) {
+  e.interviewDate =
+    e.interviewDate ||
+    `Should be on or after (${draft.profileSharedDate || '-'})`;
+}
+
+if (dInterview && dDecision && !lte(dInterview, dDecision)) {
+  e.decisionDate =
+    e.decisionDate ||
+    `Should be on or after (${draft.interviewDate || '-'})`;
+}
 
     const valid =
       !e.attachedDate &&
@@ -1501,3 +1511,5 @@ export default function ProfileTracker() {
     </Layout>
   );
 }
+
+

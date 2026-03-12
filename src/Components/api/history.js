@@ -51,4 +51,3 @@ export async function getProfileHistory(profileId, { page = 0, size = 20, includ
   });
   return normalizePageResponse(res.data);
 }
- 
