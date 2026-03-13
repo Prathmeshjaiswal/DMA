@@ -1,4 +1,3 @@
-// src/Components/DemandsManagement/RowEdit.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Upload, Button, message, Select } from "antd";
@@ -8,10 +7,12 @@ import { submitUpdateDemand } from "../../api/Demands/updatedemands";
 /** Map backend lists [{id,name}] -> [{label,value}] */
 const toOptions = (list) =>
   Array.isArray(list)
-    ? list.map((x) => ({
-        label: String(x?.name ?? "").trim(),
-        value: Number(x?.id),
-      })).filter(o => o.label && Number.isFinite(o.value))
+    ? list
+        .map((x) => ({
+          label: String(x?.name ?? "").trim(),
+          value: Number(x?.id),
+        }))
+        .filter((o) => o.label && Number.isFinite(o.value))
     : [];
 
 /** try to resolve id(s) from names string (CSV) or array of names */
@@ -19,7 +20,10 @@ const namesToIds = (options, value) => {
   if (!options?.length || value == null) return [];
   const labels = Array.isArray(value)
     ? value.map((s) => String(s).trim()).filter(Boolean)
-    : String(value).split(",").map((s) => s.trim()).filter(Boolean);
+    : String(value)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
   const map = new Map(options.map((o) => [o.label.toLowerCase(), o.value]));
   const ids = [];
   labels.forEach((name) => {
@@ -38,7 +42,7 @@ export default function RowEdit({
   row,
   columns,
   visibleColumns,
-  dropdowns,     // <-- expect full lists from getDropDownData()
+  dropdowns, // <-- expect full lists from getDropDownData()
   onSaved,
   cancelEdit,
 }) {
@@ -46,24 +50,27 @@ export default function RowEdit({
 
   // Build Select options map once
   const dd = dropdowns || {};
-  const opt = useMemo(() => ({
-    skillCluster:       toOptions(dd.skillClusterList),
-    primarySkills:      toOptions(dd.primarySkillsList),
-    secondarySkills:    toOptions(dd.secondarySkillsList),
-    hiringManager:      toOptions(dd.hiringManagerList),
-    deliveryManager:    toOptions(dd.deliveryManagerList),
-    pm:                 toOptions(dd.projectManagerList),
-    pmoSpoc:            toOptions(dd.pmoSpocList),
-    salesSpoc:          toOptions(dd.salesSpocList),
-    hbu:                toOptions(dd.hbuList),
-    demandTimeline:     toOptions(dd.demandTimelineList),
-    demandType:         toOptions(dd.demandTypeList),
-    demandLocation:     toOptions(dd.demandLocationList),
-    priority:           toOptions(dd.priorityList),
-    status:             toOptions(dd.statusList),
-    pod:                toOptions(dd.podList),
-    band:               toOptions(dd.bandList),
-  }), [dropdowns]);
+  const opt = useMemo(
+    () => ({
+      skillCluster: toOptions(dd.skillClusterList),
+      primarySkills: toOptions(dd.primarySkillsList),
+      secondarySkills: toOptions(dd.secondarySkillsList),
+      hiringManager: toOptions(dd.hiringManagerList),
+      deliveryManager: toOptions(dd.deliveryManagerList),
+      pm: toOptions(dd.projectManagerList),
+      pmoSpoc: toOptions(dd.pmoSpocList),
+      salesSpoc: toOptions(dd.salesSpocList),
+      hbu: toOptions(dd.hbuList),
+      demandTimeline: toOptions(dd.demandTimelineList),
+      demandType: toOptions(dd.demandTypeList),
+      demandLocation: toOptions(dd.demandLocationList),
+      priority: toOptions(dd.priorityList),
+      status: toOptions(dd.statusList),
+      pod: toOptions(dd.podList),
+      band: toOptions(dd.bandList),
+    }),
+    [dropdowns]
+  );
 
   // Draft state – keep raw row fields for non-select inputs
   const [draft, setDraft] = useState({});
@@ -85,6 +92,7 @@ export default function RowEdit({
     statusId: null,
     podId: null,
     bandId: null,
+    karatFlag: null, // NEW
   });
 
   const [uploadFile, setUploadFile] = useState(null);
@@ -115,9 +123,38 @@ export default function RowEdit({
       statusId: ONE(opt.status, row.status),
       podId: ONE(opt.pod, row.pod),
       bandId: ONE(opt.band, row.band),
+      // NEW: karat -> boolean flag from "Yes"/"No"
+      karatFlag:
+        String(row?.karat ?? "")
+          .trim()
+          .toLowerCase() === "yes"
+          ? true
+          : String(row?.karat ?? "")
+              .trim()
+              .toLowerCase() === "no"
+          ? false
+          : null,
     }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row, opt.skillCluster, opt.primarySkills, opt.secondarySkills, opt.hiringManager, opt.deliveryManager, opt.pm, opt.pmoSpoc, opt.salesSpoc, opt.hbu, opt.demandTimeline, opt.demandType, opt.demandLocation, opt.priority, opt.status, opt.pod, opt.band]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    row,
+    opt.skillCluster,
+    opt.primarySkills,
+    opt.secondarySkills,
+    opt.hiringManager,
+    opt.deliveryManager,
+    opt.pm,
+    opt.pmoSpoc,
+    opt.salesSpoc,
+    opt.hbu,
+    opt.demandTimeline,
+    opt.demandType,
+    opt.demandLocation,
+    opt.priority,
+    opt.status,
+    opt.pod,
+    opt.band,
+  ]);
 
   const onDraftChange = (key, value) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -143,7 +180,13 @@ export default function RowEdit({
     else if (latest?.originFileObj) setUploadFile(latest.originFileObj);
   };
   const actionsFileList = uploadFile
-    ? [{ uid: "selected-file", name: uploadFile.name ?? "Selected file", status: "done" }]
+    ? [
+        {
+          uid: "selected-file",
+          name: uploadFile.name ?? "Selected file",
+          status: "done",
+        },
+      ]
     : [];
 
   // ---------- SAVE ----------
@@ -165,7 +208,12 @@ export default function RowEdit({
 
     // Build minimal payload of changed fields
     const edited = {
-      rrNumber: draft?.rrNumber === "" ? undefined : (draft?.rrNumber != null ? Number(draft.rrNumber) : undefined),
+      rrNumber:
+        draft?.rrNumber === ""
+          ? undefined
+          : draft?.rrNumber != null
+          ? Number(draft.rrNumber)
+          : undefined,
       experience: draft?.experience,
       remark: draft?.remark,
 
@@ -186,6 +234,9 @@ export default function RowEdit({
       statusId: sel.statusId,
       podId: sel.podId,
       bandId: sel.bandId,
+
+      // NEW: Karat boolean flag
+      karatFlag: sel.karatFlag, // NEW
     };
 
     // Drop undefined/empty (so we only send changed/meaningful fields)
@@ -194,6 +245,7 @@ export default function RowEdit({
       if (Array.isArray(v)) {
         if (v.length) updateDemandDTO[k] = v;
       } else if (v !== undefined && v !== null && v !== "") {
+        // Note: boolean false is preserved by this condition
         updateDemandDTO[k] = v;
       }
     });
@@ -208,17 +260,19 @@ export default function RowEdit({
 
       if (uploadFile) {
         updateDemandDTO.fileName = uploadFile.name;
-        updateDemandDTO.filenameHint = uploadFile.name.replace(/\.[^/.]+$/, '') || 'JD';
+        updateDemandDTO.filenameHint =
+          uploadFile.name.replace(/\.[^/.]+$/, "") || "JD";
         updateDemandDTO.clearJd = false;
       }
 
-      const resp=await submitUpdateDemand({
+      const resp = await submitUpdateDemand({
         id: idNum,
         updateDemandDTO,
-        file: uploadFile ?? null,   // optional
+        file: uploadFile ?? null, // optional
       });
 
-      if(resp) {message.success("Demand updated successfully!");
+      if (resp) {
+        message.success("Demand updated successfully!");
         navigate(0);
         onSaved?.(updateDemandDTO);
         cancelEdit?.();
@@ -235,15 +289,30 @@ export default function RowEdit({
     }
   };
 
-  const multiSelectKeys = new Set([
-    "primarySkills", "secondarySkills", "demandLocation"
-  ]);
-
-  // NEW: Read-only keys (show as text in edit mode)
-  const readOnlyKeys = new Set(["karat"]); // NEW
+  const multiSelectKeys = new Set(["primarySkills", "secondarySkills", "demandLocation"]);
 
   // Render a dropdown cell for a given column key (single/multi)
   const renderSelectCell = (colKey, placeholder = "Select…") => {
+    // Special handling for Karat (Yes/No -> boolean)
+    if (colKey === "karat") {
+      const yesNoOptions = [
+        { label: "Yes", value: true },
+        { label: "No", value: false },
+      ];
+      return (
+        <Select
+          style={{ width: "100%" }}
+          placeholder={placeholder}
+          value={sel.karatFlag}
+          onChange={(v) => setSel((s) => ({ ...s, karatFlag: v }))}
+          options={yesNoOptions}
+          allowClear
+          showSearch={false}
+          disabled={isSaving}
+        />
+      );
+    }
+
     let options = [];
     let value;
     let onChange;
@@ -251,63 +320,82 @@ export default function RowEdit({
 
     switch (colKey) {
       case "skillCluster":
-        options = opt.skillCluster; value = sel.skillClusterId ?? null;
+        options = opt.skillCluster;
+        value = sel.skillClusterId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, skillClusterId: v ?? null }));
         break;
       case "primarySkills":
-        options = opt.primarySkills; value = sel.primarySkillsId;
-        onChange = (v) => setSel((s) => ({ ...s, primarySkillsId: v || [] })); mode = "multiple";
+        options = opt.primarySkills;
+        value = sel.primarySkillsId;
+        onChange = (v) => setSel((s) => ({ ...s, primarySkillsId: v || [] }));
+        mode = "multiple";
         break;
       case "secondarySkills":
-        options = opt.secondarySkills; value = sel.secondarySkillsId;
-        onChange = (v) => setSel((s) => ({ ...s, secondarySkillsId: v || [] })); mode = "multiple";
+        options = opt.secondarySkills;
+        value = sel.secondarySkillsId;
+        onChange = (v) => setSel((s) => ({ ...s, secondarySkillsId: v || [] }));
+        mode = "multiple";
         break;
       case "hiringManager":
-        options = opt.hiringManager; value = sel.hiringManagerId ?? null;
+        options = opt.hiringManager;
+        value = sel.hiringManagerId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, hiringManagerId: v ?? null }));
         break;
       case "deliveryManager":
-        options = opt.deliveryManager; value = sel.deliveryManagerId ?? null;
+        options = opt.deliveryManager;
+        value = sel.deliveryManagerId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, deliveryManagerId: v ?? null }));
         break;
       case "pm":
-        options = opt.pm; value = sel.projectManagerId ?? null;
+        options = opt.pm;
+        value = sel.projectManagerId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, projectManagerId: v ?? null }));
         break;
       case "pmoSpoc":
-        options = opt.pmoSpoc; value = sel.pmoSpocId ?? null;
+        options = opt.pmoSpoc;
+        value = sel.pmoSpocId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, pmoSpocId: v ?? null }));
         break;
       case "salesSpoc":
-        options = opt.salesSpoc; value = sel.salesSpocId ?? null;
+        options = opt.salesSpoc;
+        value = sel.salesSpocId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, salesSpocId: v ?? null }));
         break;
       case "hbu":
-        options = opt.hbu; value = sel.hbuId ?? null;
+        options = opt.hbu;
+        value = sel.hbuId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, hbuId: v ?? null }));
         break;
       case "demandTimeline":
-        options = opt.demandTimeline; value = sel.demandTimelineId ?? null;
-        onChange = (v) => setSel((s) => ({ ...s, demandTimelineId: v ?? null }));
+        options = opt.demandTimeline;
+        value = sel.demandTimelineId ?? null;
+        onChange = (v) =>
+          setSel((s) => ({ ...s, demandTimelineId: v ?? null }));
         break;
       case "demandType":
-        options = opt.demandType; value = sel.demandTypeId ?? null;
+        options = opt.demandType;
+        value = sel.demandTypeId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, demandTypeId: v ?? null }));
         break;
       case "demandLocation":
-        options = opt.demandLocation; value = sel.demandLocationId;
-        onChange = (v) => setSel((s) => ({ ...s, demandLocationId: v || [] })); mode = "multiple";
+        options = opt.demandLocation;
+        value = sel.demandLocationId;
+        onChange = (v) => setSel((s) => ({ ...s, demandLocationId: v || [] }));
+        mode = "multiple";
         break;
       case "priority":
-        options = opt.priority; value = sel.priorityId ?? null;
+        options = opt.priority;
+        value = sel.priorityId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, priorityId: v ?? null }));
         break;
       case "status":
-        options = opt.status; value = sel.statusId ?? null;
+        options = opt.status;
+        value = sel.statusId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, statusId: v ?? null }));
         break;
       case "pod":
-        options = opt.pod; value = sel.podId ?? null;
+        options = opt.pod;
+        value = sel.podId ?? null;
         onChange = (v) => setSel((s) => ({ ...s, podId: v ?? null }));
         break;
       default:
@@ -316,7 +404,7 @@ export default function RowEdit({
 
     return (
       <Select
-        style={{ width: '100%' }}
+        style={{ width: "100%" }}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
@@ -356,27 +444,33 @@ export default function RowEdit({
             );
           }
 
-          // NEW: read-only cells (show plain text in edit mode)
-          if (readOnlyKeys.has(colKey)) {
-            return (
-              <td key={colKey} className="border-b border-gray-200 px-4 py-3">
-                <div className="block max-w-40 truncate text-sm text-gray-800">
-                  {row[colKey] ?? ""}
-                </div>
-              </td>
-            );
-          } // NEW
-
-          // Dropdown-rendered keys
+          // Dropdown-rendered keys (including karat now)
           const dropdownKeys = new Set([
-            "skillCluster","primarySkills","secondarySkills","hiringManager","deliveryManager",
-            "pm","pmoSpoc","salesSpoc","hbu","demandTimeline","demandType","demandLocation",
-            "priority","status","pod"
+            "karat", // NEW
+            "skillCluster",
+            "primarySkills",
+            "secondarySkills",
+            "hiringManager",
+            "deliveryManager",
+            "pm",
+            "pmoSpoc",
+            "salesSpoc",
+            "hbu",
+            "demandTimeline",
+            "demandType",
+            "demandLocation",
+            "priority",
+            "status",
+            "pod",
           ]);
 
           if (dropdownKeys.has(colKey)) {
             return (
-              <td key={colKey} className="border-b border-gray-200 px-4 py-3" style={{ minWidth: 180 }}>
+              <td
+                key={colKey}
+                className="border-b border-gray-200 px-4 py-3"
+                style={{ minWidth: 180 }}
+              >
                 {renderSelectCell(colKey, `Select ${col.label}`)}
               </td>
             );

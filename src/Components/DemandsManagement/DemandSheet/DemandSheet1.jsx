@@ -468,19 +468,19 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Spin, Alert, Button, message, Pagination } from "antd";
-import { PlusOutlined,ExportOutlined } from "@ant-design/icons";
+import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 
 import Layout from "../../Layout.jsx";
 import ColumnsSelector from "./ColumnsSelector.jsx";
 import DemandTable from "./DemandTable.jsx";
 import DemandDetailModal from "./DemandDetailModal.jsx";
-import { exportDemandSheet } from '../../api/Export/demandsheet.js'
+import { exportDemandSheet } from "../../api/Export/demandsheet.js";
 import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
 
 // ---------- helpers to flatten backend objects ----------
 const nameOf = (obj) =>
-  (obj && typeof obj === "object" ? (obj.name ?? "") : String(obj ?? ""));
+  obj && typeof obj === "object" ? obj.name ?? "" : String(obj ?? "");
 
 const joinNames = (arr) =>
   Array.isArray(arr)
@@ -498,9 +498,9 @@ const splitNames = (v) =>
     .filter(Boolean);
 
 /**
-* Normalize backend DTO (objects with {id,name}, arrays) to flat table row.
-* Prefers displayDemandId (e.g., "CTO-100") as demandId for the table chip.
-*/
+ * Normalize backend DTO (objects with {id,name}, arrays) to flat table row.
+ * Prefers displayDemandId (e.g., "CTO-100") as demandId for the table chip.
+ */
 const normalizeDemandDto = (d) => ({
   demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
   rrNumber: String(d.rrNumber ?? ""),
@@ -533,6 +533,9 @@ const normalizeDemandDto = (d) => ({
   demandReceivedDate: d.demandReceivedDate ?? "",
   remark: d.remark ?? "",
 
+  // NEW: Presentable Karat flag ("Yes" | "No" | "")
+  karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "", // NEW
+
   // Raw id / file name
   id: d.id,
   jdFileName: d.jdFileName ?? d.fileName ?? null,
@@ -543,41 +546,61 @@ export default function DemandSheet1() {
 
   // === Columns in required sequence (as per your order) ===
   const ALL_COLUMNS = [
-    { key: "demandId",        label: "Demand ID", alwaysVisible: true },
-    { key: "rrNumber",        label: "RR" },
-    { key: "lob",             label: "LOB" },
-    { key: "skillCluster",    label: "Skill Cluster" },
-    { key: "primarySkills",   label: "Primary Skill" },
+    { key: "demandId", label: "Demand ID", alwaysVisible: true },
+    { key: "rrNumber", label: "RR" },
+    { key: "lob", label: "LOB" },
+    { key: "skillCluster", label: "Skill Cluster" },
+    { key: "primarySkills", label: "Primary Skill" },
     { key: "secondarySkills", label: "Secondary Skill" },
-    { key: "priority",        label: "Priority" },
-    { key: "status",          label: "Status" },
-    { key: "hbu",             label: "HBU" },
-    { key: "p1Age",           label: "P1 Age" }, // (kept for order; not filtering)
-    { key: "demandTimeline",  label: "Demand Timeline" },
-    { key: "demandType",      label: "Demand Type" },
-    { key: "demandLocation",  label: "Demand Location" },
-    { key: "hiringManager",   label: "Hiring Manager" },
+    { key: "priority", label: "Priority" },
+    { key: "status", label: "Status" },
+    { key: "karat", label: "Karat" }, // NEW
+    { key: "hbu", label: "HBU" },
+    { key: "p1Age", label: "P1 Age" }, // (kept for order; not filtering)
+    { key: "demandTimeline", label: "Demand Timeline" },
+    { key: "demandType", label: "Demand Type" },
+    { key: "demandLocation", label: "Demand Location" },
+    { key: "hiringManager", label: "Hiring Manager" },
     { key: "deliveryManager", label: "Delivery Manager" },
-    { key: "pm",              label: "PM" },
-    { key: "pmoSpoc",         label: "PMO SPOC" },
-    { key: "salesSpoc",       label: "Sales Spoc" },
-    { key: "pmo",             label: "PMO" },
-    { key: "band",            label: "Band" },
-    { key: "experience",      label: "Experience" },
-    { key: "statusNote",      label: "Status Note" },
+    { key: "pm", label: "PM" },
+    { key: "pmoSpoc", label: "PMO SPOC" },
+    { key: "salesSpoc", label: "Sales Spoc" },
+    { key: "pmo", label: "PMO" },
+    { key: "band", label: "Band" },
+    { key: "experience", label: "Experience" },
+    { key: "statusNote", label: "Status Note" },
     // keep available (not default-visible)
-    { key: "prodProgramName",     label: "Pod /Programme Name" },
-    { key: "demandReceivedDate",  label: "Demand Recieved Date" },
-    { key: "priorityComment",     label: "Priority Comment" },
-    { key: "currentProfileShared",label: "Current Profile Shared (Drop Down)" },
-    { key: "externalInternal",    label: "External / Internal" },
+    { key: "prodProgramName", label: "Pod /Programme Name" },
+    { key: "demandReceivedDate", label: "Demand Recieved Date" },
+    { key: "priorityComment", label: "Priority Comment" },
+    { key: "currentProfileShared", label: "Current Profile Shared (Drop Down)" },
+    { key: "externalInternal", label: "External / Internal" },
   ];
 
   // Default visible columns matching the same order
   const defaultVisible = [
-    "demandId","rrNumber","lob","skillCluster","primarySkills","secondarySkills",
-    "priority","status","hbu","p1Age","demandTimeline","demandType",
-    "demandLocation","hiringManager","deliveryManager","pm","pmoSpoc","salesSpoc","pmo","band","experience"
+    "demandId",
+    "rrNumber",
+    "lob",
+    "skillCluster",
+    "primarySkills",
+    "secondarySkills",
+    "priority",
+    "status",
+    "karat", // UPDATED: included
+    "hbu",
+    "p1Age",
+    "demandTimeline",
+    "demandType",
+    "demandLocation",
+    "hiringManager",
+    "deliveryManager",
+    "pm",
+    "pmoSpoc",
+    "salesSpoc",
+    "pmo",
+    "band",
+    "experience",
   ];
 
   // API state
@@ -610,8 +633,9 @@ export default function DemandSheet1() {
     skillCluster: "",
     primarySkills: "",
     secondarySkills: "",
-    priority: "",           // P1/P2/P3
+    priority: "", // P1/P2/P3
     status: "",
+    karat: "", // NEW: Yes/No
     hbu: "",
     demandTimeline: "",
     demandType: "",
@@ -628,7 +652,8 @@ export default function DemandSheet1() {
 
   const filterConfig = useMemo(() => {
     const text = { type: "text" };
-    const mkSel = (arr) => Array.isArray(arr) ? { type: "select", options: arr } : text;
+    const mkSel = (arr) =>
+      Array.isArray(arr) ? { type: "select", options: arr } : text;
 
     return {
       demandId: text,
@@ -637,11 +662,15 @@ export default function DemandSheet1() {
       skillCluster: text,
       primarySkills: text,
       secondarySkills: text,
-      priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
+      priority: {
+        type: "select",
+        options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }],
+      },
       status: text,
+      karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] }, // NEW
       hbu: text,
       demandTimeline: mkSel(dropdowns?.demandTimeline), // expects [{id,name}]
-      demandType: mkSel(dropdowns?.demandType),         // expects [{id,name}]
+      demandType: mkSel(dropdowns?.demandType), // expects [{id,name}]
       demandLocation: text,
       hiringManager: text,
       deliveryManager: text,
@@ -666,15 +695,6 @@ export default function DemandSheet1() {
 
   /**
    * Map UI filters -> backend search payload (matching your Postman contract).
-   * Examples (from your Postman):
-   * - primarySkillNames: [".net+Angular"]
-   * - secondarySkillNames: ["Angular"]
-   * - primarySkillsIds: [1]             // (UI doesn't expose it; left for future)
-   * - receivedFrom / receivedTo: "YYYY-MM-DD" // (UI not wired here)
-   * - status: "open positions"
-   * - demandId: 104
-   * - projectManagerName, hbuSpocName, pmoName, pmoSpocName, salesSpocName
-   * - remark, hbuName, lobName, skillClusterName
    */
   const buildFilterPayload = (f) => {
     const payload = {};
@@ -689,23 +709,34 @@ export default function DemandSheet1() {
     // RR number (if backend supports it)
     if (f.rrNumber) {
       const rrDigits = onlyDigits(f.rrNumber);
-      payload.rrNumber = rrDigits ? Number(rrDigits) : String(f.rrNumber).trim();
+      payload.rrNumber = rrDigits
+        ? Number(rrDigits)
+        : String(f.rrNumber).trim();
     }
 
     // Names that backend expects with `...Name`
-    if (f.lob)          payload.lobName = String(f.lob).trim();
-    if (f.hbu)          payload.hbuName = String(f.hbu).trim();
+    if (f.lob) payload.lobName = String(f.lob).trim();
+    if (f.hbu) payload.hbuName = String(f.hbu).trim();
     if (f.skillCluster) payload.skillClusterName = String(f.skillCluster).trim();
 
-    if (f.hiringManager)   payload.hiringManagerName   = String(f.hiringManager).trim();
-    if (f.deliveryManager) payload.deliveryManagerName = String(f.deliveryManager).trim();
-    if (f.pm)              payload.projectManagerName  = String(f.pm).trim();
-    if (f.pmoSpoc)         payload.pmoSpocName         = String(f.pmoSpoc).trim();
-    if (f.salesSpoc)       payload.salesSpocName       = String(f.salesSpoc).trim();
-    if (f.pmo)             payload.pmoName             = String(f.pmo).trim();
+    if (f.hiringManager)
+      payload.hiringManagerName = String(f.hiringManager).trim();
+    if (f.deliveryManager)
+      payload.deliveryManagerName = String(f.deliveryManager).trim();
+    if (f.pm) payload.projectManagerName = String(f.pm).trim();
+    if (f.pmoSpoc) payload.pmoSpocName = String(f.pmoSpoc).trim();
+    if (f.salesSpoc) payload.salesSpocName = String(f.salesSpoc).trim();
+    if (f.pmo) payload.pmoName = String(f.pmo).trim();
 
     // Status (string)
     if (f.status) payload.status = String(f.status).trim();
+
+    // NEW: Karat -> backend boolean `karatFlag`
+    if (f.karat) {
+      const v = String(f.karat).trim().toLowerCase();
+      if (v === "yes") payload.karatFlag = true;
+      else if (v === "no") payload.karatFlag = false;
+    }
 
     // Demand Location -> names array
     const locNames = splitNames(f.demandLocation);
@@ -718,18 +749,14 @@ export default function DemandSheet1() {
     const sec = splitNames(f.secondarySkills);
     if (sec.length) payload.secondarySkillNames = sec;
 
-    // Priority, Demand Timeline/Type, Band, Experience:
-    // (No explicit spec in your Postman sample; passing verbatim if present)
-    if (f.priority)        payload.priority = String(f.priority).trim();
-    if (f.demandTimeline)  payload.demandTimeline = String(f.demandTimeline).trim();
-    if (f.demandType)      payload.demandType = String(f.demandType).trim();
-    if (f.band)            payload.band = String(f.band).trim();
-    if (f.experience)      payload.experience = String(f.experience).trim();
+    // Priority, Demand Timeline/Type, Band, Experience (pass as-is if present)
+    if (f.priority) payload.priority = String(f.priority).trim();
+    if (f.demandTimeline) payload.demandTimeline = String(f.demandTimeline).trim();
+    if (f.demandType) payload.demandType = String(f.demandType).trim();
+    if (f.band) payload.band = String(f.band).trim();
+    if (f.experience) payload.experience = String(f.experience).trim();
 
-    // NOTE: receivedFrom / receivedTo can be added when you add date inputs in header.
-    // payload.receivedFrom = 'YYYY-MM-DD'
-    // payload.receivedTo   = 'YYYY-MM-DD'
-
+    // NOTE: receivedFrom / receivedTo can be added later as date inputs in header.
     return payload;
   };
 
@@ -757,30 +784,28 @@ export default function DemandSheet1() {
         let resp;
         if (hasAnyFilter) {
           const payload = buildFilterPayload(filters);
-
-          // Optional: uncomment to inspect the effective payload
-          // console.log("[Demands.search] payload =>", payload, { page: apiPage, size: apiSize });
-
           resp = await searchDemands(payload, apiPage, apiSize);
         } else {
           resp = await getDemandsheet(apiPage, apiSize);
         }
 
-        const list =
-          Array.isArray(resp?.data?.content) ? resp.data.content :
-          Array.isArray(resp?.content)        ? resp.content :
-          Array.isArray(resp)                 ? resp :
-          [];
+        const list = Array.isArray(resp?.data?.content)
+          ? resp.data.content
+          : Array.isArray(resp?.content)
+          ? resp.content
+          : Array.isArray(resp)
+          ? resp
+          : [];
 
         const total =
-          resp?.data?.totalElements ?? resp?.totalElements ??
-          resp?.data?.total ?? resp?.total ??
+          resp?.data?.totalElements ??
+          resp?.totalElements ??
+          resp?.data?.total ??
+          resp?.total ??
           (Array.isArray(resp) ? resp.length : 0);
 
-        const pageIndex =
-          resp?.data?.number ?? resp?.number ?? apiPage; // 0-based
-        const pageSz =
-          resp?.data?.size ?? resp?.size ?? apiSize;
+        const pageIndex = resp?.data?.number ?? resp?.number ?? apiPage; // 0-based
+        const pageSz = resp?.data?.size ?? resp?.size ?? apiSize;
 
         const normalized = list.map(normalizeDemandDto);
 
@@ -820,13 +845,14 @@ export default function DemandSheet1() {
     try {
       setLoading(true);
       await exportDemandSheet();
-      message.success('DemandSheet exported successfully.');
+      message.success("DemandSheet exported successfully.");
     } catch (e) {
-      message.error('Failed to export DemandSheet.');
+      message.error("Failed to export DemandSheet.");
     } finally {
       setLoading(false);
     }
   };
+
   const onPageChange = (page, size) => {
     setCurrentPage(page);
     setPageSize(size);
@@ -849,14 +875,21 @@ export default function DemandSheet1() {
 
   if (loading || ddLoading) {
     return (
-      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'200px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "200px",
+        }}
+      >
         <Spin size="large" tip="Loading..." />
       </div>
     );
   }
   if (apiError) {
     return (
-      <div style={{ padding:'16px' }}>
+      <div style={{ padding: "16px" }}>
         <Alert message="Error" description={apiError} type="error" showIcon />
       </div>
     );
@@ -891,23 +924,25 @@ export default function DemandSheet1() {
               <Button
                 type="default"
                 icon={<PlusOutlined />}
-                onClick={() =>{
-                  try { localStorage.removeItem('step1DraftId'); } catch {}
-                  navigate('/addDemands1');
+                onClick={() => {
+                  try {
+                    localStorage.removeItem("step1DraftId");
+                  } catch {}
+                  navigate("/addDemands1");
                 }}
                 className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
               >
                 Add New Demands
               </Button>
-                  <Button
-                    type="default"
-                    icon={<ExportOutlined  />}
-                    loading={loading}
-                    onClick={handleExport}
-                    className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-                  >
-                    Export DemandSheet
-                  </Button>
+              <Button
+                type="default"
+                icon={<ExportOutlined />}
+                loading={loading}
+                onClick={handleExport}
+                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
+              >
+                Export DemandSheet
+              </Button>
             </div>
           </div>
 
