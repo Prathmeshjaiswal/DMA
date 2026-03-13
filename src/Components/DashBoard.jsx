@@ -1,15 +1,16 @@
+
 // ================== src/pages/Dashboard.jsx ==================
 import React, { useEffect, useMemo, useState } from 'react';
 import { DatePicker, message, Spin } from 'antd';
 import dayjs from 'dayjs';
-import Layout from '../Layout.jsx';
+import Layout from './Layout.jsx';
 
 import {
   getDashboardCount,
   getLobSummary,
   getHbuSummary,
   getPrioritySummary,
-} from "../api/DashBoardData.js";
+} from "./api/DashBoardData.js";
 
 import {
   ResponsiveContainer,
@@ -170,7 +171,7 @@ export default function Dashboard() {
   const cards = useMemo(() => ([
     { key: 'totalDemands', label: 'Total Demands', labelClass: 'text-sm text-orange-400', value: count.totalDemands },
     { key: 'openPositions', label: 'Open Positions', labelClass: 'text-sm text-gray-300', value: count.openCount },
-    { key: 'closedPositions', label: 'Closed Positions', labelClass: 'text-sm text-gray-300', value: count.closedCount },
+    { key: 'Demand Fulfilled', label: 'Demand Fulfilled', labelClass: 'text-sm text-gray-300', value: count.closedCount },
     { key: 'Demand Abandoned', label: 'Demand Abandoned', labelClass: 'text-sm text-gray-300', value: count.rejectedCount },
   ]), [count]);
 
