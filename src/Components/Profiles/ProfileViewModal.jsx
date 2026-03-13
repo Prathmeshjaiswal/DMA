@@ -447,6 +447,7 @@ export default function ProfileViewModal({ open, onClose, profile, width = 900 }
                     <div className="space-y-1.5 leading-tight">
                       <RowL label="Candidate" value={profile.candidateName || "-"} />
                       <RowL label="Email" value={profile.emailId || "-"} />
+                      <RowL label="Email" value={profile.panNumber || "-"} />
                       <RowL label="Phone" value={profile.phoneNumber || "-"} />
                       <RowL label="Experience" value={profile.experienceYears || "-"} />
                       <RowL label="Location" value={profile.location || "-"} />

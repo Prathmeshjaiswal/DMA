@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Layout from "../Layout";
 import {
@@ -13,7 +12,7 @@ import {
   Select,
   Pagination,
 } from "antd";
-import { EditOutlined, EyeOutlined, SearchOutlined } from "@ant-design/icons";
+import { EditOutlined, ExportOutlined,EyeOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   getAllOnboardings,
   searchOnboardings,
@@ -21,6 +20,8 @@ import {
 } from "../api/Onboarding/onBoarding";
 import { searchProfileTracker } from "../api/Trackers/tracker"; // ✅ fetch Decision Date
 import OnboardingEditModal from "./OnboardingEditModal";
+import HistoryPanel from "../History/HistoryPanel";
+import { exportOnboardingTrackerSheet } from '../api/Export/onboardingtrackersheet'
 
 /* ---------------- helpers ---------------- */
 function fmtDate(d) {
@@ -123,7 +124,7 @@ function normalizeOnboardingRow(item = {}) {
     item?.demand?.demandDisplayId ??
     null;
 
-  // ✅ local object for demand (avoid "demand is not defined")
+  // ✅ local object for demand
   const demandObj = {
     demandId,
     demandNumber,
@@ -359,6 +360,69 @@ function RowLine({ label, value }) {
   );
 }
 
+/* --------- small label/value row for Onboarding detail tab --------- */
+function RowLabelValue({ label, value }) {
+  return (
+    <div className="leading-tight text-[12px]">
+      <strong className="text-gray-900 whitespace-nowrap">{label}: </strong>
+      <span className="text-gray-800">{value ?? "-"}</span>
+    </div>
+  );
+}
+
+/* --------- Onboarding detail section (2 columns) --------- */
+function OnboardingDetailSection({ row }) {
+  if (!row) return null;
+
+  const demand = row?.demand ?? {};
+  const profile = row?.profile ?? {};
+
+  const lob = nameOf(demand?.lob) || "-";
+  const hbu = nameOf(demand?.hbu) || "-";
+  const band = nameOf(demand?.band) || "-";
+  const hiringManager = nameOf(demand?.hiringManager) || "-";
+  const pmoSpoc = nameOf(demand?.pmoSpoc) || "-";
+
+  const wbsType = nameOf(row?.wbsType) || "-";
+  const bgvStatus = nameOf(row?.bgvStatus) || "-";
+  const onboardingStatus = nameOf(row?.onboardingStatus) || "-";
+
+  const demandPill = demandCode(row);
+  const ctoolId = row?.ctoolId ?? "-";
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+        {/* LEFT */}
+        <div className="space-y-1.5">
+          <RowLabelValue label="Demand" value={demandPill} />
+          <RowLabelValue label="LOB" value={lob} />
+          <RowLabelValue label="HBU" value={hbu} />
+          <RowLabelValue label="Band" value={band} />
+          <RowLabelValue label="Hiring Manager" value={hiringManager} />
+          <RowLabelValue label="PMO SPOC" value={pmoSpoc} />
+          <RowLabelValue label="Candidate" value={profile?.candidateName ?? "-"} />
+          <RowLabelValue label="Profile Type" value={nameOf(profile?.externalInternal) || "-"} />
+        </div>
+
+        {/* RIGHT */}
+        <div className="space-y-1.5">
+          <RowLabelValue label="WBS Type" value={wbsType} />
+          <RowLabelValue label="BGV Status" value={bgvStatus} />
+          <RowLabelValue label="Onboarding Status" value={onboardingStatus} />
+          <RowLabelValue label="Offer Date" value={fmtDate(row?.offerDate)} />
+          <RowLabelValue label="DOJ" value={fmtDate(row?.dateOfJoining)} />
+          <RowLabelValue label="PEV Upload" value={fmtDate(row?.pevUploadDate)} />
+          <RowLabelValue label="VP Tagging" value={fmtDate(row?.vpTagging)} />
+          <RowLabelValue label="Tech Select" value={fmtDate(row?.techSelectDate)} />
+          <RowLabelValue label="HSBC Onboard" value={fmtDate(row?.hsbcOnboardingDate)} />
+          <RowLabelValue label="C-Tool ID" value={ctoolId} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingList() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -569,6 +633,17 @@ export default function OnboardingList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      await exportOnboardingTrackerSheet();
+      message.success('Onboarding TrackerSheet exported successfully.');
+    } catch (e) {
+      message.error('Failed to export Onboarding TrackerSheet.');
+    } finally {
+      setLoading(false);
+    }
+  };
   // debounce on query/size
   useEffect(() => {
     const t = setTimeout(() => fetchServer(0, size), 250);
@@ -976,40 +1051,34 @@ export default function OnboardingList() {
     return base;
   }, [colModel, query, dropdownOptions, ddLoading]);
 
-  /* ---------------- View Details Modal Tabs (History only) ---------------- */
+  /* ---------------- View Details Modal Tabs (Onboarding Detail + History) ---------------- */
   const viewTabs = useMemo(() => {
     if (!viewRow) return [];
 
+    // Demand entity primary key id (for history)
+    const demandEntityId =
+      viewRow?.demand?.demandPkId ??
+      viewRow?.demandPkId ??
+      viewRow?.demand?.id ??
+      null;
+
     return [
+      {
+        key: "onboarding",
+        label: "Onboarding Detail",
+        children: (
+          <div className="space-y-3">
+            <OnboardingDetailSection row={viewRow} />
+          </div>
+        ),
+      },
       {
         key: "history",
         label: "History",
         children: (
-          <div className="space-y-3">
-            <Section title="">
-              <div className="space-y-2">
-                <RowLine label="Updated By" value="-" />
-                <RowLine label="Updated At" value="-" />
-                <div className="leading-tight">
-                  <strong className="text-gray-900">Updated Data:</strong>
-                  <div
-                    className="mt-1 text-gray-700"
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 6,
-                      padding: "8px 10px",
-                      background: "#fafafa",
-                      fontFamily:
-                        "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono','Courier New', monospace",
-                      fontSize: 12,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    No change log available.
-                  </div>
-                </div>
-              </div>
-            </Section>
+          <div className="p-1">
+            {/* mode='demand' with demand's row id */}
+            <HistoryPanel mode="demand" entityId={demandEntityId} />
           </div>
         ),
       },
@@ -1020,11 +1089,25 @@ export default function OnboardingList() {
     <>
       <Layout>
         <div className="px-4 pt-2 md:px-6 md:pt-3">
-          <div className="mb-2 w-full flex items-center justify-center pt-1">
-            <h2 className="text-lg font-bold text-gray-900 text-center m-0">
-              Onboarding Tracker
-            </h2>
-          </div>
+            <div className=" grid grid-cols-3 w-full items-center">
+            <div></div>
+          <div className="">
+        <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
+          Onboarding Tracker
+        </h2>
+        </div>
+          <div className="flex items-start justify-end gap-1 py-1">
+                          <Button
+                            type="default"
+                            icon={<ExportOutlined  />}
+                            loading={loading}
+                            onClick={handleExport}
+                            className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 py-2"
+                          >
+                            Export Onboarding TrackerSheet
+                          </Button>
+                          </div>
+              </div>
 
           <style>{`
             .onboarding-table .ant-table-thead > tr > th {
@@ -1059,9 +1142,6 @@ export default function OnboardingList() {
           {errorMsg && (
             <div className="mb-2">
               <Alert type="error" showIcon message={errorMsg} />
-              {/* If AntD warns about 'message' deprecation, you can switch to:
-                <Alert type="error" showIcon title="Error" description={errorMsg} />
-              */}
             </div>
           )}
 
@@ -1119,7 +1199,7 @@ export default function OnboardingList() {
             onUpdated={() => fetchServer(page, size)}
           />
 
-          {/* View Details Modal (History only) */}
+          {/* View Modal with two tabs: Onboarding Detail + History */}
           <Modal
             open={viewOpen}
             onCancel={closeView}
@@ -1135,7 +1215,7 @@ export default function OnboardingList() {
               </div>
             }
           >
-            {viewRow ? <Tabs defaultActiveKey="history" items={viewTabs} /> : null}
+            {viewRow ? <Tabs defaultActiveKey="onboarding" items={viewTabs} /> : null}
           </Modal>
         </div>
       </Layout>

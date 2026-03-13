@@ -80,6 +80,16 @@ export default function ProfileTable({
       ? row.secondarySkillsArray.map((n) => String(n))
       : [],
     summary: row?.summary ?? "",
+
+    // NEW: PAN initial (try common keys; normalize to uppercase)
+    panCard:
+      row?.panCard && String(row.panCard).trim() !== ""
+        ? String(row.panCard).toUpperCase()
+        : row?.pan && String(row.pan).trim() !== ""
+        ? String(row.pan).toUpperCase()
+        : row?.panNumber && String(row.panNumber).trim() !== ""
+        ? String(row.panNumber).toUpperCase()
+        : undefined,
   });
 
   const openEdit = (row) => {
@@ -145,6 +155,12 @@ export default function ProfileTable({
       const primarySkillsIds = toNumArr(values.primarySkillsIds);
       const secondarySkillsIds = toNumArr(values.secondarySkillsIds);
 
+      // NEW: normalize PAN to uppercase no-space
+      const panCard =
+        values.panCard != null && String(values.panCard).trim() !== ""
+          ? String(values.panCard).toUpperCase().replace(/\s+/g, "")
+          : undefined;
+
       const patch = {};
       if (candidateName != null) patch.candidateName = candidateName; // UPDATED
       if (emailId != null) patch.emailId = emailId; // UPDATED
@@ -159,6 +175,7 @@ export default function ProfileTable({
       patch.secondarySkillsIds = secondarySkillsIds;
 
       if (empDigits !== undefined) patch.empId = empDigits; // UPDATED
+      if (panCard !== undefined) patch.panCard = panCard; // NEW
 
       if (values.summary != null) patch.summary = String(values.summary).trim();
 
@@ -279,7 +296,6 @@ export default function ProfileTable({
 
           fileName = raw;
         }
-
 
         return (
           <div
@@ -442,6 +458,24 @@ export default function ProfileTable({
               ]}
             >
               <Input placeholder="name@example.com" />
+            </Form.Item>
+
+            {/* NEW: PAN Number (same pattern as RDGTA) */}
+            <Form.Item
+              name="panCard"
+              label="PAN Number"
+              getValueFromEvent={(e) =>
+                (e?.target?.value || "").toUpperCase().replace(/\s+/g, "")
+              }
+              rules={[
+                { required: true, message: "PAN is required" },
+                {
+                  pattern: /^[A-Z]{5}[0-9]{4}[A-Z]$/,
+                  message: "Invalid PAN format. Use 10 chars: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).",
+                },
+              ]}
+            >
+              <Input placeholder="e.g., ABCDE1234F" maxLength={10} />
             </Form.Item>
 
             {editRow?.empId != null && String(editRow.empId).trim() !== "" && (

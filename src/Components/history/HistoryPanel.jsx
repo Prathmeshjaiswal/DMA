@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 
 // 🔁 Adjust import path if needed
-import { getDemandHistory, getProfileHistory } from "../api/history";
+import { getDemandHistory, getProfileHistory } from ".././api/History";
 
 /* ----------------------------- icon + color ------------------------------ */
 const actionStyle = (action = "") => {
@@ -58,7 +58,16 @@ const capitalizeWords = (s) => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-// Prefer names/labels; handle arrays; otherwise show raw values (including IDs)
+// Title-case a name like "simran kasare" -> "Simran Kasare"
+const titleCase = (name) =>
+  String(name || "")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+/**
+ * Prefer names/labels; handle arrays; and for plain objects that
+ * don't expose a friendly key, return null (so UI shows —) rather than JSON.
+ */
 function extractDisplay(val) {
   if (val == null) return null;
 
@@ -67,21 +76,27 @@ function extractDisplay(val) {
     const parts = val
       .map((x) => {
         if (x == null) return null;
-        if (typeof x === "object") return x.name ?? x.label ?? x.value ?? JSON.stringify(x);
-        return String(x);
+        if (typeof x === "object") {
+          const named = x.name ?? x.label ?? x.value ?? null;
+          return named != null && String(named).trim() !== "" ? String(named) : null;
+        }
+        const s = String(x);
+        return s.trim() !== "" ? s : null;
       })
       .filter(Boolean);
-    // If it was an array of objects with names, join names; otherwise JSON/strings
     return parts.length ? parts.join(", ") : null;
   }
 
   // Object
   if (typeof val === "object") {
-    return val.name ?? val.label ?? val.value ?? JSON.stringify(val);
+    const named = val.name ?? val.label ?? val.value ?? null;
+    if (named == null || String(named).trim() === "") return null;
+    return String(named);
   }
 
   // Primitive
-  return String(val);
+  const s = String(val);
+  return s.trim() === "" ? null : s;
 }
 
 // Friendly labels
@@ -96,16 +111,18 @@ const LABELS = {
   hbu: "HBU",
   locationId: "Location Id",
   location: "Location",
+  onboardingStatus: "Onboarding Status",
+  bgvStatus: "BGV Status",
+  interviewDate: "Interview Date",
 };
 function makeFieldLabel(field) {
   return LABELS[field] ?? capitalizeWords(field);
 }
 
 /**
- * Build sentences from diff:
- *  - Uses names/labels if present. Otherwise shows raw values (including numeric IDs).
- *  - Keeps ID fields visible as requested.
- *  - Also supports optional status fields if present separately.
+ * Build sentences from diff (non-ATTACH path):
+ *  - Uses names/labels if present. Otherwise shows — for blank/unknown.
+ *  - Keeps ID fields visible.
  */
 function buildChangeSentences(item) {
   const sentences = [];
@@ -140,28 +157,16 @@ function buildChangeSentences(item) {
       toVal = detail;
     }
 
-    const fromTxt = extractDisplay(fromVal);
-    const toTxt = extractDisplay(toVal);
+    const fromTxt = extractDisplay(fromVal) ?? "—";
+    const toTxt = extractDisplay(toVal) ?? "—";
+    const label = makeFieldLabel(field);
 
-    const label = makeFieldLabel(field.endsWith("Id") ? field : field);
-
-    if (fromTxt != null || toTxt != null) {
-      if (fromTxt != null && toTxt != null) {
-        sentences.push({
-          field: label,
-          from: fromTxt,
-          to: toTxt,
-          sentence: `${label} changed from ${fromTxt} to ${toTxt}`,
-        });
-      } else {
-        sentences.push({
-          field: label,
-          from: "—",
-          to: toTxt ?? "—",
-          sentence: `${label} changed to ${toTxt ?? "—"}`,
-        });
-      }
-    }
+    sentences.push({
+      field: label,
+      from: fromTxt,
+      to: toTxt,
+      sentence: `${label} changed from ${fromTxt} to ${toTxt}`,
+    });
   }
 
   // De-dup by sentence
@@ -176,44 +181,31 @@ function buildChangeSentences(item) {
 /* -------------------------- sentence rendering --------------------------- */
 function ValuePill({ value, tone = "old" }) {
   // old -> red, new -> green
-  const styleOld = {
-    backgroundColor: "#fef2f2", // red-50
-    color: "#991b1b",           // red-700
-    border: "1px solid #fecaca",// red-200
-  };
-  const styleNew = {
-    backgroundColor: "#f0fdf4", // green-50
-    color: "#166534",           // green-700
-    border: "1px solid #bbf7d0",// green-200
-  };
+  const styleOld = { backgroundColor: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" };
+  const styleNew = { backgroundColor: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" };
   const style = tone === "new" ? styleNew : styleOld;
 
   return (
-    <span
-      className="inline-block rounded-md px-1.5 py-[1px] text-[12px] align-baseline"
-      style={style}
-    >
+    <span className="inline-block rounded-md px-1.5 py-[1px] text-[12px] align-baseline" style={style}>
       {String(value)}
     </span>
   );
 }
 
 function SentenceRow({ s }) {
-  // s = { field, from, to, sentence }
   const fieldLabel = s.field || "Field";
   const hasBoth = s.from != null && s.to != null;
 
   return (
     <div className="text-gray-800">
-      {/* • Field changed from [old] to [new] */}
-      <span className="select-none ">•</span>
+      <span className="select-none">•</span>{" "}
       <strong>{fieldLabel}</strong>
       {hasBoth ? (
         <>
           {" "}changed from{" "}
-          <ValuePill value={s.from} tone="old" />
+          <ValuePill value={s.from ?? "—"} tone="old" />
           {" "}to{" "}
-          <ValuePill value={s.to} tone="new" />
+          <ValuePill value={s.to ?? "—"} tone="new" />
         </>
       ) : (
         <>
@@ -229,18 +221,48 @@ function SentenceRow({ s }) {
 function HistoryItem({ item }) {
   const action = item?.action ?? "EVENT";
   const { color, icon } = actionStyle(action);
+
+  // changedByUserId can be an object: { userId, username }
   const actor =
-    item?.changedByName ??
-    item?.userName ??
-    item?.modifiedByName ??
-    item?.createdByName ??
-    item?.changedByUserId ??
+    (typeof item?.changedByUserId === "object" && (item?.changedByUserId?.username || item?.changedByUserId?.userId)) ||
+    item?.username ||
+    item?.userName ||
+    item?.changedByName ||
+    item?.changedByUserId ||
     "System";
+
   const changedAt =
     item?.changedAt ?? item?.timestamp ?? item?.occurredAt ?? item?.createdAt ?? item?.updatedAt;
 
-  const sentences = buildChangeSentences(item);
   const type = item?.entityType;
+
+  // ---------- Special case: ATTACH event ----------
+  const isAttach = String(action).toUpperCase().includes("ATTACH");
+
+  // Resolve candidate name robustly and title-case it
+  const candidateNameRaw =
+    item?.profileInfoDTO?.candidateName ??
+    item?.candidateName ??
+    item?.profileName ??
+    null;
+  const candidateName = candidateNameRaw ? titleCase(candidateNameRaw) : null;
+
+  let sentences = [];
+  if (isAttach) {
+    // ✅ As requested: show candidate name inside the green (styleNew) ValuePill
+    // Single friendly sentence, no diff rows.
+    sentences = [{
+      field: "Attachment",
+      from: "—",
+      to: candidateName ?? "—",
+      sentence: candidateName
+        ? `Profile attached: ${candidateName}`
+        : `Profile attached`,
+    }];
+  } else {
+    // Non-attach: use normal diff mapping
+    sentences = buildChangeSentences(item);
+  }
 
   return (
     <div className="w-full">
@@ -249,7 +271,7 @@ function HistoryItem({ item }) {
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <Tag color={color} className="px-2 py-0.5 text-[12px]">{action}</Tag>
-{/*             {type ? <Tag className="px-2 py-0.5 text-[12px]">{String(type)}</Tag> : null} */}
+            {/* {type ? <Tag className="px-2 py-0.5 text-[12px]">{String(type)}</Tag> : null} */}
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-600">
             <span className="inline-flex items-center gap-1">
@@ -263,10 +285,19 @@ function HistoryItem({ item }) {
           </div>
         </div>
 
-        {/* Body: sentence rows with colored pills */}
+        {/* Body */}
         <div className="px-4 py-3 text-sm space-y-1.5">
           {sentences.length > 0 ? (
-            sentences.map((s, i) => <SentenceRow key={i} s={s} />)
+            isAttach ? (
+              // Render the attach sentence with candidate name in green pill
+              <div className="text-gray-800">
+                <span className="select-none">•</span>{" "}
+                <strong>Profile attached:</strong>{" "}
+                <ValuePill value={candidateName ?? "—"} tone="new" />
+              </div>
+            ) : (
+              sentences.map((s, i) => <SentenceRow key={i} s={s} />)
+            )
           ) : (
             <div className="text-gray-500">No readable changes.</div>
           )}
@@ -339,7 +370,7 @@ export default function HistoryPanel({
             <Timeline
               mode="left"
               items={items.map((it) => {
-                const action = it?.action ?? "EVENT";
+                const action = it?.title ?? "EVENT";
                 const { color, icon } = actionStyle(action);
                 return { color, dot: icon, children: <HistoryItem item={it} /> };
               })}

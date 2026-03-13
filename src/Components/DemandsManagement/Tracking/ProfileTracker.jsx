@@ -2,16 +2,17 @@
 // ---------------------------------------------------------------
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { DatePicker, message, Tooltip, Pagination } from 'antd';
+import { DatePicker, Button, message, Tooltip, Pagination } from 'antd';
 import {
   EditOutlined,
   SaveOutlined,
   CloseOutlined,
   DownloadOutlined,
   SearchOutlined,
+  ExportOutlined
 } from '@ant-design/icons';
 import Layout from '../../Layout';
-
+import { exportProfileTrackerSheet } from '../../api/Export/profiletrackersheet.js'
 import {
   listProfileTracker,
   updateProfileTracker,
@@ -711,65 +712,142 @@ export default function ProfileTracker() {
   };
 
   function validateTrackerDates(draft, minDate, attachedDateValue) {
-    const e = {
-      attachedDate: '',
-      profileSharedDate: '',
-      interviewDate: '',
-      decisionDate: '',
-    };
+      const e = {
+        attachedDate: '',
+        profileSharedDate: '',
+        interviewDate: '',
+        decisionDate: '',
+      };
 
-    const dAttached = parseYmd(attachedDateValue);
-    const dShared = parseYmd(draft?.profileSharedDate);
-    const dInterview = parseYmd(draft?.interviewDate);
-    const dDecision = parseYmd(draft?.decisionDate);
+      const dAttached = parseYmd(attachedDateValue);
+      const dShared = parseYmd(draft?.profileSharedDate);
+      const dInterview = parseYmd(draft?.interviewDate);
+      const dDecision = parseYmd(draft?.decisionDate);
 
-    const min = parseYmd(minDate); // demand creation date (or received date fallback)
+      const min = parseYmd(minDate); // demand creation date (or received date fallback)
 
-    const lte = (a, b) => (a && b ? a.getTime() <= b.getTime() : true); // allow equal / ignore if missing
+      const lte = (a, b) => (a && b ? a.getTime() <= b.getTime() : true); // allow equal / ignore if missing
 
-    const minText =
-      typeof minDate === 'string'
-        ? minDate
-        : min
-        ? dayjs(min).format(BACKEND_FMT)
-        : '';
+      const minText =
+        typeof minDate === 'string'
+          ? minDate
+          : min
+          ? dayjs(min).format(BACKEND_FMT)
+          : '';
 
-    // Rule 1: Everything ≥ Demand Creation Date (inclusive)
-    if (min) {
-      if (dAttached && !lte(min, dAttached)) {
-        e.attachedDate = `Attached Date must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dShared && !lte(min, dShared)) {
-        e.profileSharedDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dInterview && !lte(min, dInterview)) {
-        e.interviewDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
-      if (dDecision && !lte(min, dDecision)) {
-        e.decisionDate = `Must be ≥ Demand Creation Date (${minText})`;
-      }
+     // Rule 1: Everything ≥ Demand Creation Date (inclusive)
+  if (min) {
+    if (dAttached && !lte(min, dAttached)) {
+      // show only the reference field + date
+      e.attachedDate = `Demand Creation Date (${minText})`;
     }
-
-    // Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
-    if (dAttached && dShared && !lte(dAttached, dShared)) {
-      e.profileSharedDate = e.profileSharedDate || 'Profile Shared must be ≥ Attached Date';
+    if (dShared && !lte(min, dShared)) {
+      e.profileSharedDate = `Demand Creation Date (${minText})`;
     }
-    if (dShared && dInterview && !lte(dShared, dInterview)) {
-      e.interviewDate = e.interviewDate || 'Interview must be ≥ Profile Shared';
+    if (dInterview && !lte(min, dInterview)) {
+      e.interviewDate = `Demand Creation Date (${minText})`;
     }
-    if (dInterview && dDecision && !lte(dInterview, dDecision)) {
-      e.decisionDate = e.decisionDate || 'Decision must be ≥ Interview Date';
+    if (dDecision && !lte(min, dDecision)) {
+      e.decisionDate = `Demand Creation Date (${minText})`;
     }
-
-    const valid =
-      !e.attachedDate &&
-      !e.profileSharedDate &&
-      !e.interviewDate &&
-      !e.decisionDate;
-
-    return { valid, errors: e };
   }
 
+  // Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
+  // For chain violations, show only the *previous step* name + its date
+  if (dAttached && dShared && !lte(dAttached, dShared)) {
+    e.profileSharedDate =
+      e.profileSharedDate ||
+      `Should be on or after (${displayDate(attachedDateValue)})`;
+  }
+
+  if (dShared && dInterview && !lte(dShared, dInterview)) {
+    e.interviewDate =
+      e.interviewDate ||
+      `Should be on or after (${draft.profileSharedDate || '-'})`;
+  }
+
+  if (dInterview && dDecision && !lte(dInterview, dDecision)) {
+    e.decisionDate =
+      e.decisionDate ||
+      `Should be on or after (${draft.interviewDate || '-'})`;
+  }
+
+      const valid =
+        !e.attachedDate &&
+        !e.profileSharedDate &&
+        !e.interviewDate &&
+        !e.decisionDate;
+
+      return { valid, errors: e };
+    }function validateTrackerDates(draft, minDate, attachedDateValue) {
+         const e = {
+           attachedDate: '',
+           profileSharedDate: '',
+           interviewDate: '',
+           decisionDate: '',
+         };
+
+         const dAttached = parseYmd(attachedDateValue);
+         const dShared = parseYmd(draft?.profileSharedDate);
+         const dInterview = parseYmd(draft?.interviewDate);
+         const dDecision = parseYmd(draft?.decisionDate);
+
+         const min = parseYmd(minDate); // demand creation date (or received date fallback)
+
+         const lte = (a, b) => (a && b ? a.getTime() <= b.getTime() : true); // allow equal / ignore if missing
+
+         const minText =
+           typeof minDate === 'string'
+             ? minDate
+             : min
+             ? dayjs(min).format(BACKEND_FMT)
+             : '';
+
+        // Rule 1: Everything ≥ Demand Creation Date (inclusive)
+     if (min) {
+       if (dAttached && !lte(min, dAttached)) {
+         // show only the reference field + date
+         e.attachedDate = `Demand Creation Date (${minText})`;
+       }
+       if (dShared && !lte(min, dShared)) {
+         e.profileSharedDate = `Demand Creation Date (${minText})`;
+       }
+       if (dInterview && !lte(min, dInterview)) {
+         e.interviewDate = `Demand Creation Date (${minText})`;
+       }
+       if (dDecision && !lte(min, dDecision)) {
+         e.decisionDate = `Demand Creation Date (${minText})`;
+       }
+     }
+
+     // Rule 2: attached ≤ shared ≤ interview ≤ decision (inclusive)
+     // For chain violations, show only the *previous step* name + its date
+     if (dAttached && dShared && !lte(dAttached, dShared)) {
+       e.profileSharedDate =
+         e.profileSharedDate ||
+         `Should be on or after (${displayDate(attachedDateValue)})`;
+     }
+
+     if (dShared && dInterview && !lte(dShared, dInterview)) {
+       e.interviewDate =
+         e.interviewDate ||
+         `Should be on or after (${draft.profileSharedDate || '-'})`;
+     }
+
+     if (dInterview && dDecision && !lte(dInterview, dDecision)) {
+       e.decisionDate =
+         e.decisionDate ||
+         `Should be on or after (${draft.interviewDate || '-'})`;
+     }
+
+         const valid =
+           !e.attachedDate &&
+           !e.profileSharedDate &&
+           !e.interviewDate &&
+           !e.decisionDate;
+
+         return { valid, errors: e };
+       }
   // ✅ keep original values to detect true changes
   const onEdit = (row) => {
     const original = {
@@ -812,6 +890,17 @@ export default function ProfileTracker() {
     });
   };
 
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      await exportProfileTrackerSheet();
+      message.success('Profile TrackerSheet exported successfully.');
+    } catch (e) {
+      message.error('Failed to export Profile TrackerSheet.');
+    } finally {
+      setLoading(false);
+    }
+  };
   //  send only changed fields; block if invalid ordering
   const onSave = async (row) => {
     const demandCreationStr =
@@ -891,10 +980,27 @@ export default function ProfileTracker() {
 
   return (
     <Layout>
-      <div className="p-4">
+            <div className ="py-1">
+      <div className=" grid grid-cols-3 w-full items-center">
+          <div></div>
+          <div classname="w-2/3">
         <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
           Profile Tracker
         </h2>
+        </div>
+
+          <div className="flex items-start justify-end gap-1 py-1">
+                          <Button
+                            type="default"
+                            icon={<ExportOutlined  />}
+                            loading={loading}
+                            onClick={handleExport}
+                            className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 py-2"
+                          >
+                            Export Profile TrackerSheet
+                          </Button>
+                          </div>
+                          </div>
 
         {loading && (
           <div className="text-sm text-gray-700 my-2">
@@ -906,7 +1012,6 @@ export default function ProfileTracker() {
             Error: {apiErr}
           </div>
         )}
-
         <div className="overflow-x-auto rounded-md border border-gray-200">
           <table className="max-w-[1600px] w-full border-collapse">
             <thead className="bg-gray-50">

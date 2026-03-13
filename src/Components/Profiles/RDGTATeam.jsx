@@ -7,7 +7,11 @@ import Layout from "../Layout.jsx";
 import { getAllDropdowns } from "../api/UserManagement.js";
 
 // NEW API imports (real backend)
-import { getProfileDropdowns, submitProfileCreate, submitProfileUpdate } from "../api/Profiles/addProfile.js";
+import {
+  getProfileDropdowns,
+  submitProfileCreate,
+  submitProfileUpdate,
+} from "../api/Profiles/addProfile.js";
 
 /* ============================= COMPACT UI TOKENS ============================= */
 const labelCls = "block text-[12px] font-bold text-gray-800";
@@ -38,29 +42,23 @@ const selectStyles = {
   control: (base, state) => ({
     ...base,
     minHeight: 34,
-    height: "auto", 
+    height: "auto",
     borderColor: state.isFocused ? "#111827" : "#D1D5DB",
     boxShadow: state.isFocused ? "0 0 0 2px rgba(17,24,39,0.15)" : "none",
     ":hover": { borderColor: "#111827" },
   }),
-  valueContainer: (base) => ({ ...base, 
-    padding: "2px 8px",
-     fontSize: 13,
-     
-flexWrap: "wrap",                  // UPDATED: wrap the selected chips
-    maxHeight: 84,                     // UPDATED: cap height (3 rows approx)
-    overflowY: "auto",                 // UPDATED: internal scroll when overflowing
-    gap: 4,
-
-
-   }),
-  // indicatorsContainer: (base) => ({ ...base, paddingRight: 6 }),
-  // menu: (base) => ({ ...base, fontSize: 13 }),
-
-  
-multiValue: (base) => ({
+  valueContainer: (base) => ({
     ...base,
-    backgroundColor: "#F3F4F6",       // subtle tag bg
+    padding: "2px 8px",
+    fontSize: 13,
+    flexWrap: "wrap", // UPDATED: wrap the selected chips
+    maxHeight: 84, // UPDATED: cap height (3 rows approx)
+    overflowY: "auto", // UPDATED: internal scroll when overflowing
+    gap: 4,
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: "#F3F4F6", // subtle tag bg
     border: "1px solid #E5E7EB",
   }),
   multiValueLabel: (base) => ({
@@ -68,18 +66,14 @@ multiValue: (base) => ({
     fontSize: 12,
     paddingRight: 6,
   }),
-  
-multiValueRemove: (base) => ({
+  multiValueRemove: (base) => ({
     ...base,
-    ':hover': { backgroundColor: "#EF4444", color: "white" },
+    ":hover": { backgroundColor: "#EF4444", color: "white" },
   }),
   indicatorsContainer: (base) => ({ ...base, paddingRight: 6 }),
   menu: (base) => ({ ...base, fontSize: 13, zIndex: 9999 }),
-  menuPortal: (base) => ({ ...base, zIndex: 9999 }),   // UPDATED: above modals/parents
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }), // UPDATED: above modals/parents
 };
-
-
-
 
 /* ------------------------ HELPERS ------------------------ */
 function tryJson(s) {
@@ -137,8 +131,6 @@ function getCurrentUser() {
 // ------------------------ NEW: read role & map to profile type ------------------------
 // UPDATED: derive role name from stored login response or JWT and map RDG->Internal, TA->External
 function getCurrentRoleName() {
-
-
   // Try a few likely places the login JSON might be stored
   const fromMem = window.__currentUser?.role?.role || window.__currentUser?.role;
   if (fromMem) return String(fromMem);
@@ -198,7 +190,10 @@ function validatePhoneByCountry(rawPhone, callingCode) {
       "+44": "For United Kingdom (+44), enter 9–10 digits (no leading trunk '0').",
       "+61": "For Australia (+61), enter 9 digits: mobiles start with 4; landlines 2/3/7/8.",
     };
-    return { ok: false, reason: reasons[callingCode] || "Invalid phone number for selected country." };
+    return {
+      ok: false,
+      reason: reasons[callingCode] || "Invalid phone number for selected country.",
+    };
   }
   return { ok: true };
 }
@@ -207,6 +202,21 @@ function validateEmpId(raw) {
   if (!digits) return { ok: false, reason: "Employee ID is required." };
   if (digits.length < 6) return { ok: false, reason: "Employee ID must be at least 6 digits." };
   return { ok: true, value: digits };
+}
+
+/** NEW: validatePAN - 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F). */
+function validatePAN(raw) {
+  const val = (raw || "").toUpperCase().trim();
+  if (!val) return { ok: false, reason: "PAN is required." };
+  const re = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+  if (!re.test(val)) {
+    return {
+      ok: false,
+      reason:
+        "Invalid PAN format. Use 10 characters: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).",
+    };
+  }
+  return { ok: true, value: val };
 }
 
 /** Normalize dropdowns from /profiles/dropdowns into {label,value} arrays */
@@ -219,7 +229,7 @@ function adaptOptions(dto = {}) {
 
   return {
     // exact keys from your response
-    externalInternal: toOpt(dto.externalInternals),   // Internal / External
+    externalInternal: toOpt(dto.externalInternals), // Internal / External
     hbu: toOpt(dto.hbus),
     demandLocation: toOpt(dto.locations),
     primarySkills: toOpt(dto.primarySkills),
@@ -232,8 +242,6 @@ export default function RDGTATeam() {
   const location = useLocation();
   const navigate = useNavigate();
 
-
-
   const [loading, setLoading] = useState(true);
   const [dropdowns, setDropdowns] = useState(null);
   const [options, setOptions] = useState({});
@@ -245,12 +253,13 @@ export default function RDGTATeam() {
   const [empIdError, setEmpIdError] = useState("");
   const [empIdTouched, setEmpIdTouched] = useState(false);
 
-
-
+  // NEW: PAN UI state
+  const [panError, setPanError] = useState("");
+  const [panTouched, setPanTouched] = useState(false);
 
   // UPDATED: Prefer role-based profile type; fallback to URL/state
-  const roleName = getCurrentRoleName();                 // UPDATED
-    const isAdmin = String(roleName || "").toLowerCase().includes("admin")
+  const roleName = getCurrentRoleName(); // UPDATED
+  const isAdmin = String(roleName || "").toLowerCase().includes("admin");
   const roleProfileType = mapRoleToProfileType(roleName); // UPDATED
   const derivedProfileTypeFromUrl = useMemo(() => {
     const state = location?.state || {};
@@ -269,9 +278,9 @@ export default function RDGTATeam() {
 
   // UPDATED: final profile type selection order: Role > URL/state > empty
   const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
-  const isInternal = (resolvedProfileType || "").toLowerCase() === "internal";   // UPDATED
- const showEmpIdField = isInternal || isAdmin;
- 
+  const isInternal = (resolvedProfileType || "").toLowerCase() === "internal"; // UPDATED
+  const showEmpIdField = isInternal || isAdmin;
+
   const [currentUser, setCurrentUser] = useState({ userId: "", name: "" });
 
   const [form, setForm] = useState({
@@ -289,6 +298,7 @@ export default function RDGTATeam() {
     hbu: "",
     summary: "",
     cv: null,
+    panNumber: "",
   });
 
   useEffect(() => {
@@ -347,6 +357,19 @@ export default function RDGTATeam() {
       const r = validateEmpId(digits);
       setEmpIdError(r.ok ? "" : r.reason);
     }
+
+    // NEW: live PAN validation + uppercase/trim
+    if (name === "panNumber") {
+      const val = (value || "").toUpperCase().replace(/\s+/g, "");
+      setForm((p) => ({ ...p, panNumber: val }));
+      setPanTouched(true);
+      if (val) {
+        const r = validatePAN(val);
+        setPanError(r.ok ? "" : r.reason);
+      } else {
+        setPanError("");
+      }
+    }
   };
 
   const handleFile = (e) => {
@@ -366,16 +389,15 @@ export default function RDGTATeam() {
         : "",
     summary: form.summary && form.summary.length > 2000 ? "Max 2000 characters" : "",
   };
-  const hasErrors = Object.values(errors).some(Boolean) || (!!empIdError && isInternal);
+  const hasErrors =
+    Object.values(errors).some(Boolean) || (!!empIdError && isInternal) || !!panError;
 
   // Find externalInternalId by label ("Internal"/"External") from dropdowns
   const externalInternalId = useMemo(() => {
     const list = safe(options?.externalInternal);
     // Prefer label match
-    const label = (isInternal ? "internal" : "external");
-    const match = list.find(
-      (o) => String(o.label).toLowerCase() === label
-    );
+    const label = isInternal ? "internal" : "external";
+    const match = list.find((o) => String(o.label).toLowerCase() === label);
     if (match?.value) return Number(match.value);
 
     // Fallback to your provided IDs
@@ -387,6 +409,15 @@ export default function RDGTATeam() {
 
     if (!form.candidateName) return message.warning("Candidate name is required.");
     if (!form.emailId) return message.warning("Email is required.");
+
+    // PAN submit validation
+    const panCheck = validatePAN(form.panNumber);
+    if (!panCheck.ok) {
+      setPanTouched(true);
+      setPanError(panCheck.reason);
+      return;
+    }
+    setPanError("");
 
     if (isInternal) {
       if (!form.empId) {
@@ -413,7 +444,9 @@ export default function RDGTATeam() {
       return;
     }
 
-    const selectedCountry = countryCodes.find((c) => String(c.id) === String(form.countryId));
+    const selectedCountry = countryCodes.find(
+      (c) => String(c.id) === String(form.countryId)
+    );
     if (!selectedCountry?.callingCode) {
       setPhoneTouched(true);
       setPhoneError("Please select a valid country code.");
@@ -437,22 +470,21 @@ export default function RDGTATeam() {
     const payload = {
       candidateName: form.candidateName,
       emailId: form.emailId,
-       ...(form.empId ? { empId: String(form.empId) } : {}), // UPDATED
-
-      phoneNumber: onlyDigits(form.phoneNumber),        // UPDATED
+      ...(form.empId ? { empId: String(form.empId) } : {}), // UPDATED
+      phoneNumber: onlyDigits(form.phoneNumber), // UPDATED
       isActive: true,
-      experience: Number(form.experience),              // UPDATED: backend uses 'experience'
-
+      experience: Number(form.experience), // UPDATED: backend uses 'experience'
       skillClusterId: form.skillCluster?.value ? Number(form.skillCluster.value) : null,
       locationId: form.location ? Number(form.location) : null,
       hbuId: form.hbu ? Number(form.hbu) : null,
-      externalInternalId, 
+      externalInternalId,
       countryId: form.countryId ? Number(form.countryId) : null,
-
       summary: form.summary?.trim() || "",
-
-      primarySkillsIds: safe(form.primarySkills).map((i) => Number(i.value)),   // UPDATED key name
+      primarySkillsIds: safe(form.primarySkills).map((i) => Number(i.value)), // UPDATED key name
       secondarySkillsIds: safe(form.secondarySkills).map((i) => Number(i.value)), // UPDATED key name
+
+      // If your backend accepts PAN for profiles, uncomment and ensure the key matches:
+      panNumber: panCheck.value,
     };
 
     try {
@@ -474,8 +506,7 @@ export default function RDGTATeam() {
       navigate("/profileSheet");
     } catch (err) {
       console.error("[RDGTATeam] submit error:", err);
-      const msg =
-        err?.response?.data?.message || err?.message || "Failed to submit profile";
+      const msg = err?.response?.data?.message || err?.message || "Failed to submit profile";
       message.error(msg);
     }
   };
@@ -541,34 +572,32 @@ export default function RDGTATeam() {
               )}
             </div>
 
-            {/* Employee ID — only for Internal */}
-            {/* {isInternal && (
-              <div>
-                <label className={labelCls}>Employee ID</label>
-                <input
-                  className={`${inputCls} mt-1 ${
-                    empIdTouched && empIdError ? "border-red-500 focus:ring-red-600" : ""
-                  }`}
-                  name="empId"
-                  value={form.empId}
-                  onChange={handleInput}
-                  onBlur={() => {
-                    setEmpIdTouched(true);
-                    const r = validateEmpId(form.empId);
-                    setEmpIdError(r.ok ? "" : r.reason);
-                  }}
-                  placeholder="e.g., 128713"
-                  inputMode="numeric"
-                  autoComplete="off"
-                />
-                {empIdTouched && empIdError && (
-                  <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
-                )}
-              </div>
-            )}  */}
+            {/* NEW: PAN Number */}
+            <div>
+              <label className={labelCls}>PAN Number</label>
+              <input
+                className={`${inputCls} mt-1 ${
+                  panTouched && panError ? "border-red-500 focus:ring-red-600" : ""
+                }`}
+                name="panNumber"
+                value={form.panNumber}
+                onChange={handleInput}
+                onBlur={() => {
+                  setPanTouched(true);
+                  const r = validatePAN(form.panNumber);
+                  setPanError(r.ok ? "" : r.reason);
+                }}
+                placeholder="e.g., ABCDE1234F"
+                maxLength={10}
+                autoComplete="off"
+                required
+              />
+              {panTouched && panError && (
+                <p className="text-[11px] text-red-600 mt-1">{panError}</p>
+              )}
+            </div>
 
-            
-{/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
+            {/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
             {showEmpIdField && (
               <div>
                 <label className={labelCls}>Employee ID</label>
@@ -580,8 +609,7 @@ export default function RDGTATeam() {
                   value={form.empId}
                   onChange={handleInput}
                   onBlur={() => {
-
-setEmpIdTouched(true);
+                    setEmpIdTouched(true);
                     const r = validateEmpId(form.empId);
                     // if not Internal, do not block submit—just clear/show helper
                     setEmpIdError(r.ok ? "" : r.reason);
@@ -595,7 +623,6 @@ setEmpIdTouched(true);
                 )}
               </div>
             )}
-
 
             <div>
               <label className={labelCls}>Experience (years)</label>
@@ -613,12 +640,11 @@ setEmpIdTouched(true);
           </div>
 
           {/* Contact Number — UPDATED: same grid & same input size as other fields */}
-           <div className="pt-3 pb-">
+          <div className="pt-3 pb-">
             <label className={labelTitle}>Contact Number</label>
-            </div>
-          <div className={`${grid2} ${sectionGap}`}> 
+          </div>
+          <div className={`${grid2} ${sectionGap}`}>
             <div>
-            
               <div className="flex items-center gap-2 mt-1">
                 <select
                   className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
@@ -727,7 +753,7 @@ setEmpIdTouched(true);
                   value={form.primarySkills}
                   onChange={(selected) => setForm({ ...form, primarySkills: selected || [] })}
                   placeholder="Select"
-                   classNamePrefix="rs" 
+                  classNamePrefix="rs"
                   className="mt-1"
                   styles={selectStyles}
                   menuPortalTarget={document.body}
@@ -743,10 +769,12 @@ setEmpIdTouched(true);
                   hideSelectedOptions
                   components={{ Option: CheckboxOption }}
                   value={form.secondarySkills}
-                  onChange={(selected) => setForm({ ...form, secondarySkills: selected || [] })}
+                  onChange={(selected) =>
+                    setForm({ ...form, secondarySkills: selected || [] })
+                  }
                   placeholder="Select"
                   className="mt-1"
-                   classNamePrefix="rs" 
+                  classNamePrefix="rs"
                   styles={selectStyles}
                   menuPortalTarget={document.body}
                 />

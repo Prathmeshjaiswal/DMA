@@ -148,7 +148,7 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
         )}
 
         {/* HBU */}
-        {allowHBU && <Btn onClick={() => navigate("/HBU")}>HBU</Btn>}
+{/*         {allowHBU && <Btn onClick={() => navigate("/HBU")}>HBU</Btn>} */}
 
         {/* Reports */}
         {allowReports && <Btn onClick={() => navigate("/Report")}>Reports</Btn>}
