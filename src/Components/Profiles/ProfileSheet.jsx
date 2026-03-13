@@ -216,7 +216,7 @@ export default function ProfileSheet() {
   // view modal (now separated)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRow, setViewRow] = useState(null);
-  const [viewInitialTab, setViewInitialTab] = useState("profile");
+  const [viewInitialTab, setViewInitialTab] = useState("demand");
 
   // role
   const roleName = getCurrentRoleName();
@@ -510,7 +510,7 @@ export default function ProfileSheet() {
         onClose={() => {
           setViewOpen(false);
           setViewRow(null);
-          setViewInitialTab("profile");
+          setViewInitialTab("demand");
         }}
         profile={viewRow}
         width={900}

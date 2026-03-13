@@ -1,21 +1,21 @@
+// // src/Components/DemandsManagement/DemandDetailModal.jsx
 // import React, { useEffect, useMemo, useState } from "react";
 // import { Modal, Tabs, Button, message, Spin, Alert } from "antd";
 // import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
-//
+
 // import { getProfiles } from "../../api/Profiles/addProfile.js";
 // import {
 //   attachProfilesToDemand,
 //   getAttachedProfilesByDemandId, // <-- fetch attached profiles from backend
 // } from "../../api/Demands/attachment.js";
-//
-// import HistoryPanel from "../../History/HistoryPanel"
+
 // // reuse onboarding list API
 // import { getAllOnboardings } from "../../api/Onboarding/onBoarding";
-//
+
 // // --------------------- helpers ---------------------
 // const nameOf = (obj) =>
 //   obj && typeof obj === "object" ? (obj.name ?? "") : (obj ?? "");
-//
+
 // /** Normalize API list response */
 // function extractList(res) {
 //   if (!res) return [];
@@ -24,12 +24,12 @@
 //   if (Array.isArray(res?.items)) return res.items;
 //   return [];
 // }
-//
+
 // /** Always use profileId if present; fallback to id (available pool). */
 // function profileKey(p) {
 //   return p?.profileId ?? p?.id ?? null;
 // }
-//
+
 // /** ---- Generic helpers ---- */
 // const BACKEND_FMT = "YYYY-MM-DD";
 // function fmtDate(d) {
@@ -37,37 +37,30 @@
 //   const dt = new Date(d);
 //   return Number.isNaN(dt.getTime()) ? String(d) : dt.toLocaleString();
 // }
-//
+
 // function toTitleCase(s) {
 //   if (!s) return "";
 //   return String(s)
 //     .toLowerCase()
 //     .replace(/\b\w/g, (c) => c.toUpperCase());
 // }
-//
+
 // function getStatusName(p) {
 //   return (p?.profileTrackerStatus?.name ?? p?.status ?? "-").toString();
 // }
-//
+
 // const OPEN_STATUS_SET = new Set([
-//   "Attached",
-//   "Profile Shared",
-//   "Interview Scheduled",
-//   "On Hold",
-//   "Soft Select",
-//   "On Boarding InProgress",
-//   "Interview Scheduled",
-//   "Joined",
-//   "Client Selected",
-//   "Evaluation In Progress",
-//   "Awaiting Client Slot"
+//   "ATTACHED",
+//   "PROFILE SHARED",
+//   "INTERVIEW SCHEDULE",
+//   "ON HOLD",
 // ]);
-//
+
 // function isOpenProfileStatus(p) {
-//   const status = getStatusName(p);
+//   const status = getStatusName(p).toUpperCase();
 //   return OPEN_STATUS_SET.has(status);
 // }
-//
+
 // /* ================== Onboarding Detail section (match Demand Detail look) ================== */
 // function fmtYMD(v) {
 //   if (!v) return "-";
@@ -78,7 +71,7 @@
 //   const day = String(d.getDate()).padStart(2, "0");
 //   return `${y}-${m}-${day}`;
 // }
-//
+
 // /** INLINE label/value row just like your Demand detail section */
 // function RowLabelValue({ label, value }) {
 //   return (
@@ -88,7 +81,7 @@
 //     </div>
 //   );
 // }
-//
+
 // /**
 //  * Props:
 //  *  - onboarding: an onboarding object (or null)
@@ -104,7 +97,7 @@
 //     onboarding?.profile?.candidateName ??
 //     onboarding?.profileName ??
 //     null;
-//
+
 //   return (
 //     <div className="rounded-lg border border-gray-200 bg-white p-3  shadow-sm">
 //       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6   gap-y-2">
@@ -120,7 +113,7 @@
 //           <RowLabelValue label="DOJ" value={fmtYMD(onboarding?.dateOfJoining)} />
 //           <RowLabelValue label="C-Tool ID" value={onboarding?.ctoolId ?? "-"} />
 //         </div>
-//
+
 //         {/* RIGHT */}
 //         <div className="space-y-1.5">
 //           <RowLabelValue label="BGV Status" value={bgv} />
@@ -137,7 +130,7 @@
 //     </div>
 //   );
 // }
-//
+
 // /* ============== Demand id normalization helpers for matching ============== */
 // /** Extract numeric demand id from strings like "MSS-104" or "ET100"; fallback to the original */
 // function toDemandIdComparable(v) {
@@ -147,7 +140,7 @@
 //   const m = s.match(/(\d+)\s*$/); // capture trailing number (e.g., MSS-104 -> 104)
 //   return m ? m[1] : s;
 // }
-//
+
 // /** Try to read a comparable demand id from the demand row in this modal */
 // function getComparableDemandIdFromRow(row) {
 //   const candidates = [
@@ -162,31 +155,31 @@
 //   }
 //   return null;
 // }
-//
+
 // /** ---- Profile Card ---- */
 // function ProfileCard({ p }) {
 //   const candidateName = toTitleCase(p?.candidateName ?? "-");
-//
+
 //   const primaryNames =
 //     Array.isArray(p?.primarySkills) && p.primarySkills.length
 //       ? p.primarySkills.map(nameOf).join(", ")
 //       : "-";
-//
+
 //   const secondaryNames =
 //     Array.isArray(p?.secondarySkills) && p.secondarySkills.length
 //       ? p.secondarySkills.map(nameOf).join(", ")
 //       : null;
-//
+
 //   const attachedDateDisplay = p?.attachedDate ?? "-";
-//
+
 //   const statusName = getStatusName(p);
-//
+
 //   const hbuName = nameOf(p?.hbu) || "-";
 //   const experienceText =
 //     p?.experience != null && p?.experience !== ""
 //       ? `${p.experience} Yrs`
 //       : "-";
-//
+
 //   return (
 //     <div className="rounded-lg border border-gray-200 p-3 shadow-sm">
 //       {/* Header: name on left, STATUS on right */}
@@ -204,7 +197,7 @@
 //           {statusName}
 //         </span>
 //       </div>
-//
+
 //       {/* Body: two columns */}
 //       <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
 //         {/* LEFT */}
@@ -221,7 +214,7 @@
 //             <strong>Attached Date:</strong> {attachedDateDisplay}
 //           </div>
 //         </div>
-//
+
 //         {/* RIGHT */}
 //         <div className="col-span-1">
 //           <div className="mb-1">
@@ -236,16 +229,16 @@
 //     </div>
 //   );
 // }
-//
+
 // /** Attach button row in "Attach Profile" mode */
 // function ProfileRow({ p, selected, onToggle }) {
 //   const isServerAttached = !!(p?.attachedDate || p?.profileAttachedDate || p?.dateAttached);
 //   const isSelected = !!selected;
-//
+
 //   let label = "Attach";
 //   let btnType = "default";
 //   let disabled = false;
-//
+
 //   if (isServerAttached) {
 //     label = "Attached";
 //     btnType = "primary";
@@ -255,9 +248,9 @@
 //     btnType = "primary";
 //     disabled = false; // allow unselect
 //   }
-//
+
 //   const handleClick = disabled ? undefined : () => onToggle?.(p);
-//
+
 //   return (
 //     <div className="flex items-center justify-between border-b border-gray-200 py-2">
 //       <div className="min-w-0">
@@ -283,7 +276,7 @@
 //     </div>
 //   );
 // }
-//
+
 // // ====================== main component ======================
 // export default function DemandDetailModal({
 //   open,
@@ -293,29 +286,29 @@
 // }) {
 //   const [tab, setTab] = useState("details");
 //   const [attachMode, setAttachMode] = useState(false);
-//
+
 //   const [availableProfiles, setAvailableProfiles] = useState([]);
 //   const [loadingProfiles, setLoadingProfiles] = useState(false);
-//
+
 //   const [attachedProfiles, setAttachedProfiles] = useState([]);
 //   const [loadingAttached, setLoadingAttached] = useState(false);
-//
+
 //   const [working, setWorking] = useState(false);
 //   const [selectedMap, setSelectedMap] = useState({}); // key = profileId
-//
+
 //   // inner tabs under "Profile Shared": open / archived
 //   const [profileSubTab, setProfileSubTab] = useState("open");
-//
+
 //   const demandPkId = row?.id ?? null;
-//
+
 //   // ===== Onboarding state (list) =====
 //   const [onbLoading, setOnbLoading] = useState(false);
 //   const [onbError, setOnbError] = useState(null);
 //   const [onboardingList, setOnboardingList] = useState([]); // store ALL matches
-//
+
 //   // *** UPDATED: derived single record to display in Onboarding tab
 //   const currentDemandComparable = useMemo(() => getComparableDemandIdFromRow(row), [row]);
-//
+
 //   // Seed selection using stable profile identity
 //   useEffect(() => {
 //     if (attachMode) {
@@ -327,7 +320,7 @@
 //       setSelectedMap(seeded);
 //     }
 //   }, [attachMode, attachedProfiles]);
-//
+
 //   const loadAvailable = async () => {
 //     try {
 //       setLoadingProfiles(true);
@@ -341,7 +334,7 @@
 //       setLoadingProfiles(false);
 //     }
 //   };
-//
+
 //   const loadAttached = async () => {
 //     if (!demandPkId) return;
 //     try {
@@ -356,7 +349,7 @@
 //       setLoadingAttached(false);
 //     }
 //   };
-//
+
 //   useEffect(() => {
 //     if (!open) return;
 //     if (tab === "profile") {
@@ -368,7 +361,7 @@
 //     }
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, [open, tab, attachMode, demandPkId]);
-//
+
 //   // Toggle by stable profile key
 //   const toggleSelect = (p) => {
 //     const key = profileKey(p);
@@ -380,10 +373,10 @@
 //       return next;
 //     });
 //   };
-//
+
 //   // Build selected array from map
 //   const selectedArray = useMemo(() => Object.values(selectedMap), [selectedMap]);
-//
+
 //   const submitAttach = async () => {
 //     if (!demandPkId) {
 //       message.error("Missing demand primary key id");
@@ -392,7 +385,7 @@
 //     const ids = selectedArray
 //       .map((p) => profileKey(p))
 //       .filter((v) => v != null);
-//
+
 //     if (!ids.length) {
 //       message.warning("Select at least one profile to attach.");
 //       return;
@@ -410,7 +403,7 @@
 //       setWorking(false);
 //     }
 //   };
-//
+
 //   /** Split attached profiles by status */
 //   const openAttached = useMemo(
 //     () => (attachedProfiles || []).filter(isOpenProfileStatus),
@@ -420,7 +413,7 @@
 //     () => (attachedProfiles || []).filter((p) => !isOpenProfileStatus(p)),
 //     [attachedProfiles]
 //   );
-//
+
 //   /** ---- Header ---- */
 //   const header = (
 //     <div className="flex items-center justify-between pr-2">
@@ -446,24 +439,24 @@
 //       <div />
 //     </div>
 //   );
-//
+
 //   // Load ALL matching onboardings for this demand; collect matches
 //   useEffect(() => {
 //     if (!open) return;
-//
+
 //     setOnbError(null);
 //     setOnbLoading(true);
 //     setOnboardingList([]);
-//
+
 //     const comparable = getComparableDemandIdFromRow(row);
-//
+
 //     if (!comparable) {
 //       setOnbLoading(false);
 //       return;
 //     }
-//
+
 //     let cancelled = false;
-//
+
 //     (async () => {
 //       try {
 //         // 1) Optionally collect attached profileIds for this demand (best-effort filter)
@@ -480,43 +473,43 @@
 //         } catch {
 //           // best-effort only
 //         }
-//
+
 //         // 2) Page through onboarding list, COLLECT matches for this demand
 //         let page = 0;
 //         const size = 50;
 //         const MAX_PAGES = 20;
 //         const matches = [];
-//
+
 //         while (!cancelled && page < MAX_PAGES) {
 //           const res = await getAllOnboardings(page, size);
 //           const list = Array.isArray(res?.content) ? res.content : [];
 //           const last = Boolean(res?.last);
-//
+
 //           for (const r of list) {
 //             const rDemandId = r?.demand?.demandId ?? r?.demandId ?? null;
 //             const rProfileId = r?.profile?.profileId ?? r?.profileId ?? null;
-//
+
 //             const rDemandComparable = toDemandIdComparable(rDemandId);
-//
+
 //             const demandMatch =
 //               rDemandComparable != null &&
 //               comparable != null &&
 //               String(rDemandComparable) === String(comparable);
-//
+
 //             const profileOk =
 //               attachedIds.size === 0
 //                 ? true
 //                 : attachedIds.has(String(rProfileId ?? ""));
-//
+
 //             if (demandMatch && profileOk) {
 //               matches.push(r);
 //             }
 //           }
-//
+
 //           if (last) break;
 //           page += 1;
 //         }
-//
+
 //         if (!cancelled) setOnboardingList(matches);
 //       } catch (e) {
 //         if (!cancelled) setOnbError(e?.response?.data?.message || e?.message || "Failed to load onboarding.");
@@ -524,12 +517,12 @@
 //         if (!cancelled) setOnbLoading(false);
 //       }
 //     })();
-//
+
 //     return () => {
 //       cancelled = true;
 //     };
 //   }, [open, row]);
-//
+
 //   // ---------- Helpers to classify onboarding status ----------
 //   const isOnboardedStatus = (rec) => {
 //     const s =
@@ -549,7 +542,7 @@
 //     // Covers "IN PROGRESS", "IN-PROGRESS", "PENDING"
 //     return s.includes("PROGRESS") || s.includes("PENDING") || s.includes("INPROGRESS");
 //   };
-//
+
 //   // *** UPDATED: choose **one** record to display in Onboarding tab
 //   const onboardedMatch = useMemo(
 //     () => (onboardingList || []).find(isOnboardedStatus) || null,
@@ -559,7 +552,7 @@
 //     () => (onboardingList || []).find(isOpenOnboardingStatus) || null,
 //     [onboardingList]
 //   );
-//
+
 //   // *** UPDATED: prepare a placeholder record (all fields "-") when only openMatch exists
 //   const placeholderFromOpen = useMemo(() => {
 //     if (!openMatch) return null;
@@ -584,7 +577,7 @@
 //       },
 //     };
 //   }, [openMatch, currentDemandComparable]);
-//
+
 //   return (
 //     <Modal open={open} onCancel={onClose} footer={null} width={980} title={header}>
 //       {!row ? null : (
@@ -645,13 +638,13 @@
 //                         { key: "archived", label: "Archived Profiles" },
 //                       ]}
 //                     />
-//
+
 //                     {/* Header actions - only in Open tab */}
 //                     <div className="mb-3 flex items-center justify-between">
 //                       <div className="text-gray-700 font-medium">
 //                         {profileSubTab === "open" ? "Open Profiles" : "Archived Profiles"}
 //                       </div>
-//
+
 //                       {profileSubTab === "open" && !attachMode ? (
 //                         <Button
 //                           icon={<PlusOutlined />}
@@ -676,7 +669,7 @@
 //                         <div />
 //                       )}
 //                     </div>
-//
+
 //                     {/* Body */}
 //                     {profileSubTab === "archived" ? (
 //                       <>
@@ -742,7 +735,7 @@
 //                   </div>
 //                 ),
 //               },
-//
+
 //               // ======================= Onboarding Detail (SINGLE SECTION) =======================
 //               // *** UPDATED: remove inner tabs; show either onboarded record, or placeholder for open, or nothing
 //               {
@@ -777,16 +770,21 @@
 //                 ),
 //               },
 //               // ==========================================================================
-//
+
 //               {
 //                 key: "history",
 //                 label: "History",
 //                 children: (
-//
-//                 <div className="p-1">
-//                   <HistoryPanel mode="demand" entityId={row.id} />
-//                 </div>
-//
+//                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+//                     <div className="space-y-2 text-sm">
+//                       <div><strong>Updated By:</strong> {"-"}{}</div>
+//                       <div><strong>Updated At:</strong> {"-"} </div>
+//                       <div><strong>Updated Data:</strong></div>
+//                       <pre className="bg-gray-50 p-2 rounded border border-gray-200 overflow-auto text-xs">
+//                         {"No change log available."}
+//                       </pre>
+//                     </div>
+//                   </div>
 //                 ),
 //               },
 //             ]}
@@ -796,6 +794,7 @@
 //     </Modal>
 //   );
 // }
+
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Tabs, Button, message, Spin, Alert } from "antd";
@@ -807,7 +806,7 @@ import {
   getAttachedProfilesByDemandId, // <-- fetch attached profiles from backend
 } from "../../api/Demands/attachment.js";
 
-import HistoryPanel from "../../History/HistoryPanel";
+import HistoryPanel from "../../history/HistoryPanel.jsx";
 // reuse onboarding list API
 import { getAllOnboardings } from "../../api/Onboarding/onBoarding";
 

@@ -1,4 +1,5 @@
 
+
 // ================== src/pages/Profiles/ProfileView.jsx ==================
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Tabs, Button, Checkbox, Spin, Alert, message } from "antd";
@@ -30,7 +31,7 @@ const formatDateOnly = (v) => {
   }
 };
 
-// ✅ updated parameter name for clarity; logic unchanged
+// ✅ tone based on profile tracker status
 function evalTone(statusName) {
   const s = String(statusName || "").toLowerCase();
   if (!s) return "amber";
@@ -83,16 +84,26 @@ function fmtYMD(v) {
   return `${y}-${m}-${day}`;
 }
 
-/* ---------------- Detail Block (MATCHED to Demand Detail) ---------------- */
-/**
- * Matches the Demand Detail container:
- * - rounded-lg
- * - thin gray border
- * - white bg
- * - compact padding
- * - subtle/no shadow
- * - tight gaps between columns
- */
+/* ---------------- Demand code resolver + helpers ---------------- */
+function demandDisplayOf(x) {
+  return x?.displayDemandId ?? x?.demand?.displayDemandId ?? null;
+}
+function lobNameOf(x) {
+  return x?.lob?.name ?? x?.demand?.lob?.name ?? null;
+}
+function numericIdOf(x) {
+  return x?.demandId ?? x?.demand?.demandId ?? x?.id ?? null;
+}
+function resolveDemandCode(x) {
+  const display = demandDisplayOf(x);
+  if (display) return display;
+  const lob = lobNameOf(x);
+  const num = numericIdOf(x);
+  if (lob && (num !== null && num !== undefined)) return `${lob}-${num}`;
+  return (num !== null && num !== undefined) ? String(num) : "-";
+}
+
+/* ---------------- Detail Block ---------------- */
 function DetailBlock({ children }) {
   return (
     <div className="border border-gray-300 rounded-lg bg-white p-3 mt-2">
@@ -103,7 +114,7 @@ function DetailBlock({ children }) {
   );
 }
 
-/* ---------------- Onboarding section (using DetailBlock) ---------------- */
+/* ---------------- Onboarding section ---------------- */
 function OnboardingDetailSection({ onboarding, demandId, profileId }) {
   const wbsType = onboarding?.wbsType?.name ?? onboarding?.wbsType ?? "-";
   const bgv = onboarding?.bgvStatus?.name ?? onboarding?.bgvStatus ?? "-";
@@ -159,7 +170,7 @@ export default function ProfileView({
   onClose,
   profile,
   width = 900,
-  initialTab = "profile",
+  initialTab = "demand", // ✅ UPDATED: default to Demand tab
 }) {
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -169,17 +180,55 @@ export default function ProfileView({
   const [attachedDemands, setAttachedDemands] = useState([]);
   const [attachMode, setAttachMode] = useState(false);
 
-  // ✅ refs to avoid re-creating callbacks / effects loops
+  // ---- Demand code cache ----
+  const codeMapRef = useRef({});
+  const [codeVer, setCodeVer] = useState(0);
+  const addCodes = useCallback((pairs) => {
+    if (!Array.isArray(pairs) || !pairs.length) return;
+    const map = codeMapRef.current;
+    let changed = false;
+    for (const p of pairs) {
+      const code = (p?.code || "").trim();
+      if (!code) continue;
+      const keys = [p?.id, p?.demandId].filter((k) => k !== null && k !== undefined);
+      for (const k of keys) {
+        const kk = String(k);
+        if (map[kk] !== code) {
+          map[kk] = code;
+          changed = true;
+        }
+      }
+    }
+    if (changed) setCodeVer((v) => v + 1);
+  }, []);
+  const lookupCode = useCallback((obj) => {
+    const map = codeMapRef.current;
+    const candidates = [
+      obj?.displayDemandId,
+      obj?.demand?.displayDemandId,
+      obj?.id,
+      obj?.demandId,
+      obj?.demand?.demandId,
+    ]
+      .filter((v) => v !== null && v !== undefined)
+      .map(String);
+
+    for (const k of candidates) {
+      if (map[k]) return map[k];
+    }
+    return null;
+  }, []);
+
+  // refs/guards
   const attachedDemandsRef = useRef([]);
   const demandTabLoadedForProfileRef = useRef(null);
-
   useEffect(() => {
     attachedDemandsRef.current = attachedDemands;
   }, [attachedDemands]);
 
   // reflect initial tab when opened
   useEffect(() => {
-    if (open) setActiveTab(initialTab || "profile");
+    if (open) setActiveTab(initialTab || "demand"); // ✅ UPDATED: fallback to demand
   }, [open, initialTab]);
 
   const toggleSelect = (id, checked) => {
@@ -192,7 +241,55 @@ export default function ProfileView({
     });
   };
 
-  // ✅ return mapped list so caller can use it to filter matching
+  // ---- Enrichment (unchanged) ----
+  const ENRICH_PAGE_SIZE = 500;
+  const enrichDisplayIdsForAttached = useCallback(async () => {
+    const current = attachedDemandsRef.current || [];
+    const missing = current.filter((x) => !x.displayDemandId);
+    if (missing.length === 0) return;
+
+    try {
+      const resp = await getDemandsheet(0, ENRICH_PAGE_SIZE, undefined);
+      const list =
+        Array.isArray(resp?.data?.content)
+          ? resp.data.content
+          : Array.isArray(resp?.content)
+          ? resp.content
+          : Array.isArray(resp)
+          ? resp
+          : [];
+
+      const pairs = [];
+      for (const d of list) {
+        const display = d?.displayDemandId ?? null;
+        const lob = d?.lob?.name ?? null;
+        const bizNum = d?.demandId ?? d?.id ?? null;
+        const code = display || (lob && bizNum != null ? `${lob}-${bizNum}` : null);
+        if (code) pairs.push({ id: d?.id, demandId: d?.demandId, code });
+      }
+      if (pairs.length) addCodes(pairs);
+
+      const after = (prev) =>
+        prev.map((r) => {
+          if (r.displayDemandId) return r;
+          const code = lookupCode(r);
+          return code ? { ...r, displayDemandId: code } : r;
+        });
+
+      setAttachedDemands(after);
+      try {
+        const updated = after(current);
+        const stillMissing = updated.filter((x) => !x.displayDemandId).length;
+        console.log(
+          `[ProfileView] Enrichment: attached=${current.length}, learnedPairs=${pairs.length}, stillMissing=${stillMissing}`
+        );
+      } catch {}
+    } catch (e) {
+      console.warn("[ProfileView] Enrichment failed:", e?.message || e);
+    }
+  }, [addCodes, lookupCode]);
+
+  // ✅ load attached + backfill (unchanged)
   const loadAttachedFromBackend = useCallback(async (profileId) => {
     try {
       let res = await getDemandsByProfileApi(profileId);
@@ -209,13 +306,9 @@ export default function ProfileView({
         const profileTrackerStatusName =
           x?.profileTrackerStatus?.name ?? x?.profileTrackerStatus ?? null;
 
-        // prefer backend primarySkills
         const primarySkillsStr = (() => {
           if (Array.isArray(x?.primarySkills)) {
-            return x.primarySkills
-              .map((r) => r?.name)
-              .filter(Boolean)
-              .join(", ");
+            return x.primarySkills.map((r) => r?.name).filter(Boolean).join(", ");
           }
           if (typeof x?.primarySkills === "string" && x.primarySkills.trim() !== "") {
             return x.primarySkills.trim();
@@ -223,28 +316,50 @@ export default function ProfileView({
           return "";
         })();
 
-        return {
+        const rowId = x?.demand?.id ?? x?.demandId ?? x?.id;
+        const bizId = x?.demand?.demandId ?? x?.demandId ?? x?.id;
+
+        const draft = {
           trackerId: x.id,
-          id: x.demandId ?? x.id,
-          demandId: x.demandId ?? x.id,
+          id: rowId,
+          demandId: bizId,
+          displayDemandId: x.displayDemandId ?? x?.demand?.displayDemandId ?? null,
+          lob: x?.lob ?? x?.demand?.lob ?? null,
           hbu: x?.hbu?.name || "",
           skillCluster: x?.skillCluster?.name || "",
           primarySkills: primarySkillsStr,
           attachedDate: x.attachedDate,
           createdAt: x.createdAt,
-          title: [x?.skillCluster?.name || "", x?.hbu?.name || ""]
-            .filter(Boolean)
-            .join(" • "),
+          title: [x?.skillCluster?.name || "", x?.hbu?.name || ""].filter(Boolean).join(" • "),
           evaluationStatusName,
-          profileTrackerStatusName, // <- used for color coding
+          profileTrackerStatusName,
         };
+
+        if (!draft.displayDemandId) {
+          const code = lookupCode(draft);
+          if (code) draft.displayDemandId = code;
+        }
+        return draft;
       });
+
+      try {
+        console.groupCollapsed("[ProfileView] Attached (mapped)");
+        console.table((mapped || []).map((x) => ({
+          id: x?.id,
+          demandId: x?.demandId,
+          displayDemandId: x?.displayDemandId,
+          lob: x?.lob?.name ?? null,
+          headerRenderedAs: x?.displayDemandId || resolveDemandCode(x),
+        })));
+        console.groupEnd();
+        console.log("[ProfileView] Attached (count):", mapped.length);
+      } catch {}
 
       setAttachedDemands(mapped);
       setAttachMode((prev) => prev || mapped.length === 0);
       setSelectedDemandIds(mapped.map((d) => String(d.id)));
 
-      return mapped; // ✅ give caller the exact set we just loaded
+      return mapped;
     } catch (err) {
       console.error("Failed to load demands by profile:", err);
       message.error(err?.message || "Failed to load attached demands");
@@ -253,9 +368,22 @@ export default function ProfileView({
       setSelectedDemandIds([]);
       return [];
     }
-  }, []);
+  }, [lookupCode]);
 
-  // ✅ Stable callback (no deps) — uses ref to read current attachments
+  // 🔁 codes map update backfill (unchanged)
+  useEffect(() => {
+    if (!attachedDemandsRef.current?.length) return;
+    setAttachedDemands((prev) =>
+      prev.map((d) => {
+        if (d?.displayDemandId) return d;
+        const code = lookupCode(d);
+        return code ? { ...d, displayDemandId: code } : d;
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeVer]);
+
+  // ✅ matching loader (unchanged)
   const loadMatchingDemands = useCallback(
     async (row, attachedListOptional) => {
       if (!row) {
@@ -275,25 +403,50 @@ export default function ProfileView({
             ? resp
             : [];
 
+        const cachePairs = [];
         const normalized = list.map((d) => {
-          const id = d.id ?? d.demandId ?? d.displayDemandId ?? Math.random();
+          const id = d.id ?? d.demandId ?? Math.random();
           const nameOf = (obj) =>
             obj && typeof obj === "object" ? obj.name ?? "" : String(obj ?? "");
           const join = (arr) =>
             Array.isArray(arr)
               ? arr.map((x) => nameOf(x)).filter(Boolean).join(", ")
               : nameOf(arr);
+
+        const display = d.displayDemandId ?? null;
+          const lob = d?.lob?.name ?? null;
+          const bizNum = d?.demandId ?? d?.id ?? null;
+          const displayCode = display || (lob && (bizNum !== null && bizNum !== undefined) ? `${lob}-${bizNum}` : null);
+
+          if (displayCode) {
+            cachePairs.push({ id: d.id, demandId: d.demandId, code: displayCode });
+          }
+
           return {
             id,
-            demandId: d.displayDemandId ?? d.demandId ?? String(id),
+            demandId: display || d.demandId || String(id),
+            displayDemandId: display || null,
+            lob: d?.lob ?? null,
             hbu: nameOf(d.hbu),
             skillCluster: nameOf(d.skillCluster),
             primarySkills: join(d.primarySkills),
-            title: [nameOf(d.skillCluster), nameOf(d.hbu)]
-              .filter(Boolean)
-              .join(" • "),
+            title: [nameOf(d.skillCluster), nameOf(d.hbu)].filter(Boolean).join(" • "),
           };
         });
+
+        addCodes(cachePairs);
+
+        try {
+          console.groupCollapsed("[ProfileView] Matching (normalized)");
+          console.table((normalized || []).map((x) => ({
+            id: x?.id,
+            demandId: x?.demandId,
+            displayDemandId: x?.displayDemandId,
+            lob: x?.lob?.name ?? null,
+            headerRenderedAs: x?.displayDemandId || resolveDemandCode(x),
+          })));
+          console.groupEnd();
+        } catch {}
 
         const attachedSource = Array.isArray(attachedListOptional)
           ? attachedListOptional
@@ -308,7 +461,7 @@ export default function ProfileView({
         setMatchingDemands([]);
       }
     },
-    [] // <- no deps, uses refs/params
+    [addCodes]
   );
 
   // ✅ Load ONCE per open/profile when switching to Demand tab
@@ -322,17 +475,21 @@ export default function ProfileView({
       return;
     }
 
-    // guard: avoid reloading for the same profile repeatedly
     if (demandTabLoadedForProfileRef.current === numericProfileId) return;
     demandTabLoadedForProfileRef.current = numericProfileId;
 
     (async () => {
       const attached = await loadAttachedFromBackend(numericProfileId);
       await loadMatchingDemands(profile, attached);
-    })();
-  }, [open, activeTab, profile, loadAttachedFromBackend, loadMatchingDemands]);
 
-  // ✅ Reset guards & state on close
+      const stillMissing = (attached || []).some((x) => !x.displayDemandId);
+      if (stillMissing) {
+        await enrichDisplayIdsForAttached();
+      }
+    })();
+  }, [open, activeTab, profile, loadAttachedFromBackend, loadMatchingDemands, enrichDisplayIdsForAttached]);
+
+  // Reset on close
   useEffect(() => {
     if (!open) {
       setActiveTab("profile");
@@ -344,7 +501,8 @@ export default function ProfileView({
       setOnbLoading(false);
       setOnbError(null);
       attachedDemandsRef.current = [];
-      demandTabLoadedForProfileRef.current = null; // reset the guard
+      demandTabLoadedForProfileRef.current = null;
+      // codeMapRef.current = {}; setCodeVer(v => v + 1);
     }
   }, [open]);
 
@@ -368,14 +526,28 @@ export default function ProfileView({
       await attachDemandsToProfileApi(profileId, ids);
       message.success("Demands attached to profile");
 
-      // optimistic UI (kept)
       const selSet = new Set(selectedDemandIds.map(String));
       const selectedObjs = matchingDemands.filter((d) => selSet.has(String(d.id)));
       const nowIso = new Date().toISOString();
+
+      const pairs = selectedObjs
+        .map((n) => {
+          const display = n.displayDemandId ?? null;
+          const lob = n?.lob?.name ?? null;
+          const bizNum =
+            /^\d+$/.test(String(n.demandId)) ? Number(n.demandId) : (n?.id ?? null);
+          const fallbackCode = lob && (bizNum !== null && bizNum !== undefined) ? `${lob}-${bizNum}` : null;
+          return { id: n.id, demandId: bizNum, code: display || fallbackCode || "" };
+        })
+        .filter((p) => p.code);
+      addCodes(pairs);
+
       const optimisticCards = selectedObjs.map((n) => ({
         trackerId: `tmp-${n.id}-${Date.now()}`,
         id: n.id,
-        demandId: n.demandId ?? n.id,
+        demandId: /^\d+$/.test(String(n.demandId)) ? Number(n.demandId) : n.id,
+        displayDemandId: n.displayDemandId ?? null,
+        lob: n.lob ?? null,
         hbu: n.hbu || "",
         skillCluster: n.skillCluster || "",
         primarySkills: n.primarySkills || "",
@@ -394,9 +566,10 @@ export default function ProfileView({
       setSelectedDemandIds([]);
       setAttachMode(false);
 
-      // ✅ refresh from backend once and recompute matching using the fresh list
       const freshAttached = await loadAttachedFromBackend(profileId);
       await loadMatchingDemands(profile, freshAttached);
+      const stillMissing = (freshAttached || []).some((x) => !x.displayDemandId);
+      if (stillMissing) await enrichDisplayIdsForAttached();
     } catch (err) {
       console.error("attachSelected error:", err);
       const backendMsg =
@@ -405,7 +578,7 @@ export default function ProfileView({
     }
   };
 
-  // Onboarding state
+  // Onboarding state (unchanged)
   const [onbLoading, setOnbLoading] = useState(false);
   const [onbError, setOnbError] = useState(null);
   const [onboardingList, setOnboardingList] = useState([]);
@@ -525,7 +698,6 @@ export default function ProfileView({
               key: "profile",
               label: "Profile Details",
               children: (
-                // ✅ EXACT same compact look as Demand Detail
                 <DetailBlock>
                   <div className="space-y-1.5 leading-tight">
                     <RowL label="Candidate" value={profile.candidateName || "-"} />
@@ -547,7 +719,8 @@ export default function ProfileView({
               ),
             },
             {
-              key: "demand",
+              // key: `demand-${codeVer}`,
+              key:"demand",
               label: "Demand Details",
               children: (
                 <div className="space-y-4 text-sm max-h-[60vh] overflow-y-auto pr-1">
@@ -560,7 +733,6 @@ export default function ProfileView({
                     ) : null}
                   </div>
 
-                  {/* Attached cards */}
                   {!attachMode && attachedDemands.length > 0 && (
                     <div className="rounded-lg border border-gray-300 bg-white p-4">
                       <div className="flex items-center justify-between mb-2">
@@ -570,7 +742,6 @@ export default function ProfileView({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {attachedDemands.map((d) => {
-                          // ✅ tone computed from profile tracker status only
                           const tone = evalTone(d?.profileTrackerStatusName);
                           const cardStyle = toneStyles(tone);
                           const colorText = toneTextColor(tone);
@@ -581,10 +752,15 @@ export default function ProfileView({
                               className="border rounded-md p-3"
                               style={{ ...cardStyle, textAlign: "left" }}
                             >
-                              {/* Top row: Demand # + date only */}
                               <div className="flex items-start justify-between gap-2">
-                                <div className="font-semibold text-[13px]" style={{ color: colorText }}>
-                                  Demand #{d.demandId ?? d.id}
+                                <div
+                                  className="font-semibold text-[13px]"
+                                  style={{ color: colorText }}
+                                  data-debug-id={d?.id}
+                                  data-debug-demandid={d?.demandId}
+                                  data-debug-display={d?.displayDemandId}
+                                >
+                                  Demand - {(d.displayDemandId || resolveDemandCode(d))}
                                 </div>
                                 <div className="text-[11px] text-gray-600" style={{ textAlign: "left" }}>
                                   {d.attachedDate ? formatDateOnly(d.attachedDate) : "-"}
@@ -605,7 +781,6 @@ export default function ProfileView({
                                 <strong>Primary:</strong> {d.primarySkills || "—"}
                               </div>
 
-                              {/* Status text remains the same; only color source changed */}
                               <div className="text-[12px] text-gray-700 mt-1">
                                 <strong>Status:</strong> {d.profileTrackerStatusName || "—"}
                               </div>
@@ -660,7 +835,14 @@ export default function ProfileView({
                                     className="min-w-0 cursor-pointer select-none flex-1"
                                     style={{ textAlign: "left" }}
                                   >
-                                    <div className="font-medium">Demand #{item.demandId ?? item.id}</div>
+                                    <div
+                                      className="font-medium"
+                                      data-debug-id={item?.id}
+                                      data-debug-demandid={item?.demandId}
+                                      data-debug-display={item?.displayDemandId}
+                                    >
+                                      Demand - {(item.displayDemandId || resolveDemandCode(item))}
+                                    </div>
                                     <div className="text-gray-700">{item.title}</div>
                                     <div className="text-gray-500 text-[12px]">Primary: {item.primarySkills || "-"}</div>
                                   </label>
@@ -683,7 +865,6 @@ export default function ProfileView({
               key: "onboarding",
               label: "Onboarding Detail",
               children: (
-                // ✅ EXACT same compact container
                 <div className="mt-1">
                   {onbLoading ? (
                     <div className="py-6 flex items-center justify-center">
