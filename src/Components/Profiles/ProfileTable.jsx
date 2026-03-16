@@ -569,8 +569,6 @@
 //   );
 // }
 
-
-
 // ================== src/pages/Profiles/ProfileTable.jsx ==================
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -655,13 +653,17 @@ export default function ProfileTable({
     summary: row?.summary ?? "",
 
     // NEW: PAN initial (try common keys; normalize to uppercase)
-    panCard:
-      row?.panCard && String(row.panCard).trim() !== ""
-        ? String(row.panCard).toUpperCase()
+    panNumber:
+      row?.panNumber && String(row.panNumber).trim() !== ""
+        ? String(row.panNumber).toUpperCase()
         : row?.pan && String(row.pan).trim() !== ""
         ? String(row.pan).toUpperCase()
-        : row?.panNumber && String(row.panNumber).trim() !== ""
-        ? String(row.panNumber).toUpperCase()
+        : row?.pan_no && String(row.pan_no).trim() !== ""
+        ? String(row.pan_no).toUpperCase()
+        : row?.panNo && String(row.panNo).trim() !== ""
+        ? String(row.panNo).toUpperCase()
+        : row?.panCard && String(row.panCard).trim() !== ""
+        ? String(row.panCard).toUpperCase()
         : undefined,
   });
 
@@ -728,10 +730,10 @@ export default function ProfileTable({
       const primarySkillsIds = toNumArr(values.primarySkillsIds);
       const secondarySkillsIds = toNumArr(values.secondarySkillsIds);
 
-      // NEW: normalize PAN to uppercase no-space
-      const panCard =
-        values.panCard != null && String(values.panCard).trim() !== ""
-          ? String(values.panCard).toUpperCase().replace(/\s+/g, "")
+      // NEW: normalize PAN to uppercase no-space (use panNumber to match backend DTO)
+      const panNumber =
+        values.panNumber != null && String(values.panNumber).trim() !== ""
+          ? String(values.panNumber).toUpperCase().replace(/\s+/g, "")
           : undefined;
 
       const patch = {};
@@ -748,7 +750,7 @@ export default function ProfileTable({
       patch.secondarySkillsIds = secondarySkillsIds;
 
       if (empDigits !== undefined) patch.empId = empDigits; // UPDATED
-      if (panCard !== undefined) patch.panCard = panCard; // NEW
+      if (panNumber !== undefined) patch.panNumber = panNumber; // ✅ BACKEND-COMPATIBLE
 
       if (values.summary != null) patch.summary = String(values.summary).trim();
 
@@ -1033,9 +1035,9 @@ export default function ProfileTable({
               <Input placeholder="name@example.com" />
             </Form.Item>
 
-            {/* NEW: PAN Number (same pattern as RDGTA) */}
+            {/* NEW: PAN Number (match backend key: panNumber) */}
             <Form.Item
-              name="panCard"
+              name="panNumber"
               label="PAN Number"
               getValueFromEvent={(e) =>
                 (e?.target?.value || "").toUpperCase().replace(/\s+/g, "")
@@ -1044,7 +1046,8 @@ export default function ProfileTable({
                 { required: true, message: "PAN is required" },
                 {
                   pattern: /^[A-Z]{5}[0-9]{4}[A-Z]$/,
-                  message: "Invalid PAN format. Use 10 chars: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).",
+                  message:
+                    "Invalid PAN format. Use 10 chars: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F).",
                 },
               ]}
             >

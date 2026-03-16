@@ -2,14 +2,13 @@
 // // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 // import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // import { Button, message } from "antd";
-// import { PlusOutlined } from "@ant-design/icons";
+// import { PlusOutlined,ExportOutlined  } from "@ant-design/icons";
 // import { useNavigate } from "react-router-dom";
 
 // import Layout from "../Layout.jsx";
 // import ProfileTable from "./ProfileTable.jsx";
-// // src/Components/Profiles/ProfileSheet.jsx
 // import ProfileView from "./ProfileView.jsx"
-
+// import { exportProfileSheet } from '../api/Export/profilesheet.js'
 // import {
 //   getProfiles,
 //   getProfileDropdowns,
@@ -216,7 +215,7 @@
 //   // view modal (now separated)
 //   const [viewOpen, setViewOpen] = useState(false);
 //   const [viewRow, setViewRow] = useState(null);
-//   const [viewInitialTab, setViewInitialTab] = useState("demand");
+//   const [viewInitialTab, setViewInitialTab] = useState("profile");
 
 //   // role
 //   const roleName = getCurrentRoleName();
@@ -361,7 +360,20 @@
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, []);
 
-//   // search debounce
+
+//   const handleExport = async () => {
+//     try {
+//       setLoading(true);
+//       await exportProfileSheet();
+//       message.success('ProfileSheet exported successfully.');
+//     } catch (e) {
+//       message.error('Failed to export ProfileSheet.');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+
 //   const handleQueryChange = (key, value) => setQuery((prev) => ({ ...prev, [key]: value }));
 //   useEffect(() => {
 //     const t = setTimeout(() => fetchServer(0, size), 250);
@@ -450,6 +462,17 @@
 //               >
 //                 Add New Profile
 //               </Button>
+
+//     <Button
+//       type="default"
+//       icon={<ExportOutlined  />}
+//       loading={loading}
+//       onClick={handleExport}
+//       className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
+//     >
+//       Export ProfileSheet
+//     </Button>
+
 //             </div>
 //           </div>
 
@@ -486,7 +509,7 @@
 //         onClose={() => {
 //           setViewOpen(false);
 //           setViewRow(null);
-//           setViewInitialTab("demand");
+//           setViewInitialTab("profile");
 //         }}
 //         profile={viewRow}
 //         width={900}
@@ -495,7 +518,6 @@
 //     </>
 //   );
 // }
-
 
 
 
@@ -679,6 +701,10 @@ function adaptRow(item) {
   const createdAt = pick("createdAt", "created_on");
   const updatedAt = pick("updatedAt", "updated_on");
 
+  // NEW: PAN Number (common fallbacks)
+  const panNumber =
+    asText(pick("panNumber", "pan", "pan_no", "panNo", "taxId")) || "";
+
   return {
     id: pick("id", "profileId"),
     profileId: pick("profileId", "id"),
@@ -687,6 +713,8 @@ function adaptRow(item) {
     phoneNumber,
     experienceYears: experience ?? "",
     empId,
+    // NEW
+    panNumber, // <-- include PAN in adapted row
     location,
     hbu,
     skillCluster,
@@ -726,6 +754,8 @@ export default function ProfileSheet() {
   const ALL_COLUMNS = [
     { key: "candidateName", label: "Candidate Name" },
     { key: "emailId", label: "Email ID" },
+    // NEW
+    { key: "panNumber", label: "PAN Number" }, // <-- Added PAN column
     { key: "empId", label: "Employee ID" },
     { key: "phoneNumber", label: "Phone" },
     { key: "experienceYears", label: "Exp (yrs)" },
@@ -736,9 +766,12 @@ export default function ProfileSheet() {
     { key: "hbu", label: "HBU" },
     { key: "summary", label: "Summary" },
   ];
+
+  // Default visible: show PAN after Email; keep Emp ID conditional
   const defaultVisible = [
     "candidateName",
     "emailId",
+    "panNumber", // NEW: show PAN by default
     ...(showEmpId ? ["empId"] : []),
     "phoneNumber",
     "experienceYears",
@@ -816,6 +849,9 @@ export default function ProfileSheet() {
     }
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
+
+    // (OPTIONAL) If later you add filter UI for PAN, map here:
+    // if (clean(query.panNumber)) filter.panNumber = clean(query.panNumber);
 
     if (!adminView) filter.createdByUserId = currentUserId;
 
@@ -905,6 +941,8 @@ export default function ProfileSheet() {
         if (patch.candidateName != null) next.candidateName = patch.candidateName;
         if (patch.phoneNumber != null) next.phoneNumber = patch.phoneNumber;
         if (patch.empId != null) next.empId = patch.empId;
+        // NEW: reflect PAN change if you ever send it via patch
+        if (patch.panNumber != null) next.panNumber = patch.panNumber; // NEW
 
         if (patch.locationId != null) next.locationId = patch.locationId;
         if (patch.hbuId != null) next.hbuId = patch.hbuId;
