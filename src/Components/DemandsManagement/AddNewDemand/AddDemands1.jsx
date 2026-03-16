@@ -1048,12 +1048,12 @@ const SectionHeader = ({ icon, title, helper }) => (
 const toOptions = (list) =>
   Array.isArray(list)
     ? list
-      .map((x) =>
-        x && typeof x === "object"
-          ? { value: Number(x.id), label: String(x.name ?? "").trim() }
-          : null
-      )
-      .filter((o) => o && o.label)
+        .map((x) =>
+          x && typeof x === "object"
+            ? { value: Number(x.id), label: String(x.name ?? "").trim() }
+            : null
+        )
+        .filter((o) => o && o.label)
     : [];
 
 const safe = (arr) => (Array.isArray(arr) ? arr : []);
@@ -1271,9 +1271,9 @@ export default function AddDemands1() {
           noOfPositions: String(data?.numberOfPositions ?? prev.noOfPositions ?? "1"),
           skillCluster: data?.skillCluster
             ? {
-              value: Number(data.skillCluster.id ?? data.skillClusterId),
-              label: String(data.skillCluster.name ?? ""),
-            }
+                value: Number(data.skillCluster.id ?? data.skillClusterId),
+                label: String(data.skillCluster.name ?? ""),
+              }
             : prev.skillCluster,
           primarySkills: Array.isArray(data?.primarySkills)
             ? data.primarySkills.map((s) => ({ value: Number(s.id), label: String(s.name) }))
@@ -1353,17 +1353,17 @@ export default function AddDemands1() {
         next.demandTimeline = String(curOpt?.value ?? "");
       }
 
-      // Location type default -> onshore, and preselect "Pune" (or first onshore option)
+      // 🔹 Location type default -> OFFSHORE, and preselect "Pune" (or first offshore option)
       if (!prev.locationType) {
-        next.locationType = "onshore";
+        next.locationType = "offshore";
       }
-      if ((!prev.demandLocation || prev.demandLocation.length === 0) && options?.onshoreLocation?.length) {
-        const puneOpt = options.onshoreLocation.find((o) => o.label?.toLowerCase() === "pune");
-        const chosen = puneOpt || options.onshoreLocation[0];
+      if ((!prev.demandLocation || prev.demandLocation.length === 0) && options?.offshoreLocation?.length) {
+        const puneOpt = options.offshoreLocation.find((o) => o.label?.toLowerCase() === "pune");
+        const chosen = puneOpt || options.offshoreLocation[0];
         next.demandLocation = chosen?.value != null ? [Number(chosen.value)] : [];
       }
 
-      // 🔹 Keep karat default "yes" unless changed
+      // Keep karat default "yes" unless changed
       if (!prev.karat) {
         next.karat = "yes";
       }
@@ -1594,7 +1594,6 @@ export default function AddDemands1() {
               </div>
             </div>
           </section>
-
 
           {/* ========= Skills ========= */}
           <section>
@@ -2004,4 +2003,3 @@ export default function AddDemands1() {
     </Layout>
   );
 }
-``

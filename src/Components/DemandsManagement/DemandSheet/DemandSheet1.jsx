@@ -533,8 +533,8 @@ const normalizeDemandDto = (d) => ({
   demandReceivedDate: d.demandReceivedDate ?? "",
   remark: d.remark ?? "",
 
-  // NEW: Presentable Karat flag ("Yes" | "No" | "")
-  karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "", // NEW
+  // Presentable Karat flag ("Yes" | "No" | "")
+  karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
 
   // Raw id / file name
   id: d.id,
@@ -554,9 +554,9 @@ export default function DemandSheet1() {
     { key: "secondarySkills", label: "Secondary Skill" },
     { key: "priority", label: "Priority" },
     { key: "status", label: "Status" },
-    { key: "karat", label: "Karat" }, // NEW
+    { key: "karat", label: "Karat" },
     { key: "hbu", label: "HBU" },
-    { key: "p1Age", label: "P1 Age" }, // (kept for order; not filtering)
+    { key: "p1Age", label: "P1 Age" },
     { key: "demandTimeline", label: "Demand Timeline" },
     { key: "demandType", label: "Demand Type" },
     { key: "demandLocation", label: "Demand Location" },
@@ -587,7 +587,7 @@ export default function DemandSheet1() {
     "secondarySkills",
     "priority",
     "status",
-    "karat", // UPDATED: included
+    "karat",
     "hbu",
     "p1Age",
     "demandTimeline",
@@ -635,7 +635,7 @@ export default function DemandSheet1() {
     secondarySkills: "",
     priority: "", // P1/P2/P3
     status: "",
-    karat: "", // NEW: Yes/No
+    karat: "", // Yes/No
     hbu: "",
     demandTimeline: "",
     demandType: "",
@@ -656,7 +656,15 @@ export default function DemandSheet1() {
       Array.isArray(arr) ? { type: "select", options: arr } : text;
 
     return {
-      demandId: text,
+      // Demand ID input with arrows (spinner)
+      demandId: {
+        type: "number",
+        inputProps: {
+          placeholder: "ID",
+          step: 1,
+          min: 0,
+        },
+      },
       rrNumber: text,
       lob: text,
       skillCluster: text,
@@ -667,7 +675,7 @@ export default function DemandSheet1() {
         options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }],
       },
       status: text,
-      karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] }, // NEW
+      karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] },
       hbu: text,
       demandTimeline: mkSel(dropdowns?.demandTimeline), // expects [{id,name}]
       demandType: mkSel(dropdowns?.demandType), // expects [{id,name}]
@@ -700,7 +708,7 @@ export default function DemandSheet1() {
     const payload = {};
 
     // Demand ID: allow "MSS-104" or "104"
-    if (f.demandId) {
+    if (f.demandId !== "" && f.demandId != null) {
       const dStr = String(f.demandId).trim();
       const digits = onlyDigits(dStr);
       if (digits) payload.demandId = Number(digits);
@@ -731,7 +739,7 @@ export default function DemandSheet1() {
     // Status (string)
     if (f.status) payload.status = String(f.status).trim();
 
-    // NEW: Karat -> backend boolean `karatFlag`
+    // Karat -> backend boolean `karatFlag`
     if (f.karat) {
       const v = String(f.karat).trim().toLowerCase();
       if (v === "yes") payload.karatFlag = true;
@@ -756,7 +764,6 @@ export default function DemandSheet1() {
     if (f.band) payload.band = String(f.band).trim();
     if (f.experience) payload.experience = String(f.experience).trim();
 
-    // NOTE: receivedFrom / receivedTo can be added later as date inputs in header.
     return payload;
   };
 
@@ -781,12 +788,16 @@ export default function DemandSheet1() {
         const apiPage = Math.max(0, Number(uiPage) - 1);
         const apiSize = Number(uiSize);
 
+        // 🔽 IMPORTANT: Always ask backend to sort by Demand ID DESC *before* pagination
+        // Try standard Spring sort first; your getDemands API should append this to query string.
+        const sort = "displayDemandId,desc"; // or "demandId,desc" if that's your column name
+
         let resp;
         if (hasAnyFilter) {
           const payload = buildFilterPayload(filters);
-          resp = await searchDemands(payload, apiPage, apiSize);
+          resp = await searchDemands(payload, apiPage, apiSize, sort);
         } else {
-          resp = await getDemandsheet(apiPage, apiSize);
+          resp = await getDemandsheet(apiPage, apiSize, sort);
         }
 
         const list = Array.isArray(resp?.data?.content)
@@ -809,6 +820,7 @@ export default function DemandSheet1() {
 
         const normalized = list.map(normalizeDemandDto);
 
+        // ❌ Do NOT sort here; keep server order (already DESC by demand id)
         setRows(normalized);
         setTotalItems(Number.isFinite(total) ? total : normalized.length);
         setCurrentPage(Number(pageIndex) + 1);
