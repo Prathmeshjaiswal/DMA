@@ -520,11 +520,10 @@
 // }
 
 
-
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, message } from "antd";
-import { PlusOutlined,ExportOutlined  } from "@ant-design/icons";
+import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 import Layout from "../Layout.jsx";
@@ -701,9 +700,14 @@ function adaptRow(item) {
   const createdAt = pick("createdAt", "created_on");
   const updatedAt = pick("updatedAt", "updated_on");
 
-  // NEW: PAN Number (common fallbacks)
-  const panNumber =
-    asText(pick("panNumber", "pan", "pan_no", "panNo", "taxId")) || "";
+  // PAN kept in data; UI visibility controlled by a flag
+  const panNumber = asText(pick("panNumber", "pan", "pan_no", "panNo", "taxId")) || "";
+
+  // Status (backend returns profileStatus as RefDTO {id,name})
+  const profileStatus = asText(pick("profileStatus", "profileStatusName", "status", "statusName"));
+  const profileStatusId =
+    pick("profileStatusId") ??
+    (item?.profileStatus?.id != null ? Number(item.profileStatus.id) : undefined);
 
   return {
     id: pick("id", "profileId"),
@@ -713,8 +717,9 @@ function adaptRow(item) {
     phoneNumber,
     experienceYears: experience ?? "",
     empId,
-    // NEW
-    panNumber, // <-- include PAN in adapted row
+    panNumber, // kept
+    profileStatus,
+    profileStatusId,
     location,
     hbu,
     skillCluster,
@@ -740,6 +745,9 @@ function adaptRow(item) {
 export default function ProfileSheet() {
   const navigate = useNavigate();
 
+  // ----- Simple feature flag: 0 = hide PAN column; 1 = show -----
+  const SHOW_PAN = 0;
+
   // view modal (now separated)
   const [viewOpen, setViewOpen] = useState(false);
   const [viewRow, setViewRow] = useState(null);
@@ -751,36 +759,55 @@ export default function ProfileSheet() {
   const showEmpId = isRDGRole(roleName) || isAdminRole(roleName);
   const currentUserId = useMemo(() => getCurrentUserId(), []);
 
-  const ALL_COLUMNS = [
-    { key: "candidateName", label: "Candidate Name" },
-    { key: "emailId", label: "Email ID" },
-    // NEW
-    { key: "panNumber", label: "PAN Number" }, // <-- Added PAN column
-    { key: "empId", label: "Employee ID" },
-    { key: "phoneNumber", label: "Phone" },
-    { key: "experienceYears", label: "Exp (yrs)" },
-    { key: "skillCluster", label: "Skill Cluster" },
-    { key: "primarySkills", label: "Primary Skills" },
-    { key: "secondarySkills", label: "Secondary Skills" },
-    { key: "location", label: "Location" },
-    { key: "hbu", label: "HBU" },
-    { key: "summary", label: "Summary" },
-  ];
+  // All possible columns (PAN included here but filtered by SHOW_PAN)
+  const ALL_COLUMNS_BASE = useMemo(
+    () => [
+      { key: "candidateName", label: "Candidate Name" },
+      { key: "emailId", label: "Email ID" },
+      { key: "panNumber", label: "PAN Number" }, // will be hidden when SHOW_PAN === 0
+      { key: "empId", label: "Employee ID" },
+      { key: "profileStatus", label: "Status" },
+      { key: "phoneNumber", label: "Phone" },
+      { key: "experienceYears", label: "Exp (yrs)" },
+      { key: "skillCluster", label: "Skill Cluster" },
+      { key: "primarySkills", label: "Primary Skills" },
+      { key: "secondarySkills", label: "Secondary Skills" },
+      { key: "location", label: "Location" },
+      { key: "hbu", label: "HBU" },
+      { key: "summary", label: "Summary" },
+    ],
+    []
+  );
 
-  // Default visible: show PAN after Email; keep Emp ID conditional
-  const defaultVisible = [
-    "candidateName",
-    "emailId",
-    "panNumber", // NEW: show PAN by default
-    ...(showEmpId ? ["empId"] : []),
-    "phoneNumber",
-    "experienceYears",
-    "skillCluster",
-    "primarySkills",
-    "secondarySkills",
-    "location",
-    "hbu",
-  ];
+  // Apply flag to actually send columns to table (removes PAN column when SHOW_PAN === 0)
+  const ALL_COLUMNS = useMemo(
+    () => (SHOW_PAN ? ALL_COLUMNS_BASE : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber")),
+    [SHOW_PAN, ALL_COLUMNS_BASE]
+  );
+
+  // Default visible (PAN present in base list but filtered by flag below)
+  const defaultVisibleBase = useMemo(
+    () => [
+      "candidateName",
+      "emailId",
+      "panNumber", // filtered out when SHOW_PAN === 0
+      ...(showEmpId ? ["empId"] : []),
+      "profileStatus",
+      "phoneNumber",
+      "experienceYears",
+      "skillCluster",
+      "primarySkills",
+      "secondarySkills",
+      "location",
+      "hbu",
+    ],
+    [showEmpId]
+  );
+
+  const defaultVisible = useMemo(
+    () => (SHOW_PAN ? defaultVisibleBase : defaultVisibleBase.filter((k) => k !== "panNumber")),
+    [SHOW_PAN, defaultVisibleBase]
+  );
 
   // paging + data
   const [rows, setRows] = useState([]);
@@ -850,7 +877,8 @@ export default function ProfileSheet() {
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
 
-    // (OPTIONAL) If later you add filter UI for PAN, map here:
+    // (OPTIONAL) Future filters:
+    // if (clean(query.profileStatus)) filter.profileStatusName = clean(query.profileStatus);
     // if (clean(query.panNumber)) filter.panNumber = clean(query.panNumber);
 
     if (!adminView) filter.createdByUserId = currentUserId;
@@ -941,8 +969,10 @@ export default function ProfileSheet() {
         if (patch.candidateName != null) next.candidateName = patch.candidateName;
         if (patch.phoneNumber != null) next.phoneNumber = patch.phoneNumber;
         if (patch.empId != null) next.empId = patch.empId;
-        // NEW: reflect PAN change if you ever send it via patch
-        if (patch.panNumber != null) next.panNumber = patch.panNumber; // NEW
+        if (patch.panNumber != null) next.panNumber = patch.panNumber; // reflect PAN
+
+        if (patch.profileStatusId != null) next.profileStatusId = patch.profileStatusId; // optional future
+        if (patch.profileStatusName != null) next.profileStatus = patch.profileStatusName; // optional future
 
         if (patch.locationId != null) next.locationId = patch.locationId;
         if (patch.hbuId != null) next.hbuId = patch.hbuId;
@@ -1001,16 +1031,15 @@ export default function ProfileSheet() {
                 Add New Profile
               </Button>
 
-    <Button
-      type="default"
-      icon={<ExportOutlined  />}
-      loading={loading}
-      onClick={handleExport}
-      className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-    >
-      Export ProfileSheet
-    </Button>
-
+              <Button
+                type="default"
+                icon={<ExportOutlined />}
+                loading={loading}
+                onClick={handleExport}
+                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
+              >
+                Export ProfileSheet
+              </Button>
             </div>
           </div>
 
@@ -1024,8 +1053,8 @@ export default function ProfileSheet() {
           {/* Table — server-driven list + search */}
           <ProfileTable
             rows={rows}
-            columns={ALL_COLUMNS}
-            visibleColumns={visibleColumns}
+            columns={ALL_COLUMNS}            /* PAN column hidden when SHOW_PAN === 0 */
+            visibleColumns={visibleColumns}  /* PAN not in defaults when SHOW_PAN === 0 */
             onViewRow={onViewRow}
             onDownload={downloadProfileCv ? (row) => downloadProfileCv(row.cvFileName) : undefined}
             onSavePatch={handleSavePatch}
