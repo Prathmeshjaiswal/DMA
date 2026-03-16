@@ -941,9 +941,8 @@
 //   );
 // }
 
-
 // src/Components/DemandsManagement/AddNewDemand/AddDemands1.jsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Layout from "../../Layout.jsx";
 import Select, { components } from "react-select";
 import { message, Spin } from "antd";
@@ -974,9 +973,14 @@ const toSelectValues = (ids, optionList) =>
     ? optionList.filter(o => ids.map(Number).includes(Number(o.value)))
     : [];
 
-
-
 const todayStr = () => format(new Date(), "dd-MMM-yyyy");
+
+// ✅ round to 2 decimals safely
+const round2 = (n) => {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return null;
+  return Math.round(x * 100) / 100;
+};
 
 // ✅ INITIAL (blank) form
 const INITIAL_FORM = () => ({
@@ -1011,11 +1015,15 @@ const INITIAL_FORM = () => ({
   status: "",
   pod: "",
   demandReceivedDate: todayStr(),
+
+  // 🔹 New controlled numeric field (float)
   experience: "",
+
   remark: "",
   rrDrafts: [],
 
-  karat: "no", // default toggle for UI only
+  // 🔹 Default Karat -> YES (as requested)
+  karat: "yes",
 });
 
 // react-select checkbox option renderer
@@ -1087,7 +1095,9 @@ const buildDraftCreateRequest = (form) => ({
   pmoId: toNum(form.pmo),
   projectManagerId: toNum(form.pm),
 
-  experience: form.experience ?? "5-7",
+  // 🔹 Experience as float rounded to 2 decimals (or null if empty)
+  experience: round2(form.experience),
+
   remark: form.remark ?? "Saving as draft from Step-1 (mix file + text)",
 
   numberOfPositions: toNum(form.noOfPositions),
@@ -1297,7 +1307,13 @@ export default function AddDemands1() {
           pod: String(data?.pod?.id ?? data?.podId ?? ""),
 
           demandReceivedDate: data?.demandReceivedDate || prev.demandReceivedDate,
-          experience: data?.experience ?? prev.experience,
+
+          // 🔹 Experience: show as fixed 2 decimals if present
+          experience:
+            data?.experience != null && data.experience !== ""
+              ? Number(round2(data.experience)).toFixed(2)
+              : prev.experience,
+
           remark: data?.remark ?? prev.remark,
           rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : prev.rrDrafts,
 
@@ -1305,7 +1321,7 @@ export default function AddDemands1() {
           karat:
             data?.karatFlag != null
               ? (Number(data.karatFlag) === 1 || data.karatFlag === true ? "yes" : "no")
-              : prev.karat ?? "no",
+              : prev.karat ?? "yes",
         }));
       } catch (e) {
         console.error("load draft error:", e);
@@ -1347,9 +1363,9 @@ export default function AddDemands1() {
         next.demandLocation = chosen?.value != null ? [Number(chosen.value)] : [];
       }
 
-      // Keep karat default "no" unless changed
+      // 🔹 Keep karat default "yes" unless changed
       if (!prev.karat) {
-        next.karat = "no";
+        next.karat = "yes";
       }
 
       return next;
@@ -1357,7 +1373,82 @@ export default function AddDemands1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation, options?.offshoreLocation]);
 
-  // (No localStorage hydration or persistence anymore)
+  // Build payload and call API:
+  // - If draftId exists -> PUT via updateDraft
+  // - Else -> POST via submitStep1
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validations
+    if (!form.lob) return message.warning("Line of Business is required.");
+    if (!form.noOfPositions || Number(form.noOfPositions) < 1)
+      return message.warning("No. of Positions must be at least 1.");
+    if (!form.skillCluster) return message.warning("Skill Cluster is required.");
+    if (!form.demandReceivedDate) return message.warning("Demand Received Date is required.");
+    if (!form.karat) return message.warning("Karat is required.");
+
+    // Optional: you can enforce experience >= 0 if present
+    if (form.experience !== "" && Number(form.experience) < 0) {
+      return message.warning("Experience cannot be negative.");
+    }
+
+    setLoading(true);
+    try {
+      const request = buildDraftCreateRequest(form);
+
+      let resp;
+      let effDraftId = Number(draftId) || null;
+
+      if (effDraftId) {
+        // strip rrDrafts on Step‑1 update (server enforces rrDraftId/positionIndex)
+        const { rrDrafts: _omit, ...requestWithoutRrDrafts } = request;
+        await updateDraft({ draftId: effDraftId, request: requestWithoutRrDrafts, files: [] });
+        resp = { data: { draftId: effDraftId } };
+      } else {
+        resp = await submitStep1(request);
+        const newId = Number(resp?.data?.draftId ?? resp?.draftId);
+        if (Number.isFinite(newId) && newId > 0) {
+          effDraftId = newId;
+          setDraftId(newId);
+        }
+      }
+
+      const serverDTO = resp?.data ?? resp;
+      const finalDraftId = Number(serverDTO?.draftId ?? effDraftId) || effDraftId || null;
+
+      const forStep2 = {
+        ...request, // includes karatFlag and experience (rounded)
+        ...serverDTO,
+        draftId: finalDraftId,
+        noOfPositions: form.noOfPositions,
+      };
+
+      navigate("/addDemands2", {
+        state: {
+          draftId: finalDraftId,
+          karatFlag: request.karatFlag,
+          form1Data: forStep2,
+        },
+      });
+    } catch (err) {
+      console.error("[Step1] error:", err);
+      const msg = err?.response?.data?.message || err?.message || "Step 1 failed.";
+      message.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!dropdowns || !dropdownsLoaded || loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-72">
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 28 }} spin />} />
+          <span className="ml-3 text-gray-600">Loading…</span>
+        </div>
+      </Layout>
+    );
+  }
 
   // ===== pill radios (LOB, Timeline, Type) =====
   const PillRadios = ({ name, optionsList, value, onChange }) => (
@@ -1419,78 +1510,6 @@ export default function AddDemands1() {
     </div>
   );
 
-  // Build payload and call API:
-  // - If draftId exists -> PUT via updateDraft
-  // - Else -> POST via submitStep1
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validations
-    if (!form.lob) return message.warning("Line of Business is required.");
-    if (!form.noOfPositions || Number(form.noOfPositions) < 1)
-      return message.warning("No. of Positions must be at least 1.");
-    if (!form.skillCluster) return message.warning("Skill Cluster is required.");
-    if (!form.demandReceivedDate) return message.warning("Demand Received Date is required.");
-    if (!form.karat) return message.warning("Karat is required.");
-
-    setLoading(true);
-    try {
-      const request = buildDraftCreateRequest(form);
-
-      let resp;
-      let effDraftId = Number(draftId) || null;
-
-      if (effDraftId) {
-        // strip rrDrafts on Step‑1 update (server enforces rrDraftId/positionIndex)
-        const { rrDrafts: _omit, ...requestWithoutRrDrafts } = request;
-        await updateDraft({ draftId: effDraftId, request: requestWithoutRrDrafts, files: [] });
-        resp = { data: { draftId: effDraftId } };
-      } else {
-        resp = await submitStep1(request);
-        const newId = Number(resp?.data?.draftId ?? resp?.draftId);
-        if (Number.isFinite(newId) && newId > 0) {
-          effDraftId = newId;
-          setDraftId(newId);
-        }
-      }
-
-      const serverDTO = resp?.data ?? resp;
-      const finalDraftId = Number(serverDTO?.draftId ?? effDraftId) || effDraftId || null;
-
-      const forStep2 = {
-        ...request, // includes karatFlag
-        ...serverDTO,
-        draftId: finalDraftId,
-        noOfPositions: form.noOfPositions,
-      };
-
-      navigate("/addDemands2", {
-        state: {
-          draftId: finalDraftId,
-          karatFlag: request.karatFlag,
-          form1Data: forStep2,
-        },
-      });
-    } catch (err) {
-      console.error("[Step1] error:", err);
-      const msg = err?.response?.data?.message || err?.message || "Step 1 failed.";
-      message.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!dropdowns || !dropdownsLoaded || loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-72">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 28 }} spin />} />
-          <span className="ml-3 text-gray-600">Loading…</span>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
       <div className="">
@@ -1506,9 +1525,13 @@ export default function AddDemands1() {
               title="Basics"
               helper="Select the LOB and enter total positions."
             />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* LEFT COLUMN – LOB */}
               <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
-                <span className={`${labelCls} whitespace-nowrap mt-2`}>Line of Business:</span>
+                <span className={`${labelCls} whitespace-nowrap mt-2`}>
+                  Line of Business:
+                </span>
                 <PillRadios
                   name="lob"
                   optionsList={options?.lob}
@@ -1516,19 +1539,62 @@ export default function AddDemands1() {
                   onChange={(val) => setForm((p) => ({ ...p, lob: val }))}
                 />
               </div>
-              <div className="flex items-center gap-4 px-3 pb-3">
-                <label className={`${labelCls} whitespace-nowrap`}>No. of Positions:</label>
-                <input
-                  className={`${inputCls} w-1/6`}
-                  type="number"
-                  min={1}
-                  placeholder="1"
-                  value={form.noOfPositions}
-                  onChange={(e) => setForm({ ...form, noOfPositions: e.target.value })}
-                />
+
+              {/* RIGHT COLUMN – Positions + Experience */}
+              <div className="flex flex-col gap-4 px-3 pb-3">
+                {/* No. of Positions */}
+                <div className="flex items-center gap-4">
+                  <label className={`${labelCls} whitespace-nowrap`}>
+                    No. of Positions:
+                  </label>
+                  <input
+                    className={`${inputCls} w-1/4`}
+                    type="number"
+                    min={1}
+                    placeholder="1"
+                    value={form.noOfPositions}
+                    onChange={(e) =>
+                      setForm({ ...form, noOfPositions: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* ✅ Experience directly under LOB */}
+                <div className="flex items-center gap-4">
+                  <label className={`${labelCls} whitespace-nowrap`}>
+                    Experience (Years):
+                  </label>
+                  <input
+                    className={`${inputCls} w-1/4`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g., 3.5"
+                    value={form.experience}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") {
+                        setForm((p) => ({ ...p, experience: "" }));
+                      } else {
+                        setForm((p) => ({ ...p, experience: v }));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (form.experience === "") return;
+                      const v = Number(form.experience);
+                      if (!Number.isNaN(v)) {
+                        setForm((p) => ({
+                          ...p,
+                          experience: v.toFixed(2), // ✅ round to 2 decimals
+                        }));
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </section>
+
 
           {/* ========= Skills ========= */}
           <section>
@@ -1634,7 +1700,13 @@ export default function AddDemands1() {
 
           {/* ========= Business ========= */}
           <section>
-            <SectionHeader icon={<ProjectOutlined />} title="Business" helper="Context & ownership." />
+            <SectionHeader
+              icon={<ProjectOutlined />}
+              title="Business"
+              helper="Context & ownership."
+            />
+
+            {/* ✅ FIRST ROW: Sales SPOC | PMO | HBU */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
               <OtherableSelect
                 label="Sales SPOC"
@@ -1643,8 +1715,12 @@ export default function AddDemands1() {
                 options={options?.salesSpoc}
                 placeholder="Select Sales SPOC"
                 otherValue={form.salesSpocOther}
-                onChangeSelect={(val) => setForm({ ...form, salesSpoc: val })}
-                onChangeOther={(val) => setForm({ ...form, salesSpocOther: val })}
+                onChangeSelect={(val) =>
+                  setForm({ ...form, salesSpoc: val })
+                }
+                onChangeOther={(val) =>
+                  setForm({ ...form, salesSpocOther: val })
+                }
                 inputCls={inputCls}
                 labelCls={labelCls}
               />
@@ -1656,27 +1732,17 @@ export default function AddDemands1() {
                 options={options?.pmo}
                 placeholder="Select PMO"
                 otherValue={form.pmoOther}
-                onChangeSelect={(val) => setForm({ ...form, pmo: val })}
-                onChangeOther={(val) => setForm({ ...form, pmoOther: val })}
+                onChangeSelect={(val) =>
+                  setForm({ ...form, pmo: val })
+                }
+                onChangeOther={(val) =>
+                  setForm({ ...form, pmoOther: val })
+                }
                 inputCls={inputCls}
                 labelCls={labelCls}
               />
 
-              <OtherableSelect
-                label="PMO SPOC"
-                name="pmoSpoc"
-                value={form.pmoSpoc}
-                options={options?.pmoSpoc}
-                placeholder="Select PMO SPOC"
-                otherValue={form.pmoSpocOther}
-                onChangeSelect={(val) => setForm({ ...form, pmoSpoc: val })}
-                onChangeOther={(val) => setForm({ ...form, pmoSpocOther: val })}
-                inputCls={inputCls}
-                labelCls={labelCls}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
+              {/* ✅ HBU now beside PMO */}
               <OtherableSelect
                 label="HBU"
                 name="hbu"
@@ -1684,12 +1750,19 @@ export default function AddDemands1() {
                 options={options?.hbu}
                 placeholder="Select HBU"
                 otherValue={form.hbuOther}
-                onChangeSelect={(val) => setForm({ ...form, hbu: val })}
-                onChangeOther={(val) => setForm({ ...form, hbuOther: val })}
+                onChangeSelect={(val) =>
+                  setForm({ ...form, hbu: val })
+                }
+                onChangeOther={(val) =>
+                  setForm({ ...form, hbuOther: val })
+                }
                 inputCls={inputCls}
                 labelCls={labelCls}
               />
+            </div>
 
+            {/* ✅ SECOND ROW: HBU SPOC */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
               <OtherableSelect
                 label="HBU SPOC"
                 name="hbuSpoc"
@@ -1697,12 +1770,17 @@ export default function AddDemands1() {
                 options={options?.hbuSpoc}
                 placeholder="Select HBU SPOC"
                 otherValue={form.hbuSpocOther}
-                onChangeSelect={(val) => setForm({ ...form, hbuSpoc: val })}
-                onChangeOther={(val) => setForm({ ...form, hbuSpocOther: val })}
+                onChangeSelect={(val) =>
+                  setForm({ ...form, hbuSpoc: val })
+                }
+                onChangeOther={(val) =>
+                  setForm({ ...form, hbuSpocOther: val })
+                }
                 inputCls={inputCls}
                 labelCls={labelCls}
               />
 
+              <div className="hidden md:block" />
               <div className="hidden md:block" />
             </div>
           </section>
@@ -1800,51 +1878,6 @@ export default function AddDemands1() {
                 )}
               </div>
 
-              {/* <div>
-                <label className={`${labelCls} mb-1 block`}>Demand Location</label>
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    className={`px-2 py-0.5 rounded border text-xs ${
-                      form.locationType === "onshore"
-                        ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
-                    }`}
-                    onClick={() => setForm((prev) => ({ ...prev, locationType: "onshore", demandLocation: [] }))}
-                  >
-                    Onshore
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-2 py-0.5 rounded border text-xs ${
-                      form.locationType === "offshore"
-                        ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
-                    }`}
-                    onClick={() => setForm((prev) => ({ ...prev, locationType: "offshore", demandLocation: [] }))}
-                  >
-                    Offshore
-                  </button>
-                </div>
-                <PillCheckboxes
-                  name="demandLocation"
-                  optionsList={form.locationType === "onshore" ? options?.onshoreLocation || [] : options?.offshoreLocation || []}
-                  selected={form.demandLocation}
-                  onToggle={(val, isChecked) =>
-                    setForm((prev) => {
-                      const curr = new Set(prev.demandLocation.map(String));
-                      if (isChecked) curr.add(val);
-                      else curr.delete(val);
-                      return { ...prev, demandLocation: Array.from(curr).map((x) => Number(x)) };
-                    })
-                  }
-                />
-                <div className="flex items-center gap-2 text-xs text-gray-500 mt-2 pl-22">
-                  <EnvironmentOutlined />
-                  <span>Select one or more locations.</span>
-                </div>
-              </div> */}
-
               <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Location</label>
 
@@ -1853,8 +1886,8 @@ export default function AddDemands1() {
                   <button
                     type="button"
                     className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "onshore"
-                        ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
                       }`}
                     onClick={() =>
                       setForm((prev) => ({
@@ -1869,8 +1902,8 @@ export default function AddDemands1() {
                   <button
                     type="button"
                     className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "offshore"
-                        ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
                       }`}
                     onClick={() =>
                       setForm((prev) => ({
@@ -1971,3 +2004,4 @@ export default function AddDemands1() {
     </Layout>
   );
 }
+``
