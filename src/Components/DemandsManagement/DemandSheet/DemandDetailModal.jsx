@@ -830,13 +830,6 @@ function profileKey(p) {
 }
 
 /** ---- Generic helpers ---- */
-const BACKEND_FMT = "YYYY-MM-DD";
-function fmtDate(d) {
-  if (!d) return "-";
-  const dt = new Date(d);
-  return Number.isNaN(dt.getTime()) ? String(d) : dt.toLocaleString();
-}
-
 function toTitleCase(s) {
   if (!s) return "";
   return String(s)
@@ -978,12 +971,6 @@ function ProfileCard({ p }) {
 
   const statusName = getStatusName(p);
 
-  const hbuName = nameOf(p?.hbu) || "-";
-  const experienceText =
-    p?.experience != null && p?.experience !== ""
-      ? `${p.experience} Yrs`
-      : "-";
-
   return (
     <div className="rounded-lg border border-gray-200 p-3 shadow-sm">
       {/* Header: name on left, STATUS on right */}
@@ -1021,13 +1008,7 @@ function ProfileCard({ p }) {
 
         {/* RIGHT */}
         <div className="col-span-1">
-          <div className="mb-1">
-            <strong>HBU:</strong> {nameOf(p?.hbu) || "-"}
-          </div>
-          <div className="mb-1">
-            <strong>Experience:</strong>{" "}
-            {p?.experience != null && p?.experience !== "" ? `${p.experience} Yrs` : "-"}
-          </div>
+          {/* compact right column */}
         </div>
       </div>
     </div>
@@ -1062,8 +1043,7 @@ function ProfileRow({ p, selected, onToggle }) {
           {toTitleCase(p?.candidateName ?? "-")}
         </div>
         <div className="text-xs text-gray-500">
-          Exp: {p?.experience ?? "-"}&nbsp;Yrs&nbsp;•&nbsp; HBU: {nameOf(p?.hbu) || "-"}&nbsp;•&nbsp; Loc{" "}
-          {nameOf(p?.location) || "-"}
+          Exp: {p?.experience ?? "-"}&nbsp;Yrs
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -1082,7 +1062,6 @@ function ProfileRow({ p, selected, onToggle }) {
 }
 
 /* ================== NEW: Onboarding tone helpers (cards) ================== */
-// *** UPDATED: tone/color based on onboarding status name
 function onboardingTone(statusNameRaw) {
   const s = String(statusNameRaw || "").toUpperCase();
   if (s.includes("ONBOARD")) return "green";
@@ -1202,19 +1181,6 @@ export default function DemandDetailModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab, attachMode, demandPkId]);
-
-  // *** UPDATED: auto-show available profiles if no attached profiles
-//   useEffect(() => {
-//     if (!open || tab !== "profile" || profileSubTab !== "open") return;
-//     if (!loadingAttached && Array.isArray(attachedProfiles)) {
-//       if (attachedProfiles.length === 0) {
-//         setAttachMode(true);
-//         // ensure available list loads
-//         loadAvailable();
-//       }
-//     }
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [open, tab, profileSubTab, loadingAttached, attachedProfiles]);
 
   // Toggle by stable profile key
   const toggleSelect = (p) => {
@@ -1421,6 +1387,7 @@ export default function DemandDetailModal({
                       <div><strong>Secondary Skill:</strong> {row.secondarySkills || "-"}</div>
                       <div><strong>Priority:</strong> {row.priority || "-"}</div>
                       <div><strong>Status:</strong> {row.status || "-"}</div>
+                      <div><strong>Karat:</strong> {row.karat || "-"}</div> {/* NEW */}
                       <div><strong>Band:</strong> {row.band || "-"}</div>
                       <div><strong>Experience:</strong> {row.experience || "-"}</div>
                       <div><strong>Hiring Manager:</strong> {row.hiringManager || "-"}</div>
@@ -1439,122 +1406,6 @@ export default function DemandDetailModal({
                   </div>
                 ),
               },
-//               {
-//                 key: "profile",
-//                 label: "Profile Shared",
-//                 children: (
-//                   <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm text-sm">
-//                     {/* Inner tabs: Open Profiles / Archived Profiles */}
-//                     <Tabs
-//                       activeKey={profileSubTab}
-//                       onChange={(k) => {
-//                         setProfileSubTab(k);
-//                         setAttachMode(false);
-//                       }}
-//                       items={[
-//                         { key: "open", label: "Open Profiles" },
-//                         { key: "archived", label: "Archived Profiles" },
-//                       ]}
-//                     />
-//
-//                     {/* Header actions - only in Open tab */}
-//                     <div className="mb-3 flex items-center justify-between">
-//                       <div className="text-gray-700 font-medium">
-//                         {profileSubTab === "open" ? "Open Profiles" : "Archived Profiles"}
-//                       </div>
-//
-//                       {profileSubTab === "open" && (attachedProfiles?.length ) > 0 ? (
-//                         <Button
-//                           icon={<PlusOutlined />}
-//                           type="primary"
-//                           onClick={() => {
-//                             setAttachMode(true);
-//                             loadAvailable();
-//                           }}
-//                         >
-//                           Attach Profile
-//                         </Button>
-//                       ) : profileSubTab === "open" && attachMode ? (
-//                         <div className="flex items-center gap-2">
-//                           <Button onClick={() => setAttachMode(false)} disabled={working}>
-//                             Back
-//                           </Button>
-//                           <Button type="primary" loading={working} onClick={submitAttach}>
-//                             Submit
-//                           </Button>
-//                         </div>
-//                       ) : (
-//                         <div />
-//                       )}
-//                     </div>
-//
-//                     {/* Body */}
-//                     {profileSubTab === "archived" ? (
-//                       <>
-//                         {loadingAttached ? (
-//                           <div className="text-gray-500 text-sm px-2 py-6">
-//                             Loading archived profiles…
-//                           </div>
-//                         ) : archivedAttached?.length ? (
-//                           <div className="grid sm:grid-cols-2 gap-3">
-//                             {archivedAttached.map((p) => (
-//                               <ProfileCard key={profileKey(p)} p={p} />
-//                             ))}
-//                           </div>
-//                         ) : (
-//                           <div className="text-gray-600">No archived profiles.</div>
-//                         )}
-//                       </>
-//                     ) : !attachMode ? (
-//                       <>
-//                         {loadingAttached ? (
-//                           <div className="text-gray-500 text-sm px-2 py-6">
-//                             Loading attached profiles…
-//                           </div>
-//                         ) : openAttached?.length ? (
-//                           <div className="grid sm:grid-cols-2 gap-3">
-//                             {openAttached.map((p) => (
-//                               <ProfileCard key={profileKey(p)} p={p} />
-//                             ))}
-//                           </div>
-//                         ) : (
-//                           // *** UPDATED: If no attached profiles -> the effect already moved to attach mode,
-//                           // but in case it hasn't yet, show a gentle fallback.
-//                           <div className="text-gray-600">No profile attached.</div>
-//                         )}
-//                       </>
-//                     ) : (
-//                       <>
-//                         <div className="rounded-md border border-gray-100 p-2">
-//                           {loadingProfiles ? (
-//                             <div className="text-gray-500 text-sm px-2 py-6">
-//                               Loading profiles…
-//                             </div>
-//                           ) : availableProfiles?.length ? (
-//                             <div className="divide-y divide-gray-200">
-//                               {availableProfiles.map((p) => {
-//                                 const key = profileKey(p);
-//                                 return (
-//                                   <ProfileRow
-//                                     key={key}
-//                                     p={p}
-//                                     selected={!!selectedMap[key]}
-//                                     onToggle={toggleSelect}
-//                                   />
-//                                 );
-//                               })}
-//                             </div>
-//                           ) : (
-//                             <div className="text-gray-500 text-sm px-2 py-6">
-//                               No profiles available.
-//                             </div>
-//                           )}
-//                         </div>
-//                       </>
-//                     )}
-//                   </div>
-//                 ),
-//               },
               {
                 key: "profile",
                 label: "Profile Shared",
@@ -1676,7 +1527,6 @@ export default function DemandDetailModal({
               },
 
               // ======================= Onboarding Detail (MULTI-CARD) =======================
-              // *** UPDATED: Show ALL onboarding records as colored cards
               {
                 key: "onboarding",
                 label: "Onboarding Detail",
@@ -1735,7 +1585,6 @@ export default function DemandDetailModal({
                   </div>
                 ),
               },
-              // ==========================================================================
 
               {
                 key: "history",
