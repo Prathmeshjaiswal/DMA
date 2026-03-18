@@ -235,7 +235,7 @@ function adaptOptions(dto = {}) {
     primarySkills: toOpt(dto.primarySkills),
     secondarySkills: toOpt(dto.secondarySkills),
     skillCluster: toOpt(dto.skillClusters),
-    profileStatus: toOpt(dto.status),
+    profileStatus: toOpt(dto.profileStatusList),
   };
 }
 

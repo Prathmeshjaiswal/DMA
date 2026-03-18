@@ -46,15 +46,15 @@ export default function ProfileTable({
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
 
   const opts = {
-  locations: dropdownOptions?.demandLocation ?? [],
-  hbu: dropdownOptions?.hbu ?? [],
-  skillCluster: dropdownOptions?.skillCluster ?? [],
-  primarySkills: dropdownOptions?.primarySkills ?? [],
-  secondarySkills: dropdownOptions?.secondarySkills ?? [],
+    locations: dropdownOptions?.demandLocation ?? [],
+    hbu: dropdownOptions?.hbu ?? [],
+    skillCluster: dropdownOptions?.skillCluster ?? [],
+    primarySkills: dropdownOptions?.primarySkills ?? [],
+    secondarySkills: dropdownOptions?.secondarySkills ?? [],
 
-  // REQUIRED
-  profileStatus: dropdownOptions?.profileStatus ?? [],
-};
+    // REQUIRED
+    profileStatus: dropdownOptions?.profileStatus ?? [],
+  };
   const ensureId = (row) => row?.id ?? row?.profileId;
 
   // --- compute initial values for the edit form from the selected row
@@ -86,10 +86,10 @@ export default function ProfileTable({
     summary: row?.summary ?? "",
 
 
- profileStatusId:
-    row?.profileStatusId != null
-      ? String(row.profileStatusId)
-      : undefined,
+   profileStatusId:
+  row?.profileStatusId != null
+    ? String(row.profileStatusId)
+    : undefined,
 
 
 
@@ -120,11 +120,12 @@ export default function ProfileTable({
 
   // ✅ Populate form only after the modal is open and the Form is mounted/connected
   useEffect(() => {
-    if (editOpen && editRow && opts.profileStatus.length > 0) {
-      form.setFieldsValue(buildInitialValues(editRow));
-    }
-  }, [editOpen, editRow, form]);
+  if (editOpen && editRow && opts.profileStatus.length > 0) {
+    form.setFieldsValue(buildInitialValues(editRow));
+  }
+}, [editOpen, editRow, opts.profileStatus, form]);
 
+  
   const closeEdit = () => {
     setEditOpen(false);
     setEditRow(null);
@@ -132,99 +133,100 @@ export default function ProfileTable({
   };
 
   const handleSave = async () => {
-  const id = ensureId(editRow);
-  if (!id) {
-    Modal.warning({
-      title: "Profile ID missing",
-      content: "Cannot update because id/profileId was not found.",
-    });
-    return;
-  }
-
-  try {
-    const values = await form.validateFields();
-
-    // ✅ MUST BE FIRST
-    const patch = {};
-
-    const toNum = (v) =>
-      v == null || v === "" || Number.isNaN(Number(v)) ? undefined : Number(v);
-
-    const toNumArr = (arr) =>
-      Array.isArray(arr)
-        ? arr.map((v) => Number(v)).filter((n) => !Number.isNaN(n))
-        : [];
-
-    // -------- BASIC FIELDS --------
-    if (values.candidateName != null)
-      patch.candidateName = values.candidateName.trim();
-
-    if (values.emailId != null)
-      patch.emailId = values.emailId.trim();
-
-    if (values.phoneNumber) {
-      patch.phoneNumber = String(values.phoneNumber).replace(/\D+/g, "");
-    }
-
-    if (values.empId) {
-      patch.empId = String(values.empId).replace(/\D+/g, "");
-    }
-
-    // -------- EXPERIENCE --------
-    if (values.experienceYears != null) {
-      patch.experience = Number(values.experienceYears);
-    }
-
-    // -------- STATUS ✅ FIXED --------
-    const profileStatusId =
-      values.profileStatusId != null
-        ? Number(values.profileStatusId)
-        : undefined;
-
-    if (profileStatusId != null) {
-      patch.profileStatusId = profileStatusId;
-    }
-
-    // -------- LOCATION / HBU / SKILLS --------
-    const locationId = toNum(values.locationId);
-    if (locationId != null) patch.locationId = locationId;
-
-    const hbuId = toNum(values.hbuId);
-    if (hbuId != null) patch.hbuId = hbuId;
-
-    const skillClusterId = toNum(values.skillClusterId);
-    if (skillClusterId != null) patch.skillClusterId = skillClusterId;
-
-    patch.primarySkillsIds = toNumArr(values.primarySkillsIds);
-    patch.secondarySkillsIds = toNumArr(values.secondarySkillsIds);
-
-    // -------- SUMMARY --------
-    if (values.summary != null) {
-      patch.summary = values.summary.trim();
-    }
-
-    // -------- PAN --------
-    if (values.panNumber) {
-      patch.panNumber = String(values.panNumber)
-        .toUpperCase()
-        .replace(/\s+/g, "");
-    }
-
-    setSaving(true);
-    await onSavePatch(id, patch);
-    message.success("Profile updated successfully");
-    closeEdit();
-  } catch (err) {
-    if (!err?.errorFields) {
-      Modal.error({
-        title: "Update failed",
-        content: err?.message || "Something went wrong while saving.",
+    const id = ensureId(editRow);
+    if (!id) {
+      Modal.warning({
+        title: "Profile ID missing",
+        content: "Cannot update because id/profileId was not found.",
       });
+      return;
     }
-  } finally {
-    setSaving(false);
-  }
-};
+
+    try {
+      const values = await form.validateFields();
+
+      // ✅ MUST BE FIRST
+      const patch = {};
+
+      const toNum = (v) =>
+        v == null || v === "" || Number.isNaN(Number(v)) ? undefined : Number(v);
+
+      const toNumArr = (arr) =>
+        Array.isArray(arr)
+          ? arr.map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+          : [];
+
+      // -------- BASIC FIELDS --------
+      if (values.candidateName != null)
+        patch.candidateName = values.candidateName.trim();
+
+      if (values.emailId != null)
+        patch.emailId = values.emailId.trim();
+
+      if (values.phoneNumber) {
+        patch.phoneNumber = String(values.phoneNumber).replace(/\D+/g, "");
+      }
+
+      if (values.empId) {
+        patch.empId = String(values.empId).replace(/\D+/g, "");
+      }
+
+      // -------- EXPERIENCE --------
+      if (values.experienceYears != null) {
+        patch.experience = Number(values.experienceYears);
+      }
+
+      // -------- STATUS ✅ FIXED --------
+      const profileStatusId =
+  values.profileStatusId != null
+    ? Number(values.profileStatusId)
+    : undefined;
+
+if (profileStatusId != null) {
+  patch.profileStatusId = profileStatusId;
+}
+
+
+      // -------- LOCATION / HBU / SKILLS --------
+      const locationId = toNum(values.locationId);
+      if (locationId != null) patch.locationId = locationId;
+
+      const hbuId = toNum(values.hbuId);
+      if (hbuId != null) patch.hbuId = hbuId;
+
+      const skillClusterId = toNum(values.skillClusterId);
+      if (skillClusterId != null) patch.skillClusterId = skillClusterId;
+
+      patch.primarySkillsIds = toNumArr(values.primarySkillsIds);
+      patch.secondarySkillsIds = toNumArr(values.secondarySkillsIds);
+
+      // -------- SUMMARY --------
+      if (values.summary != null) {
+        patch.summary = values.summary.trim();
+      }
+
+      // -------- PAN --------
+      if (values.panNumber) {
+        patch.panNumber = String(values.panNumber)
+          .toUpperCase()
+          .replace(/\s+/g, "");
+      }
+
+      setSaving(true);
+      await onSavePatch(id, patch);
+      message.success("Profile updated successfully");
+      closeEdit();
+    } catch (err) {
+      if (!err?.errorFields) {
+        Modal.error({
+          title: "Update failed",
+          content: err?.message || "Something went wrong while saving.",
+        });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Central download handler with guards + stopPropagation
   const handleDownloadClick = (e, row) => {
@@ -242,8 +244,8 @@ export default function ProfileTable({
 
 
   console.log("ProfileTable dropdownOptions:", dropdownOptions);
-console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
-``
+  console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
+  ``
 
   // ------- columns (narrow widths & ellipsis) -------
   const antdColumns = useMemo(() => {
@@ -587,17 +589,17 @@ console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
               />
             </Form.Item>
             <Form.Item
-  name="profileStatusId"
-  label="Status"
->
-  <AntdSelect
-    allowClear
-    placeholder="Select status"
-    options={opts.profileStatus}
-    showSearch
-    optionFilterProp="label"
-  />
-</Form.Item>
+              name="profileStatusId"
+              label="Status"
+            >
+              <AntdSelect
+                allowClear
+                placeholder="Select status"
+                options={opts.profileStatus}
+                showSearch
+                optionFilterProp="label"
+              />
+            </Form.Item>
 
             <Form.Item
               name="skillClusterId"

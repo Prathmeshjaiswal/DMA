@@ -629,7 +629,7 @@
     skillCluster: toOpt(dto.skillClusters),
 
     // ✅ ✅ ✅ ADD THIS
-    profileStatus: toOpt(dto.status),
+    profileStatus: toOpt(dto.profileStatusList),
   };
 }
 ``
