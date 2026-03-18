@@ -2,8 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
-//  headers: { 'Content-Type': 'application/json' },
+  baseURL: 'http://10.253.22.85:8080',
 
 });
 
