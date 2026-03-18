@@ -511,7 +511,7 @@ const normalizeDemandDto = (d) => ({
   hiringManager: nameOf(d.hiringManager),
   deliveryManager: nameOf(d.deliveryManager),
   pm: nameOf(d.projectManager),
-  pmoSpoc: nameOf(d.pmoSpoc),
+  // pmoSpoc: nameOf(d.pmoSpoc),
   pmo: nameOf(d.pmo),
   salesSpoc: nameOf(d.salesSpoc),
   hbu: nameOf(d.hbu),
@@ -563,7 +563,7 @@ export default function DemandSheet1() {
     { key: "hiringManager", label: "Hiring Manager" },
     { key: "deliveryManager", label: "Delivery Manager" },
     { key: "pm", label: "PM" },
-    { key: "pmoSpoc", label: "PMO SPOC" },
+    // { key: "pmoSpoc", label: "PMO SPOC" },
     { key: "salesSpoc", label: "Sales Spoc" },
     { key: "pmo", label: "PMO" },
     { key: "band", label: "Band" },
@@ -596,7 +596,7 @@ export default function DemandSheet1() {
     "hiringManager",
     "deliveryManager",
     "pm",
-    "pmoSpoc",
+    // "pmoSpoc",
     "salesSpoc",
     "pmo",
     "band",
@@ -643,7 +643,7 @@ export default function DemandSheet1() {
     hiringManager: "",
     deliveryManager: "",
     pm: "",
-    pmoSpoc: "",
+    // pmoSpoc: "",
     salesSpoc: "",
     pmo: "",
     band: "",
@@ -683,7 +683,7 @@ export default function DemandSheet1() {
       hiringManager: text,
       deliveryManager: text,
       pm: text,
-      pmoSpoc: text,
+      // pmoSpoc: text,
       salesSpoc: text,
       pmo: text,
       band: text,
@@ -732,7 +732,7 @@ export default function DemandSheet1() {
     if (f.deliveryManager)
       payload.deliveryManagerName = String(f.deliveryManager).trim();
     if (f.pm) payload.projectManagerName = String(f.pm).trim();
-    if (f.pmoSpoc) payload.pmoSpocName = String(f.pmoSpoc).trim();
+    // if (f.pmoSpoc) payload.pmoSpocName = String(f.pmoSpoc).trim();
     if (f.salesSpoc) payload.salesSpocName = String(f.salesSpoc).trim();
     if (f.pmo) payload.pmoName = String(f.pmo).trim();
 

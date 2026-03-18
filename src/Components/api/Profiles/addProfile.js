@@ -5,7 +5,12 @@ import api from "../client";
 /** Get Profile dropdowns from backend: { success, message, data: {...} } -> return data */
 export async function getProfileDropdowns() {
   const res = await api.get("/profiles/dropdowns");
-  return res.data?.data ?? {};
+  // return res.data?.data ?? res.data ?? {};
+  
+const dto = res.data?.data ?? res.data ?? {};
+console.log("[profiles/dropdowns] dto:", dto); // should contain statuses
+return dto;
+
 }
 
 /** Normalize common PageResponse variants (works with your current JSON) */
@@ -47,10 +52,14 @@ export async function getProfiles(page = 0, size = 10) {
 }
 
 /** Server search — uses backend pagination & filters (URL uses '&', not HTML escaped) */
-export async function searchProfilesApi(filter = {}, page = 0, size = 20) {
-  const res = await api.post(`/profiles/search?page=${page}&size=${size}`, filter);
+export async function searchProfilesApi(filter = {}, page = 0, size = 10) {
+  const res = await api.post(
+    `/profiles/search?page=${page}&size=${size}`, // ✅ CORRECT
+    filter
+  );
   return normalizePageResponse(res.data);
 }
+``
 
 // /** Download CV by file name (Blob) */
 // export async function downloadProfileCv(fileName) {

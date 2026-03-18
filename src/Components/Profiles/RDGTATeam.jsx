@@ -51,14 +51,14 @@ const selectStyles = {
     ...base,
     padding: "2px 8px",
     fontSize: 13,
-    flexWrap: "wrap",
-    maxHeight: 84,
-    overflowY: "auto",
+    flexWrap: "wrap", // UPDATED: wrap the selected chips
+    maxHeight: 84, // UPDATED: cap height (3 rows approx)
+    overflowY: "auto", // UPDATED: internal scroll when overflowing
     gap: 4,
   }),
   multiValue: (base) => ({
     ...base,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F3F4F6", // subtle tag bg
     border: "1px solid #E5E7EB",
   }),
   multiValueLabel: (base) => ({
@@ -72,7 +72,7 @@ const selectStyles = {
   }),
   indicatorsContainer: (base) => ({ ...base, paddingRight: 6 }),
   menu: (base) => ({ ...base, fontSize: 13, zIndex: 9999 }),
-  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }), // UPDATED: above modals/parents
 };
 
 /* ------------------------ HELPERS ------------------------ */
@@ -129,7 +129,9 @@ function getCurrentUser() {
 }
 
 // ------------------------ NEW: read role & map to profile type ------------------------
+// UPDATED: derive role name from stored login response or JWT and map RDG->Internal, TA->External
 function getCurrentRoleName() {
+  // Try a few likely places the login JSON might be stored
   const fromMem = window.__currentUser?.role?.role || window.__currentUser?.role;
   if (fromMem) return String(fromMem);
 
@@ -158,7 +160,7 @@ function mapRoleToProfileType(roleName) {
   const r = String(roleName || "").toLowerCase();
   if (r.includes("rdg")) return "Internal";
   if (r.includes("ta")) return "External";
-  return "";
+  return ""; // unknown: allow URL/state to decide
 }
 
 function onlyDigits(s = "") {
@@ -202,7 +204,7 @@ function validateEmpId(raw) {
   return { ok: true, value: digits };
 }
 
-/** validatePAN - 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F). */
+/** NEW: validatePAN - 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F). */
 function validatePAN(raw) {
   const val = (raw || "").toUpperCase().trim();
   if (!val) return { ok: false, reason: "PAN is required." };
@@ -226,12 +228,14 @@ function adaptOptions(dto = {}) {
     }));
 
   return {
-    externalInternal: toOpt(dto.externalInternals),
+    // exact keys from your response
+    externalInternal: toOpt(dto.externalInternals), // Internal / External
     hbu: toOpt(dto.hbus),
     demandLocation: toOpt(dto.locations),
     primarySkills: toOpt(dto.primarySkills),
     secondarySkills: toOpt(dto.secondarySkills),
     skillCluster: toOpt(dto.skillClusters),
+    profileStatus: toOpt(dto.status),
   };
 }
 
@@ -254,14 +258,10 @@ export default function RDGTATeam() {
   const [panError, setPanError] = useState("");
   const [panTouched, setPanTouched] = useState(false);
 
-  // NEW: Candidate name validation UI state
-  const [candidateNameError, setCandidateNameError] = useState("");
-  const [candidateNameTouched, setCandidateNameTouched] = useState(false);
-
-  // Role-based profile type
-  const roleName = getCurrentRoleName();
+  // UPDATED: Prefer role-based profile type; fallback to URL/state
+  const roleName = getCurrentRoleName(); // UPDATED
   const isAdmin = String(roleName || "").toLowerCase().includes("admin");
-  const roleProfileType = mapRoleToProfileType(roleName);
+  const roleProfileType = mapRoleToProfileType(roleName); // UPDATED
   const derivedProfileTypeFromUrl = useMemo(() => {
     const state = location?.state || {};
     const search = new URLSearchParams(location?.search || "");
@@ -277,20 +277,21 @@ export default function RDGTATeam() {
     return "";
   }, [location]);
 
-  const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || "";
-  const isInternal = (resolvedProfileType || "").toLowerCase() === "internal";
+  // UPDATED: final profile type selection order: Role > URL/state > empty
+  const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
+  const isInternal = (resolvedProfileType || "").toLowerCase() === "internal"; // UPDATED
   const showEmpIdField = isInternal || isAdmin;
 
   const [currentUser, setCurrentUser] = useState({ userId: "", name: "" });
 
   const [form, setForm] = useState({
     profileType: "",
-    empId: "",
+    empId: "", // — maps to backend
     candidateName: "",
     emailId: "",
-    countryId: "", // will be set to +91 by default after loading
+    countryId: "",
     phoneNumber: "",
-    experience: "",
+    experience: "", // — maps to backend
     skillCluster: null,
     primarySkills: [],
     secondarySkills: [],
@@ -299,6 +300,7 @@ export default function RDGTATeam() {
     summary: "",
     cv: null,
     panNumber: "",
+    profileStatus: null,
   });
 
   useEffect(() => {
@@ -306,10 +308,10 @@ export default function RDGTATeam() {
     setCurrentUser(u);
     setForm((p) => ({
       ...p,
-      profileType: resolvedProfileType || p.profileType,
+      profileType: resolvedProfileType || p.profileType, // UPDATED
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedProfileType]);
+  }, [resolvedProfileType]); // UPDATED
 
   // Load dropdowns (profiles + country codes)
   useEffect(() => {
@@ -327,17 +329,7 @@ export default function RDGTATeam() {
         if (mounted) {
           setDropdowns(profileDto);
           setOptions(adaptOptions(profileDto));
-          const countries = umResp?.data?.countryCodes || [];
-          setCountries(countries);
-
-          // DEFAULT: set +91 as selected (no placeholder)
-          const india = countries.find((c) => String(c.callingCode) === "+91");
-          if (india?.id) {
-            setForm((prev) => ({
-              ...prev,
-              countryId: String(india.id),
-            }));
-          }
+          setCountries(umResp?.data?.countryCodes || []);
         }
       } catch (e) {
         console.error("[AddProfile] dropdowns load error:", e);
@@ -366,13 +358,6 @@ export default function RDGTATeam() {
       setEmpIdTouched(true);
       const r = validateEmpId(digits);
       setEmpIdError(r.ok ? "" : r.reason);
-    }
-
-    // Candidate Name required (not null/blank)
-    if (name === "candidateName") {
-      const val = (value || "").trim();
-      setCandidateNameTouched(true);
-      setCandidateNameError(val ? "" : "Candidate name is required.");
     }
 
     // NEW: live PAN validation + uppercase/trim
@@ -406,33 +391,25 @@ export default function RDGTATeam() {
         : "",
     summary: form.summary && form.summary.length > 2000 ? "Max 2000 characters" : "",
   };
-
   const hasErrors =
-    Object.values(errors).some(Boolean) ||
-    (!!empIdError && isInternal) ||
-    !!panError ||
-    !!candidateNameError;
+    Object.values(errors).some(Boolean) || (!!empIdError && isInternal) || !!panError;
 
   // Find externalInternalId by label ("Internal"/"External") from dropdowns
   const externalInternalId = useMemo(() => {
     const list = safe(options?.externalInternal);
+    // Prefer label match
     const label = isInternal ? "internal" : "external";
     const match = list.find((o) => String(o.label).toLowerCase() === label);
     if (match?.value) return Number(match.value);
+
+    // Fallback to your provided IDs
     return isInternal ? 1 : 2;
   }, [options, isInternal]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
 
-    // Candidate name must not be null/blank
-    const trimmedName = (form.candidateName || "").trim();
-    if (!trimmedName) {
-      setCandidateNameTouched(true);
-      setCandidateNameError("Candidate name is required.");
-      return;
-    }
-
+    if (!form.candidateName) return message.warning("Candidate name is required.");
     if (!form.emailId) return message.warning("Email is required.");
 
     // PAN submit validation
@@ -491,38 +468,44 @@ export default function RDGTATeam() {
     if (!form.location) return message.warning("Select a Location.");
     if (hasErrors) return message.error("Please fix the highlighted errors.");
 
-    // UPDATED: use trimmed candidate name
+    // UPDATED: keep phoneNumber as string of digits (not Number)
     const payload = {
-      candidateName: trimmedName,
+      candidateName: form.candidateName,
       emailId: form.emailId,
-      ...(form.empId ? { empId: String(form.empId) } : {}),
-      phoneNumber: onlyDigits(form.phoneNumber),
+      ...(form.empId ? { empId: String(form.empId) } : {}), // UPDATED
+      phoneNumber: onlyDigits(form.phoneNumber), // UPDATED
       isActive: true,
-      experience: Number(form.experience),
+      experience: Number(form.experience), // UPDATED: backend uses 'experience'
+        profileStatusId: form.profileStatus?.value ?? null,
       skillClusterId: form.skillCluster?.value ? Number(form.skillCluster.value) : null,
       locationId: form.location ? Number(form.location) : null,
       hbuId: form.hbu ? Number(form.hbu) : null,
       externalInternalId,
       countryId: form.countryId ? Number(form.countryId) : null,
       summary: form.summary?.trim() || "",
-      primarySkillsIds: safe(form.primarySkills).map((i) => Number(i.value)),
-      secondarySkillsIds: safe(form.secondarySkills).map((i) => Number(i.value)),
+      primarySkillsIds: safe(form.primarySkills).map((i) => Number(i.value)), // UPDATED key name
+      secondarySkillsIds: safe(form.secondarySkills).map((i) => Number(i.value)), // UPDATED key name
+
+      // If your backend accepts PAN for profiles, uncomment and ensure the key matches:
       panNumber: panCheck.value,
     };
 
     try {
+      // If you navigate to this page for editing, you can pass an id in location.state.id
       const editId = location?.state?.id;
       if (editId) {
-        const res = await submitProfileUpdate(editId, payload, form.cv || null);
+        const res = await submitProfileUpdate(editId, payload, form.cv || null); // file optional
         message.success(res?.message || "Profile updated successfully");
       } else {
         if (!form.cv) {
           message.warning("Please attach CV (PDF/DOC/DOCX).");
           return;
         }
-        const res = await submitProfileCreate(payload, form.cv);
+        const res = await submitProfileCreate(payload, form.cv); // file required
         message.success(res?.message || "Profile created successfully");
       }
+
+      // Navigate to listing (adjust route if you have one)
       navigate("/profileSheet");
     } catch (err) {
       console.error("[RDGTATeam] submit error:", err);
@@ -556,27 +539,25 @@ export default function RDGTATeam() {
       <section className={cardWrap}>
         <SectionTitle>Add Profile</SectionTitle>
 
+        {/* Profile Type info (read-only display if present)
+        {resolvedProfileType ? (
+          <div className="mt-2 text-[12px] text-gray-600">
+            Profile Type: <span className="font-semibold">{resolvedProfileType}</span>
+          </div>
+        ) : null} */}
+
         <form onSubmit={onSubmit} noValidate>
           {/* Basics */}
           <div className={`${grid2} mt-4`}>
             <div>
               <label className={labelCls}>Candidate Name</label>
               <input
-                className={`${inputCls} mt-1 ${candidateNameTouched && candidateNameError ? "border-red-500 focus:ring-red-600" : ""}`}
+                className={`${inputCls} mt-1`}
                 name="candidateName"
                 value={form.candidateName}
                 onChange={handleInput}
-                onBlur={() => {
-                  setCandidateNameTouched(true);
-                  const val = (form.candidateName || "").trim();
-                  setCandidateNameError(val ? "" : "Candidate name is required.");
-                }}
                 placeholder="Candidate Name"
-                required
               />
-              {candidateNameTouched && candidateNameError && (
-                <p className="text-[11px] text-red-600 mt-1">{candidateNameError}</p>
-              )}
             </div>
 
             <div>
@@ -588,20 +569,18 @@ export default function RDGTATeam() {
                 value={form.emailId}
                 onChange={handleInput}
                 placeholder="name@example.com"
-                required
               />
               {errors.emailId && (
                 <p className="text-[11px] text-red-600 mt-1">{errors.emailId}</p>
               )}
             </div>
 
-            {/* PAN Number */}
+            {/* NEW: PAN Number */}
             <div>
               <label className={labelCls}>PAN Number</label>
               <input
-                className={`${inputCls} mt-1 ${
-                  panTouched && panError ? "border-red-500 focus:ring-red-600" : ""
-                }`}
+                className={`${inputCls} mt-1 ${panTouched && panError ? "border-red-500 focus:ring-red-600" : ""
+                  }`}
                 name="panNumber"
                 value={form.panNumber}
                 onChange={handleInput}
@@ -620,20 +599,20 @@ export default function RDGTATeam() {
               )}
             </div>
 
-            {/* Show Emp ID for Internal OR Admin */}
+            {/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
             {showEmpIdField && (
               <div>
                 <label className={labelCls}>Employee ID</label>
                 <input
-                  className={`${inputCls} mt-1 ${
-                    empIdTouched && empIdError ? "border-red-500 focus:ring-red-600" : ""
-                  }`}
+                  className={`${inputCls} mt-1 ${empIdTouched && empIdError ? "border-red-500 focus:ring-red-600" : ""
+                    }`}
                   name="empId"
                   value={form.empId}
                   onChange={handleInput}
                   onBlur={() => {
                     setEmpIdTouched(true);
                     const r = validateEmpId(form.empId);
+                    // if not Internal, do not block submit—just clear/show helper
                     setEmpIdError(r.ok ? "" : r.reason);
                   }}
                   placeholder="e.g., 128713"
@@ -657,19 +636,35 @@ export default function RDGTATeam() {
                 value={form.experience}
                 onChange={handleInput}
                 placeholder="e.g., 5"
-                required
               />
             </div>
+
+
+
+            <div>
+              <label className={labelCls}>Status</label>
+              <Select
+                options={safe(options?.profileStatus)}
+                value={form.profileStatus}
+                onChange={(selected) =>
+                  setForm((p) => ({ ...p, profileStatus: selected }))
+                }
+                placeholder="Select Status"
+                className="mt-1"
+                styles={selectStyles}
+                isClearable
+              />
+            </div>
+
           </div>
 
-          {/* Contact Number */}
+          {/* Contact Number — UPDATED: same grid & same input size as other fields */}
           <div className="pt-3 pb-">
             <label className={labelTitle}>Contact Number</label>
           </div>
           <div className={`${grid2} ${sectionGap}`}>
             <div>
               <div className="flex items-center gap-2 mt-1">
-                {/* Country code select — default to +91 */}
                 <select
                   className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
                   name="countryId"
@@ -692,7 +687,7 @@ export default function RDGTATeam() {
                     }
                   }}
                 >
-                  {/* No placeholder; render all codes; +91 is preselected by state */}
+                  <option value="">+91</option>
                   {countryCodes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.callingCode}
@@ -701,8 +696,9 @@ export default function RDGTATeam() {
                 </select>
 
                 <div className="flex-1">
+                  {/* UPDATED: use inputCls to match size with other inputs */}
                   <input
-                    className={`${inputCls}`}
+                    className={`${inputCls}`} // UPDATED
                     name="phoneNumber"
                     value={form.phoneNumber}
                     placeholder="Phone number"
@@ -734,7 +730,6 @@ export default function RDGTATeam() {
                       );
                       if (!res.ok) setPhoneError(res.reason);
                     }}
-                    required
                   />
                   {phoneTouched && phoneError && (
                     <p className="text-[11px] text-red-600 mt-1 leading-snug">
@@ -745,7 +740,7 @@ export default function RDGTATeam() {
               </div>
             </div>
 
-            {/* empty cell to keep 2-column balance */}
+            {/* empty cell to keep 2-column balance when needed */}
             <div className="hidden sm:block" />
           </div>
 
@@ -904,4 +899,3 @@ export default function RDGTATeam() {
     </Layout>
   );
 }
-``

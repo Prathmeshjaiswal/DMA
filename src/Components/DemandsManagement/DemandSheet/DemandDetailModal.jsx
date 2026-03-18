@@ -1141,19 +1141,39 @@ export default function DemandDetailModal({
     }
   }, [attachMode, attachedProfiles]);
 
-  const loadAvailable = async () => {
-    try {
-      setLoadingProfiles(true);
-      const resp = await getProfiles();
-      const list = extractList(resp);
-      setAvailableProfiles(list);
-    } catch (e) {
-      console.error(e);
-      message.error(e?.message || "Failed to load profiles");
-    } finally {
-      setLoadingProfiles(false);
+ function isKaratReadyProfile(p) {
+  const statusName = p?.profileStatus?.name ?? "";
+  return String(statusName).trim().toLowerCase() === "karat ready";
+}
+
+
+ const loadAvailable = async () => {
+  try {
+    setLoadingProfiles(true);
+
+    const resp = await getProfiles(0, 1000); // temp bulk fetch
+    const list = extractList(resp);
+
+    // ✅ Demand Karat flag (from DemandSheet row)
+    const demandKarat = String(row?.karat || "").toLowerCase();
+
+    let finalProfiles = list;
+
+    // ✅ RULE:
+    // If Demand Karat = YES → only Karat Ready profiles
+    // If Demand Karat = NO  → show all profiles
+    if (demandKarat === "yes") {
+      finalProfiles = list.filter(isKaratReadyProfile);
     }
-  };
+
+    setAvailableProfiles(finalProfiles);
+  } catch (e) {
+    console.error(e);
+    message.error(e?.message || "Failed to load profiles");
+  } finally {
+    setLoadingProfiles(false);
+  }
+};
 
   const loadAttached = async () => {
     if (!demandPkId) return;

@@ -1048,12 +1048,12 @@ const SectionHeader = ({ icon, title, helper }) => (
 const toOptions = (list) =>
   Array.isArray(list)
     ? list
-        .map((x) =>
-          x && typeof x === "object"
-            ? { value: Number(x.id), label: String(x.name ?? "").trim() }
-            : null
-        )
-        .filter((o) => o && o.label)
+      .map((x) =>
+        x && typeof x === "object"
+          ? { value: Number(x.id), label: String(x.name ?? "").trim() }
+          : null
+      )
+      .filter((o) => o && o.label)
     : [];
 
 const safe = (arr) => (Array.isArray(arr) ? arr : []);
@@ -1271,9 +1271,9 @@ export default function AddDemands1() {
           noOfPositions: String(data?.numberOfPositions ?? prev.noOfPositions ?? "1"),
           skillCluster: data?.skillCluster
             ? {
-                value: Number(data.skillCluster.id ?? data.skillClusterId),
-                label: String(data.skillCluster.name ?? ""),
-              }
+              value: Number(data.skillCluster.id ?? data.skillClusterId),
+              label: String(data.skillCluster.name ?? ""),
+            }
             : prev.skillCluster,
           primarySkills: Array.isArray(data?.primarySkills)
             ? data.primarySkills.map((s) => ({ value: Number(s.id), label: String(s.name) }))
@@ -1368,10 +1368,21 @@ export default function AddDemands1() {
         next.karat = "yes";
       }
 
+
+      // ✅ Priority -> "P0" (default)
+      if (!prev.priority && options?.priority?.length) {
+        const p0Opt =
+          options.priority.find(
+            (o) => o.label?.toLowerCase() === "p0"
+          ) || options.priority[0];
+
+        next.priority = String(p0Opt?.value ?? "");
+      }
+
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation, options?.offshoreLocation]);
+  }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation,   options?.priority, options?.offshoreLocation]);
 
   // Build payload and call API:
   // - If draftId exists -> PUT via updateDraft
@@ -1879,67 +1890,83 @@ export default function AddDemands1() {
 
               <div>
                 <label className={`${labelCls} mb-1 block`}>Demand Location</label>
+                <div className="flex w-full h-10">
+                  {/* Onshore / Offshore toggle */}
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "onshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                        }`}
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          locationType: "onshore",
+                          demandLocation: [], // reset selection when switching type
+                        }))
+                      }
+                    >
+                      Onshore
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "offshore"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
+                        }`}
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          locationType: "offshore",
+                          demandLocation: [], // reset selection when switching type
+                        }))
+                      }
+                    >
+                      Offshore
+                    </button>
+                  </div>
 
-                {/* Onshore / Offshore toggle */}
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "onshore"
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
-                      }`}
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        locationType: "onshore",
-                        demandLocation: [], // reset selection when switching type
-                      }))
+                  {/* Dynamic dropdown for locations */}
+                  <Select
+                    className=" py-1 w-full ml-2 h-10 hover:border-gray-400"
+                    placeholder={`Select locations`}
+                    options={form.locationType === "onshore" ? safe(options?.onshoreLocation) : safe(options?.offshoreLocation)}
+                    isMulti
+                    isClearable
+                    closeMenuOnSelect={false}
+                    hideSelectedOptions
+                    components={{ Option: CheckboxOption }}
+                    value={
+                      form.locationType === "onshore"
+                        ? toSelectValues(form.demandLocation, safe(options?.onshoreLocation))
+                        : toSelectValues(form.demandLocation, safe(options?.offshoreLocation))
                     }
-                  >
-                    Onshore
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-2 py-0.5 rounded border text-xs ${form.locationType === "offshore"
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-800 border-gray-300 hover:border-gray-400"
-                      }`}
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        locationType: "offshore",
-                        demandLocation: [], // reset selection when switching type
-                      }))
-                    }
-                  >
-                    Offshore
-                  </button>
-                </div>
+                    onChange={(selected) => {
+                      const arr = Array.isArray(selected) ? selected.map((o) => Number(o.value)) : [];
+                      setForm((prev) => ({ ...prev, demandLocation: arr }));
+                    }}
 
-                {/* Dynamic dropdown for locations */}
-                <Select
-                  className="mt-1 "
-                  placeholder={`Select ${form.locationType === 'onshore' ? 'Onshore' : 'Offshore'} location(s)`}
-                  options={form.locationType === "onshore" ? safe(options?.onshoreLocation) : safe(options?.offshoreLocation)}
-                  isMulti
-                  isClearable
-                  closeMenuOnSelect={false}
-                  hideSelectedOptions
-                  components={{ Option: CheckboxOption }}
-                  value={
-                    form.locationType === "onshore"
-                      ? toSelectValues(form.demandLocation, safe(options?.onshoreLocation))
-                      : toSelectValues(form.demandLocation, safe(options?.offshoreLocation))
-                  }
-                  onChange={(selected) => {
-                    const arr = Array.isArray(selected) ? selected.map((o) => Number(o.value)) : [];
-                    setForm((prev) => ({ ...prev, demandLocation: arr }));
-                  }}
-                />
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        //       minHeight: "40px", // h-10 → 40px
+                        height: "35px",
+                        //       width: "80px", // w-20 (you can change)
+                      }),
+                      //     valueContainer: (base) => ({
+                      //       ...base,
+                      //       height: "40px",
+                      //       paddingTop: "2px",
+                      //     }),
+                    }}
 
-                <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
-                  <EnvironmentOutlined />
-                  <span>Select one or more locations.</span>
+                  />
+
+                  {/*                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2"> */}
+                  {/*                   <EnvironmentOutlined /> */}
+                  {/*                   <span>Select one or more locations.</span> */}
+                  {/*                 </div> */}
                 </div>
               </div>
 
