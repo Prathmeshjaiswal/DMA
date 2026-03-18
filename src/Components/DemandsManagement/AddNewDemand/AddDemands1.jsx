@@ -1189,6 +1189,44 @@ export default function AddDemands1() {
   // ✅ Start with a fresh blank form every time (unless editing a draft)
   const [form, setForm] = useState(() => INITIAL_FORM());
 
+  // ✅ Shared styles for ALL multi-selects (Primary, Secondary, Location)
+const sharedMultiSelectStyles = {
+  control: (base) => ({
+    ...base,
+    minHeight: "35px",
+    height: "auto",
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    flexWrap: "wrap",      // ✅ keep chips inside
+    maxHeight: "70px",     // ✅ prevent layout break
+    overflowY: "auto",     // ✅ scroll inside
+    padding: "2px 8px",
+    gap: "4px",
+  }),
+  multiValue: (base) => ({
+    ...base,
+    backgroundColor: "#d3d3d3",
+    border: "1px solid #CBD5E0",
+  }),
+  multiValueLabel: (base) => ({
+    ...base,
+    fontSize: "12px",
+  }),
+  multiValueRemove: (base) => ({
+    ...base,
+    ":hover": {
+      backgroundColor: "#EF4444",
+      color: "white",
+    },
+  }),
+  menu: (base) => ({
+    ...base,
+    zIndex: 9999,
+  }),
+};
+
+
   // dropdowns
   useEffect(() => {
     let mounted = true;
@@ -1946,21 +1984,24 @@ export default function AddDemands1() {
                       const arr = Array.isArray(selected) ? selected.map((o) => Number(o.value)) : [];
                       setForm((prev) => ({ ...prev, demandLocation: arr }));
                     }}
+  styles={sharedMultiSelectStyles} 
+                    // styles={{
+                    //   control: (base) => ({
+                    //     ...base,
+                    //     //       minHeight: "40px", // h-10 → 40px
+                    //     height: "35px",
+                    //     //       width: "80px", // w-20 (you can change)
+                    //   }),
+                    //   //     valueContainer: (base) => ({
+                    //   //       ...base,
+                    //   //       height: "40px",
+                    //   //       paddingTop: "2px",
+                    //   //     }),
+                    //   {sharedMultiSelectStyles}
 
-                    styles={{
-                      control: (base) => ({
-                        ...base,
-                        //       minHeight: "40px", // h-10 → 40px
-                        height: "35px",
-                        //       width: "80px", // w-20 (you can change)
-                      }),
-                      //     valueContainer: (base) => ({
-                      //       ...base,
-                      //       height: "40px",
-                      //       paddingTop: "2px",
-                      //     }),
-                    }}
+                    // }}
 
+                   
                   />
 
                   {/*                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2"> */}
