@@ -76,6 +76,14 @@ const selectStyles = {
 };
 
 /* ------------------------ HELPERS ------------------------ */
+
+function findDefaultKaratInProgressStatus(options = []) {
+  return options.find(
+    (o) => String(o.label).toLowerCase() === "karat inprogress"
+  ) || null;
+}
+
+
 function tryJson(s) {
   try {
     return JSON.parse(s);
@@ -277,6 +285,8 @@ export default function RDGTATeam() {
     return "";
   }, [location]);
 
+  
+
   // UPDATED: final profile type selection order: Role > URL/state > empty
   const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
   const isInternal = (resolvedProfileType || "").toLowerCase() === "internal"; // UPDATED
@@ -327,10 +337,47 @@ export default function RDGTATeam() {
         ]);
 
         if (mounted) {
-          setDropdowns(profileDto);
-          setOptions(adaptOptions(profileDto));
-          setCountries(umResp?.data?.countryCodes || []);
-        }
+  const adapted = adaptOptions(profileDto);
+
+  setDropdowns(profileDto);
+  setOptions(adapted);
+  const codes = umResp?.data?.countryCodes || [];
+setCountries(codes);
+
+// ✅ DEFAULT country = India (+91)
+setForm((prev) => {
+  if (prev.countryId) return prev;
+
+  const india = codes.find(c => c.callingCode === "+91");
+
+  if (india && prev.phoneNumber) {
+    const res = validatePhoneByCountry(prev.phoneNumber, "+91");
+    setPhoneError(res.ok ? "" : res.reason);
+  }
+
+  return {
+    ...prev,
+    countryId: india ? String(india.id) : "",
+  };
+});
+
+
+  // ✅ ✅ ✅ SET DEFAULT STATUS FOR CREATE
+  setForm((prev) => {
+    // Only set default if not already selected
+    if (prev.profileStatus) return prev;
+
+    const defaultStatus = findDefaultKaratInProgressStatus(
+      adapted.profileStatus
+    );
+
+    return {
+      ...prev,
+      profileStatus: defaultStatus,
+    };
+  });
+}
+
       } catch (e) {
         console.error("[AddProfile] dropdowns load error:", e);
         setLoadErr(e?.message || "Failed to load dropdowns.");
@@ -373,6 +420,8 @@ export default function RDGTATeam() {
       }
     }
   };
+
+  
 
   const handleFile = (e) => {
     const f = e.target.files?.[0] || null;
@@ -666,35 +715,35 @@ export default function RDGTATeam() {
             <div>
               <div className="flex items-center gap-2 mt-1">
                 <select
-                  className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
-                  name="countryId"
-                  value={form.countryId}
-                  onChange={(e) => {
-                    const countryId = e.target.value;
-                    setForm((p) => ({ ...p, countryId }));
-                    setPhoneTouched(true);
-                    const selected = countryCodes.find(
-                      (c) => String(c.id) === String(countryId)
-                    );
-                    if (selected?.callingCode && form.phoneNumber) {
-                      const res = validatePhoneByCountry(
-                        form.phoneNumber,
-                        selected.callingCode
-                      );
-                      setPhoneError(res.ok ? "" : res.reason);
-                    } else {
-                      setPhoneError("");
-                    }
-                  }}
-                >
-                  <option value="">+91</option>
-                  {countryCodes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.callingCode}
-                    </option>
-                  ))}
-                </select>
+  className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+  name="countryId"
+  value={form.countryId}
+  oonChange={(e) => {
+  const val = onlyDigits(e.target.value);
 
+  setForm((p) => ({ ...p, phoneNumber: val }));
+  setPhoneTouched(true);
+
+  // ✅ use latest countryId safely
+  const countryId = form.countryId;
+  const selected = countryCodes.find(
+    (c) => String(c.id) === String(countryId)
+  );
+
+  if (selected?.callingCode && val) {
+    const res = validatePhoneByCountry(val, selected.callingCode);
+    setPhoneError(res.ok ? "" : res.reason);
+  } else {
+    setPhoneError("");
+  }
+}}
+>
+  {countryCodes.map((c) => (
+    <option key={c.id} value={c.id}>
+      {c.callingCode}
+    </option>
+  ))}
+</select>
                 <div className="flex-1">
                   {/* UPDATED: use inputCls to match size with other inputs */}
                   <input
