@@ -943,6 +943,9 @@
 
 // src/Components/DemandsManagement/AddNewDemand/AddDemands1.jsx
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+
+import { useRef } from "react";
 import Layout from "../../Layout.jsx";
 import Select, { components } from "react-select";
 import { message, Spin } from "antd";
@@ -985,6 +988,7 @@ const round2 = (n) => {
 // ✅ INITIAL (blank) form
 const INITIAL_FORM = () => ({
   lob: "",
+  subLob: "",
   noOfPositions: "1",
   skillCluster: null,
   primarySkills: [],
@@ -1075,8 +1079,17 @@ const toYyyyMmDd = (d) => {
 };
 
 // Build EXACT payload for Step‑1 draft
-const buildDraftCreateRequest = (form) => ({
+const buildDraftCreateRequest = (form, cibLobId) => ({
   hbuId: toNum(form.hbu),
+  // subLobId: toNum(form.subLob),
+
+  // // ✅ send only when CIB
+
+  subLobId:
+    String(form.lob) === String(cibLobId)
+      ? toNum(form.subLob)
+      : null,
+
   hbuSpocId: toNum(form.hbuSpoc),
   hubSpocId: toNum(form.hbuSpoc), // legacy key (if backend still reads it)
   bandId: toNum(form.band),
@@ -1166,8 +1179,20 @@ function OtherableSelect({
   );
 }
 
+
+
+
 // ------------------------ component ------------------------
 export default function AddDemands1() {
+
+
+  const [subLobError, setSubLobError] = useState(false);
+
+  const prevLobRef = useRef(null);
+  const [searchParams] = useSearchParams();
+const draftIdFromQuery = Number(searchParams.get("draftId"));
+
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -1180,51 +1205,63 @@ export default function AddDemands1() {
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
 
   // ✅ ONLY take draftId from navigation state (not from localStorage)
+  // const [draftId, setDraftId] = useState(() => {
+  //   const fromNav = location?.state?.draftId;
+  //   const n = Number(fromNav);
+  //   return Number.isFinite(n) && n > 0 ? n : null;
+  // });
+
+
   const [draftId, setDraftId] = useState(() => {
-    const fromNav = location?.state?.draftId;
-    const n = Number(fromNav);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  });
+  const fromNav = Number(location?.state?.draftId);
+  const fromQuery = draftIdFromQuery;
+
+  return Number.isFinite(fromNav)
+    ? fromNav
+    : Number.isFinite(fromQuery)
+    ? fromQuery
+    : null;
+});
 
   // ✅ Start with a fresh blank form every time (unless editing a draft)
   const [form, setForm] = useState(() => INITIAL_FORM());
 
   // ✅ Shared styles for ALL multi-selects (Primary, Secondary, Location)
-const sharedMultiSelectStyles = {
-  control: (base) => ({
-    ...base,
-    minHeight: "35px",
-    height: "auto",
-  }),
-  valueContainer: (base) => ({
-    ...base,
-    flexWrap: "wrap",      // ✅ keep chips inside
-    maxHeight: "70px",     // ✅ prevent layout break
-    overflowY: "auto",     // ✅ scroll inside
-    padding: "2px 8px",
-    gap: "4px",
-  }),
-  multiValue: (base) => ({
-    ...base,
-    backgroundColor: "#d3d3d3",
-    border: "1px solid #CBD5E0",
-  }),
-  multiValueLabel: (base) => ({
-    ...base,
-    fontSize: "12px",
-  }),
-  multiValueRemove: (base) => ({
-    ...base,
-    ":hover": {
-      backgroundColor: "#EF4444",
-      color: "white",
-    },
-  }),
-  menu: (base) => ({
-    ...base,
-    zIndex: 9999,
-  }),
-};
+  const sharedMultiSelectStyles = {
+    control: (base) => ({
+      ...base,
+      minHeight: "35px",
+      height: "auto",
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      flexWrap: "wrap",      // ✅ keep chips inside
+      maxHeight: "70px",     // ✅ prevent layout break
+      overflowY: "auto",     // ✅ scroll inside
+      padding: "2px 8px",
+      gap: "4px",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: "#d3d3d3",
+      border: "1px solid #CBD5E0",
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      fontSize: "12px",
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      ":hover": {
+        backgroundColor: "#EF4444",
+        color: "white",
+      },
+    }),
+    menu: (base) => ({
+      ...base,
+      zIndex: 9999,
+    }),
+  };
 
 
   // dropdowns
@@ -1233,8 +1270,11 @@ const sharedMultiSelectStyles = {
     (async () => {
       try {
         const dd = await getDropDownData();
+        // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
         if (!mounted) return;
         setDropdowns(dd?.data || dd);
+        // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
+        ``
       } catch (e) {
         console.error("Failed to load dropdowns:", e);
         message.error("Failed to load form data. Please refresh.");
@@ -1252,6 +1292,17 @@ const sharedMultiSelectStyles = {
     const d = dropdowns || {};
     return {
       lob: toOptions(d.lobList),
+
+
+
+      subLob: Array.isArray(d.subLobList)
+        ? d.subLobList.map(s => ({
+          value: String(s.id),   // ✅ STRING
+          label: String(s.name ?? "").trim(),
+        }))
+        : [],
+
+
       skillCluster: toOptions(d.skillClusterList),
       primarySkills: toOptions(d.primarySkillsList),
       secondarySkills: toOptions(d.secondarySkillsList),
@@ -1284,6 +1335,49 @@ const sharedMultiSelectStyles = {
     };
   }, [dropdowns]);
 
+  // useEffect(() => {
+  //   console.log("OPTIONS.SUBLOB >>>", options?.subLob);
+  // }, [options?.subLob]);
+
+
+  // ✅ ADD THIS EXACTLY HERE (after options)
+  const cibLobId = useMemo(
+    () =>
+      options?.lob?.find(
+        o => o.label?.toUpperCase() === "CIB"
+      )?.value,
+    [options?.lob]
+  );
+
+
+useEffect(() => {
+  console.log("DRAFT ID USED:", draftId);
+  console.log("SUBLOB (on render):", form.subLob);
+}, [draftId, form.subLob]);
+
+  // useEffect(() => {
+  //   if (!cibLobId) return;
+
+  //   const prevLob = prevLobRef.current;
+  //   const currLob = form.lob;
+
+  //   // If LOB changed FROM CIB → something else, clear subLob
+  //   if (
+  //     prevLob === String(cibLobId) &&
+  //     currLob !== String(cibLobId)
+  //   ) {
+  //     setForm(prev => ({ ...prev, subLob: "" }));
+  //   }
+
+  //   // Save current for next comparison
+  //   prevLobRef.current = currLob;
+  // }, [form.lob, cibLobId]);
+
+
+  useEffect(() => {
+    console.log("SUBLOB VALUE:", form.subLob);
+  }, [form.subLob]);
+
   const handleChange = (e) => {
     const { name, value, type } = e.target;
     setForm((prev) => ({
@@ -1306,6 +1400,15 @@ const sharedMultiSelectStyles = {
         setForm((prev) => ({
           ...prev,
           lob: String(data?.lob?.id ?? data?.lobId ?? prev.lob ?? ""),
+
+          subLob: String(
+            data?.subLob?.id ??
+            data?.subLobId ??
+            prev.subLob ??
+            ""
+          ),
+
+
           noOfPositions: String(data?.numberOfPositions ?? prev.noOfPositions ?? "1"),
           skillCluster: data?.skillCluster
             ? {
@@ -1420,7 +1523,13 @@ const sharedMultiSelectStyles = {
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation,   options?.priority, options?.offshoreLocation]);
+  }, [options?.demandType, options?.demandTimeline, options?.onshoreLocation, options?.priority, options?.offshoreLocation]);
+
+
+
+
+
+
 
   // Build payload and call API:
   // - If draftId exists -> PUT via updateDraft
@@ -1436,14 +1545,35 @@ const sharedMultiSelectStyles = {
     if (!form.demandReceivedDate) return message.warning("Demand Received Date is required.");
     if (!form.karat) return message.warning("Karat is required.");
 
+    // if (String(form.lob) === String(cibLobId) && !form.subLob) {
+    //   return message.warning("Please select Sub‑LOB for CIB.");
+
+    // }
+
+
+    // ✅ Enforce Sub‑LOB for CIB
+if (String(form.lob) === String(cibLobId) && !form.subLob) {
+  setSubLobError(true);
+  return message.warning("Please select Sub‑LOB for CIB.");
+}
+
     // Optional: you can enforce experience >= 0 if present
     if (form.experience !== "" && Number(form.experience) < 0) {
       return message.warning("Experience cannot be negative.");
     }
 
+    console.log("BEFORE SUBMIT:");
+console.log("DRAFT ID:", draftId);
+console.log("LOB:", form.lob);
+console.log("SUBLOB:", form.subLob);
+
+
     setLoading(true);
     try {
-      const request = buildDraftCreateRequest(form);
+      // const request = buildDraftCreateRequest(form);
+      const request = buildDraftCreateRequest(form, cibLobId);
+      console.log("FINAL PAYLOAD:", request);
+
 
       let resp;
       let effDraftId = Number(draftId) || null;
@@ -1472,7 +1602,14 @@ const sharedMultiSelectStyles = {
         noOfPositions: form.noOfPositions,
       };
 
-      navigate("/addDemands2", {
+      // navigate("/addDemands2", {
+      //   state: {
+      //     draftId: finalDraftId,
+      //     karatFlag: request.karatFlag,
+      //     form1Data: forStep2,
+      //   },
+      // });
+      navigate(`/addDemands2?draftId=${finalDraftId}`, {
         state: {
           draftId: finalDraftId,
           karatFlag: request.karatFlag,
@@ -1577,7 +1714,7 @@ const sharedMultiSelectStyles = {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* LEFT COLUMN – LOB */}
-              <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
+              {/* <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
                 <span className={`${labelCls} whitespace-nowrap mt-2`}>
                   Line of Business:
                 </span>
@@ -1587,7 +1724,67 @@ const sharedMultiSelectStyles = {
                   value={form.lob}
                   onChange={(val) => setForm((p) => ({ ...p, lob: val }))}
                 />
+              </div> */}
+
+              {/* LOB */}
+              <div className="flex items-start gap-4 px-3 pb-3 w-5/6">
+                <span className={`${labelCls} whitespace-nowrap mt-2`}>
+                  Line of Business:
+                </span>
+
+                <div className="flex flex-col gap-2">
+
+                  {/* Main LOB */}
+                  <PillRadios
+                    name="lob"
+                    optionsList={options?.lob}
+                    value={form.lob}
+                   onChange={(val) => {
+  setForm(prev => {
+    const isCib = String(val) === String(cibLobId);
+    return {
+      ...prev,
+      lob: val,
+      subLob: isCib ? prev.subLob : "",
+    };
+  });
+  setSubLobError(false);
+}}
+                  />
+
+                  {/* ✅ Sub‑LOB ONLY WHEN CIB */}
+                  {String(form.lob) === String(cibLobId) && (
+                    <div
+                      className={`ml-6 mt-2 ${String(form.lob) === String(cibLobId) ? "block" : "hidden"
+                        }`}
+                    >
+                      <span className={`${labelCls} mb-1 block`}>Sub‑LOB</span>
+
+                      <PillRadios
+                        name="subLob"
+                        optionsList={options?.subLob}
+                        value={form.subLob}
+                       
+onChange={(val) => {
+  setForm(p => ({ ...p, subLob: val }));
+  setSubLobError(false);
+}}
+
+                      />
+                      {String(form.lob) === String(cibLobId) && subLobError && (
+  <div className="ml-6 mt-1 text-xs text-red-600">
+    Sub‑LOB is required when Line of Business is CIB.
+  </div>
+)}
+                    </div>
+                  )}
+                </div>
               </div>
+
+
+
+
+
 
               {/* RIGHT COLUMN – Positions + Experience */}
               <div className="flex flex-col gap-4 px-3 pb-3">
@@ -1858,7 +2055,7 @@ const sharedMultiSelectStyles = {
               </div>
 
               <div className="flex flex-col items-start">
-                <label className={`${labelCls} mb-1 block`}>Karat</label>
+                <label className={`${labelCls} `}>Karat</label>
                 <div className="mt-1">
                   <PillRadios
                     name="karat"
@@ -1870,9 +2067,9 @@ const sharedMultiSelectStyles = {
               </div>
 
               <div>
-                <label className={labelCls}>Priority</label>
+                <label className={`${labelCls} `}>Priority</label>
                 <select
-                  className={`${inputCls}`}
+                  className={`${inputCls} mt-2`}
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
                 >
@@ -1967,7 +2164,7 @@ const sharedMultiSelectStyles = {
 
                   {/* Dynamic dropdown for locations */}
                   <Select
-                    className=" py-1 w-full ml-2 h-10 hover:border-gray-400"
+                    className=" py-0 w-full ml-2 h-10 hover:border-gray-400"
                     placeholder={`Select locations`}
                     options={form.locationType === "onshore" ? safe(options?.onshoreLocation) : safe(options?.offshoreLocation)}
                     isMulti
@@ -1984,24 +2181,24 @@ const sharedMultiSelectStyles = {
                       const arr = Array.isArray(selected) ? selected.map((o) => Number(o.value)) : [];
                       setForm((prev) => ({ ...prev, demandLocation: arr }));
                     }}
-  styles={sharedMultiSelectStyles} 
-                    // styles={{
-                    //   control: (base) => ({
-                    //     ...base,
-                    //     //       minHeight: "40px", // h-10 → 40px
-                    //     height: "35px",
-                    //     //       width: "80px", // w-20 (you can change)
-                    //   }),
-                    //   //     valueContainer: (base) => ({
-                    //   //       ...base,
-                    //   //       height: "40px",
-                    //   //       paddingTop: "2px",
-                    //   //     }),
-                    //   {sharedMultiSelectStyles}
+                    styles={sharedMultiSelectStyles}
+                  // styles={{
+                  //   control: (base) => ({
+                  //     ...base,
+                  //     //       minHeight: "40px", // h-10 → 40px
+                  //     height: "35px",
+                  //     //       width: "80px", // w-20 (you can change)
+                  //   }),
+                  //   //     valueContainer: (base) => ({
+                  //   //       ...base,
+                  //   //       height: "40px",
+                  //   //       paddingTop: "2px",
+                  //   //     }),
+                  //   {sharedMultiSelectStyles}
 
-                    // }}
+                  // }}
 
-                   
+
                   />
 
                   {/*                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2"> */}
