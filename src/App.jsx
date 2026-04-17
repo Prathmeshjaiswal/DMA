@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import './App.css'
 import Login from './Components/Auth/Login.jsx'
-import OnBoardingTracker from "./Components/DemandsManagement/Tracking/OnBoardingTracker.jsx"
+// import OnBoardingTracker from "./Components/DemandsManagement/Tracking/OnBoardingTracker.jsx"
 import ProfileTracker from "./Components/DemandsManagement/Tracking/ProfileTracker.jsx"
 import RDGTATeam from "./Components/Profiles/RDGTATeam.jsx"
 import Report from "./Components/DemandsManagement/Report.jsx"
@@ -13,7 +13,7 @@ import DemandDetails from './Components/DemandsManagement/DemandDetails.jsx'
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import CreateUser from "./Components/UserManagement/CreateUser.jsx"
 import ChangePassword from "./Components/Auth/ChangePassword.jsx"
-import SetNewPassword from './Components/Auth/SetNewPassword.jsx'
+// import SetNewPassword from './Components/Auth/SetNewPassword.jsx'
 import AddDemands2 from './Components/DemandsManagement/AddNewDemand/AddDemands2.jsx'
 import DemandSheet1 from './Components/DemandsManagement/DemandSheet/DemandSheet1.jsx'
 import AddDemands1 from './Components/DemandsManagement/AddNewDemand/AddDemands1.jsx'
