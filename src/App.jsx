@@ -54,14 +54,14 @@ function App() {
 
           {/* protected */}
           <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
-          <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} />
+          {/* <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} /> */}
 
           {/* UPDATED: Map to specific child modules under DashBoard */}
           <Route
             path="/ProfileTracker"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Track"> {/* UPDATED */}
+                <RequirePermission module="DashBoard" child="Track" action="Profile Tracker"> {/* UPDATED */}
                   <ProfileTracker />
                 </RequirePermission>
               </ProtectedRoute>
@@ -232,7 +232,7 @@ function App() {
             path="/onboardinglist"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Track">
+                <RequirePermission module="DashBoard" child="Track" action="Onboarding Tracker">
                   <OnboardingList />
                 </RequirePermission>
               </ProtectedRoute>

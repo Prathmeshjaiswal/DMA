@@ -120,9 +120,9 @@ export default function DemandSheet1() {
   const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
   const canViewHistory = can("DashBoard", "Demands", "History");
 
-console.log("PERMISSIONS:", canUpdateDemands);
-const { list } = usePermissions();
-console.log("PERM LIST:", list.modulesByName?.DashBoard?.Demands);
+// console.log("PERMISSIONS:", canUpdateDemands);
+// const { list } = usePermissions();
+// console.log("PERM LIST:", list.modulesByName?.DashBoard?.Demands);
 
 
 
