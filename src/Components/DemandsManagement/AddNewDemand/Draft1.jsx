@@ -6,6 +6,7 @@ import { Button, Table, message, Tooltip } from "antd";
 import { EditOutlined, DownloadOutlined } from "@ant-design/icons";
 
 import { listDrafts, downloadDraftJD } from "../../api/Demands/draft.js";
+import { usePermissions } from "../../Auth/PermissionProvider.jsx";
 
 /* ---------------- helpers to read labels safely ---------------- */
 
@@ -87,6 +88,11 @@ export default function Draft1() {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
+
+
+  //permission check
+  const { can } = usePermissions();
+  const canUpdateDrafts = can("DashBoard", "Demands", "Update Drafts");
 
   const loadDraftsFromServer = async () => {
     try {
@@ -262,26 +268,26 @@ export default function Draft1() {
       title: "JD",
       key: "jd",
       width: 70,
-//       fixed: "right",
+      //       fixed: "right",
       render: (_, rec) => {
         const fileName = rec.__fileName;
         return (
-                <Tooltip title={`${fileName}`}>
-          <Button
-            size="small"
-            icon={<DownloadOutlined />}
-            disabled={!fileName}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!fileName) {
-                message.warning("No JD available for this draft.");
-                return;
-              }
-              downloadDraftJD(fileName);
-            }}
-          >
-            JD
-          </Button>
+          <Tooltip title={`${fileName}`}>
+            <Button
+              size="small"
+              icon={<DownloadOutlined />}
+              disabled={!fileName}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!fileName) {
+                  message.warning("No JD available for this draft.");
+                  return;
+                }
+                downloadDraftJD(fileName);
+              }}
+            >
+              JD
+            </Button>
           </Tooltip>
         );
       },
@@ -292,10 +298,11 @@ export default function Draft1() {
       title: "Action",
       key: "action",
       width: 70,
-//       fixed: "right",
+      //       fixed: "right",
       render: (_, rec) => {
-        const draftId = rec.key; // we set this from id/draftId above
-        return (
+        const draftId = rec.key;
+
+        return canUpdateDrafts ? (
           <Button
             type="default"
             size="small"
@@ -307,8 +314,9 @@ export default function Draft1() {
           >
             Edit
           </Button>
-        );
+        ) : null;
       },
+
     },
   ];
 
@@ -327,7 +335,7 @@ export default function Draft1() {
         size="small"              // compact height
         rowKey="key"
         scroll={{ x: 3000 }}      // wide table → horizontal scroll
-//         sticky
+      //         sticky
       />
     </Layout>
   );

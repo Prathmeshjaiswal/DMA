@@ -42,11 +42,11 @@ function normalizePageResponse(raw) {
 export async function getProfiles(page = 0, size = 10) {
   const res = await api.get("/profiles", {
     params: { page, size}, // cache buster
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-      Expires: "0",
-    },
+    // headers: {
+    //   "Cache-Control": "no-cache",
+    //   Pragma: "no-cache",
+    
+    // },
   });
   return normalizePageResponse(res.data);
 }
@@ -84,10 +84,7 @@ export async function downloadProfileCv(fileName) {
     // 2) Main attempt: fetch as BLOB and force download
     const res = await api.get(downloadUrl, {
       responseType: "blob",
-      headers: {
-        "Cache-Control": "no-cache",
-        Accept: "*/*",
-      },
+
     });
 
     // Content-Type & Content-Disposition (may be missing)
@@ -170,7 +167,6 @@ export async function submitProfileUpdate(id, payload, file = null) {
   if (file) formData.append("file", file, file.name);
 
   const res = await api.put(`/profiles/update/${id}`, formData, {
-    headers: { "Cache-Control": "no-cache" },
     transformRequest: [(data) => data], // keep FormData intact
   });
 

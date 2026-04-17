@@ -1,3 +1,5 @@
+
+
 // src/Components/DemandsManagement/DemandTable.jsx
 import React, { useState } from "react";
 import TableHeader from "./TableHeader";
@@ -26,11 +28,15 @@ export default function DemandTable({
   visibleColumns = [],
   dropdowns = {},
   className = "",
-  onViewRow = () => {},
+  onViewRow = () => { },
+
+  canViewDemands = false,
+  canUpdateDemands = false,
+
   // Header filters
   filters = {},
   filterConfig = {},
-  onFilterChange = () => {},
+  onFilterChange = () => { },
   // Optional header props
   theadClassName = "bg-gray-50",
   actionsLabel = "Actions",
@@ -97,6 +103,10 @@ export default function DemandTable({
                   startEdit={startEdit}
                   isLocked={isLocked}
                   onViewRow={onViewRow}
+
+                  canUpdateDemands={canUpdateDemands}
+                  canViewDemands={canViewDemands}
+
                 />
               );
             })}

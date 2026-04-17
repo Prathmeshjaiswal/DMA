@@ -992,6 +992,10 @@ export default function AddDemands2() {
         bandId:             toNum(pickFirst(meta?.bandId, meta?.band)),
         priorityId:         toNum(pickFirst(meta?.priorityId, meta?.priority)),
         lobId:              toNum(pickFirst(meta?.lobId, meta?.lob)),
+
+        subLobId: toNum(pickFirst(meta?.subLobId, meta?.subLob)),
+
+
         demandTypeId:       toNum(pickFirst(meta?.demandTypeId, meta?.demandType)),
         demandTimelineId:   toNum(pickFirst(meta?.demandTimelineId, meta?.demandTimeline)),
         externalInternalId: toNum(pickFirst(meta?.externalInternalId, meta?.externalInternal)),
@@ -1141,6 +1145,10 @@ export default function AddDemands2() {
         hbuSpocId:          toNum(pickFirst(meta?.hbuSpocId, meta?.hubSpocId, meta?.hbu_spoc_id)),
         hiringManagerId:    toNum(pickFirst(meta?.hiringManagerId, meta?.hiringManager)),
         lobId:              toNum(pickFirst(meta?.lobId, meta?.lob)),
+
+        subLobId: toNum(pickFirst(meta?.subLobId, meta?.subLob)),
+
+
         numberOfPositions:  toNum(pickFirst(meta?.numberOfPositions, meta?.noOfPositions)),
         pmoId:              toNum(pickFirst(meta?.pmoId, meta?.pmo)),
         pmoSpocId:          toNum(pickFirst(meta?.pmoSpocId, meta?.pmoSpoc)),

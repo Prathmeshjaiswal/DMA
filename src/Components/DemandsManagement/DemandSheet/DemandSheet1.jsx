@@ -1,473 +1,7 @@
-// // src/Components/DemandsManagement/DemandSheet1.jsx
-// import { useEffect, useState, useCallback, useMemo } from "react";
-// import { useNavigate } from "react-router-dom";
-// import { Spin, Alert, Button, message, Pagination } from "antd";
-// import { PlusOutlined } from "@ant-design/icons";
-
-// import Layout from "../../Layout.jsx";
-// import ColumnsSelector from "./ColumnsSelector.jsx";
-// import DemandTable from "./DemandTable.jsx";
-// import DemandDetailModal from "./DemandDetailModal.jsx";
-
-// import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
-// import { getDropDownData } from "../../api/Demands/addDemands.js";
-
-// // ---------- helpers to flatten backend objects ----------
-// const nameOf = (obj) =>
-//   (obj && typeof obj === "object" ? (obj.name ?? "") : String(obj ?? ""));
-
-// const joinNames = (arr) =>
-//   Array.isArray(arr)
-//     ? arr.map(nameOf).filter(Boolean).join(", ")
-//     : nameOf(arr);
-
-// // keep only digits
-// const onlyDigits = (s = "") => String(s ?? "").replace(/\D+/g, "");
-
-// // split comma/semicolon/newline separated names into array
-// const splitNames = (v) =>
-//   String(v ?? "")
-//     .split(/[,;\n]/)
-//     .map((s) => s.trim())
-//     .filter(Boolean);
-
-// /**
-//  * Normalize backend DTO (objects with {id,name}, arrays) to flat table row.
-//  * Prefers displayDemandId (e.g., "CTO-100") as demandId for the table chip.
-//  */
-// const normalizeDemandDto = (d) => ({
-//   demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
-//   rrNumber: String(d.rrNumber ?? ""),
-
-//   // People / org (flatten {id,name} -> name)
-//   lob: nameOf(d.lob),
-//   skillCluster: nameOf(d.skillCluster),
-//   hiringManager: nameOf(d.hiringManager),
-//   deliveryManager: nameOf(d.deliveryManager),
-//   pm: nameOf(d.projectManager),
-//   pmoSpoc: nameOf(d.pmoSpoc),
-//   pmo: nameOf(d.pmo),
-//   salesSpoc: nameOf(d.salesSpoc),
-//   hbu: nameOf(d.hbu),
-
-//   // Skills & locations
-//   primarySkills: joinNames(d.primarySkills),
-//   secondarySkills: joinNames(d.secondarySkills),
-//   demandLocation: joinNames(d.demandLocations),
-
-//   // Meta
-//   priority: nameOf(d.priority),
-//   band: nameOf(d.band),
-//   experience: d.experience ?? "",
-//   status: nameOf(d.status),
-//   demandTimeline: nameOf(d.demandTimeline),
-//   demandType: nameOf(d.demandType),
-
-//   // Dates & extra
-//   demandReceivedDate: d.demandReceivedDate ?? "",
-//   remark: d.remark ?? "",
-
-//   // NEW: Presentable Karat flag ("Yes" | "No" | "")
-//   karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "", // NEW
-
-//   // Raw id / file name
-//   id: d.id,
-//   jdFileName: d.jdFileName ?? d.fileName ?? null,
-// });
-
-// export default function DemandSheet1() {
-//   const navigate = useNavigate();
-
-//   // === Columns in required sequence (as per your order) ===
-//   const ALL_COLUMNS = [
-//     { key: "demandId",        label: "Demand ID", alwaysVisible: true },
-//     { key: "rrNumber",        label: "RR" },
-//     { key: "lob",             label: "LOB" },
-//     { key: "skillCluster",    label: "Skill Cluster" },
-//     { key: "primarySkills",   label: "Primary Skill" },
-//     { key: "secondarySkills", label: "Secondary Skill" },
-//     { key: "priority",        label: "Priority" },
-//     { key: "status",          label: "Status" },
-//     { key: "karat",           label: "Karat" },               // NEW
-//     { key: "hbu",             label: "HBU" },
-//     { key: "p1Age",           label: "P1 Age" }, // (kept for order; not filtering)
-//     { key: "demandTimeline",  label: "Demand Timeline" },
-//     { key: "demandType",      label: "Demand Type" },
-//     { key: "demandLocation",  label: "Demand Location" },
-//     { key: "hiringManager",   label: "Hiring Manager" },
-//     { key: "deliveryManager", label: "Delivery Manager" },
-//     { key: "pm",              label: "PM" },
-//     { key: "pmoSpoc",         label: "PMO SPOC" },
-//     { key: "salesSpoc",       label: "Sales Spoc" },
-//     { key: "pmo",             label: "PMO" },
-//     { key: "band",            label: "Band" },
-//     { key: "experience",      label: "Experience" },
-//     { key: "statusNote",      label: "Status Note" },
-//     // keep available (not default-visible)
-//     { key: "prodProgramName",     label: "Pod /Programme Name" },
-//     { key: "demandReceivedDate",  label: "Demand Recieved Date" },
-//     { key: "priorityComment",     label: "Priority Comment" },
-//     { key: "currentProfileShared",label: "Current Profile Shared (Drop Down)" },
-//     { key: "externalInternal",    label: "External / Internal" },
-//   ];
-
-//   // Default visible columns matching the same order
-//   const defaultVisible = [
-//     "demandId","rrNumber","lob","skillCluster","primarySkills","secondarySkills",
-//     "priority","status","karat","hbu","p1Age","demandTimeline","demandType", // UPDATED: added "karat"
-//     "demandLocation","hiringManager","deliveryManager","pm","pmoSpoc","salesSpoc","pmo","band","experience"
-//   ];
-
-//   // API state
-//   const [rows, setRows] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [apiError, setApiError] = useState(null);
-
-//   // Dropdowns (for filter selects)
-//   const [dropdowns, setDropdowns] = useState(null);
-//   const [ddLoading, setDdLoading] = useState(false);
-
-//   // Pagination state (UI is 1-based)
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const [pageSize, setPageSize] = useState(10);
-//   const [totalItems, setTotalItems] = useState(0);
-
-//   // Columns selector state
-//   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
-//   const [columnsEnabled, setColumnsEnabled] = useState(false);
-
-//   // Demand details modal
-//   const [detailOpen, setDetailOpen] = useState(false);
-//   const [detailRow, setDetailRow] = useState(null);
-
-//   // ---------------- Filters (header) ----------------
-//   const [filters, setFilters] = useState({
-//     demandId: "",
-//     rrNumber: "",
-//     lob: "",
-//     skillCluster: "",
-//     primarySkills: "",
-//     secondarySkills: "",
-//     priority: "",           // P1/P2/P3
-//     status: "",
-//     karat: "",              // NEW: "Yes" | "No" | ""
-//     hbu: "",
-//     demandTimeline: "",
-//     demandType: "",
-//     demandLocation: "",
-//     hiringManager: "",
-//     deliveryManager: "",
-//     pm: "",
-//     pmoSpoc: "",
-//     salesSpoc: "",
-//     pmo: "",
-//     band: "",
-//     experience: "",
-//   });
-
-//   const filterConfig = useMemo(() => {
-//     const text = { type: "text" };
-//     const mkSel = (arr) => Array.isArray(arr) ? { type: "select", options: arr } : text;
-
-//     return {
-//       demandId: text,
-//       rrNumber: text,
-//       lob: text,
-//       skillCluster: text,
-//       primarySkills: text,
-//       secondarySkills: text,
-//       priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
-//       status: text,
-//       karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] }, // NEW
-//       hbu: text,
-//       demandTimeline: mkSel(dropdowns?.demandTimeline), // expects [{id,name}]
-//       demandType: mkSel(dropdowns?.demandType),         // expects [{id,name}]
-//       demandLocation: text,
-//       hiringManager: text,
-//       deliveryManager: text,
-//       pm: text,
-//       pmoSpoc: text,
-//       salesSpoc: text,
-//       pmo: text,
-//       band: text,
-//       experience: text,
-//     };
-//   }, [dropdowns]);
-
-//   const hasAnyFilter = useMemo(
-//     () => Object.values(filters).some((v) => String(v ?? "").trim() !== ""),
-//     [filters]
-//   );
-
-//   const setFilter = (key, value) => {
-//     setFilters((prev) => ({ ...prev, [key]: value }));
-//     setCurrentPage(1);
-//   };
-
-//   /**
-//    * Map UI filters -> backend search payload (matching your Postman contract).
-//    */
-//   const buildFilterPayload = (f) => {
-//     const payload = {};
-
-//     // Demand ID: allow "MSS-104" or "104"
-//     if (f.demandId) {
-//       const dStr = String(f.demandId).trim();
-//       const digits = onlyDigits(dStr);
-//       if (digits) payload.demandId = Number(digits);
-//     }
-
-//     // RR number (if backend supports it)
-//     if (f.rrNumber) {
-//       const rrDigits = onlyDigits(f.rrNumber);
-//       payload.rrNumber = rrDigits ? Number(rrDigits) : String(f.rrNumber).trim();
-//     }
-
-//     // Names that backend expects with `...Name`
-//     if (f.lob)          payload.lobName = String(f.lob).trim();
-//     if (f.hbu)          payload.hbuName = String(f.hbu).trim();
-//     if (f.skillCluster) payload.skillClusterName = String(f.skillCluster).trim();
-
-//     if (f.hiringManager)   payload.hiringManagerName   = String(f.hiringManager).trim();
-//     if (f.deliveryManager) payload.deliveryManagerName = String(f.deliveryManager).trim();
-//     if (f.pm)              payload.projectManagerName  = String(f.pm).trim();
-//     if (f.pmoSpoc)         payload.pmoSpocName         = String(f.pmoSpoc).trim();
-//     if (f.salesSpoc)       payload.salesSpocName       = String(f.salesSpoc).trim();
-//     if (f.pmo)             payload.pmoName             = String(f.pmo).trim();
-
-//     // Status (string)
-//     if (f.status) payload.status = String(f.status).trim();
-
-//     // NEW: Karat -> backend boolean `karatFlag`
-//     if (f.karat) {
-//       const v = String(f.karat).trim().toLowerCase();
-//       if (v === "yes") payload.karatFlag = true;
-//       else if (v === "no") payload.karatFlag = false;
-//     }
-
-//     // Demand Location -> names array
-//     const locNames = splitNames(f.demandLocation);
-//     if (locNames.length) payload.demandLocationNames = locNames;
-
-//     // Primary / Secondary skills -> names arrays
-//     const prim = splitNames(f.primarySkills);
-//     if (prim.length) payload.primarySkillNames = prim;
-
-//     const sec = splitNames(f.secondarySkills);
-//     if (sec.length) payload.secondarySkillNames = sec;
-
-//     // Priority, Demand Timeline/Type, Band, Experience (pass as-is if present)
-//     if (f.priority)        payload.priority = String(f.priority).trim();
-//     if (f.demandTimeline)  payload.demandTimeline = String(f.demandTimeline).trim();
-//     if (f.demandType)      payload.demandType = String(f.demandType).trim();
-//     if (f.band)            payload.band = String(f.band).trim();
-//     if (f.experience)      payload.experience = String(f.experience).trim();
-
-//     // NOTE: receivedFrom / receivedTo can be added later as date inputs in header.
-//     return payload;
-//   };
-
-//   const loadDropdowns = async () => {
-//     try {
-//       setDdLoading(true);
-//       const dd = await getDropDownData();
-//       const data = dd?.data || dd;
-//       setDropdowns(data || {});
-//     } catch (err) {
-//       console.error("dropdowns load error:", err);
-//       message.error("Failed to load dropdown data");
-//     } finally {
-//       setDdLoading(false);
-//     }
-//   };
-
-//   const loadDemands = useCallback(
-//     async (uiPage = currentPage, uiSize = pageSize) => {
-//       try {
-//         setLoading(true);
-//         const apiPage = Math.max(0, Number(uiPage) - 1);
-//         const apiSize = Number(uiSize);
-
-//         let resp;
-//         if (hasAnyFilter) {
-//           const payload = buildFilterPayload(filters);
-//           resp = await searchDemands(payload, apiPage, apiSize);
-//         } else {
-//           resp = await getDemandsheet(apiPage, apiSize);
-//         }
-
-//         const list =
-//           Array.isArray(resp?.data?.content) ? resp.data.content :
-//           Array.isArray(resp?.content)        ? resp.content :
-//           Array.isArray(resp)                 ? resp :
-//           [];
-
-//         const total =
-//           resp?.data?.totalElements ?? resp?.totalElements ??
-//           resp?.data?.total ?? resp?.total ??
-//           (Array.isArray(resp) ? resp.length : 0);
-
-//         const pageIndex =
-//           resp?.data?.number ?? resp?.number ?? apiPage; // 0-based
-//         const pageSz =
-//           resp?.data?.size ?? resp?.size ?? apiSize;
-
-//         const normalized = list.map(normalizeDemandDto);
-
-//         setRows(normalized);
-//         setTotalItems(Number.isFinite(total) ? total : normalized.length);
-//         setCurrentPage(Number(pageIndex) + 1);
-//         setPageSize(pageSz);
-//       } catch (err) {
-//         const msg =
-//           err?.userMessage ||
-//           err?.response?.data?.message ||
-//           err?.message ||
-//           "Failed to load demands";
-//         setApiError(msg);
-//       } finally {
-//         setLoading(false);
-//       }
-//     },
-//     [currentPage, pageSize, filters, hasAnyFilter]
-//   );
-
-//   useEffect(() => {
-//     loadDropdowns();
-//     loadDemands(1, pageSize);
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, []);
-
-//   useEffect(() => {
-//     const t = setTimeout(() => {
-//       loadDemands(1, pageSize);
-//     }, 400);
-//     return () => clearTimeout(t);
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [filters]);
-
-//   const onPageChange = (page, size) => {
-//     setCurrentPage(page);
-//     setPageSize(size);
-//     loadDemands(page, size);
-//   };
-//   const onPageSizeChange = (page, size) => {
-//     setCurrentPage(1);
-//     setPageSize(size);
-//     loadDemands(1, size);
-//   };
-
-//   const onViewRow = (row) => {
-//     setDetailRow(row);
-//     setDetailOpen(true);
-//   };
-//   const closeDetails = () => {
-//     setDetailOpen(false);
-//     setDetailRow(null);
-//   };
-
-//   if (loading || ddLoading) {
-//     return (
-//       <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'200px' }}>
-//         <Spin size="large" tip="Loading..." />
-//       </div>
-//     );
-//   }
-//   if (apiError) {
-//     return (
-//       <div style={{ padding:'16px' }}>
-//         <Alert message="Error" description={apiError} type="error" showIcon />
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <>
-//       <Layout>
-//         <div className="">
-//           {/* SAME ROW: left = ColumnsSelector, center = title, right = buttons */}
-//           <div className="mb-4 grid grid-cols-3 w-full items-center">
-//             <ColumnsSelector
-//               columnsEnabled={columnsEnabled}
-//               setColumnsEnabled={setColumnsEnabled}
-//               ALL_COLUMNS={ALL_COLUMNS}
-//               visibleColumns={visibleColumns}
-//               toggleColumn={(key) =>
-//                 setVisibleColumns((prev) => {
-//                   const meta = ALL_COLUMNS.find((c) => c.key === key);
-//                   if (meta?.alwaysVisible) return prev;
-//                   return prev.includes(key)
-//                     ? prev.filter((k) => k !== key)
-//                     : [...prev, key];
-//                 })
-//               }
-//             />
-//             <div>
-//               <h1 className="text-lg font-bold">Demand Sheet</h1>
-//             </div>
-//             <div className="flex items-start justify-end gap-1 pt-1">
-//               <Button onClick={() => navigate("/drafts1")}>View Draft</Button>
-//               <Button
-//                 type="default"
-//                 icon={<PlusOutlined />}
-//                 onClick={() =>{
-//                   try { localStorage.removeItem('step1DraftId'); } catch {}
-//                   navigate('/addDemands1');
-//                 }}
-//                 className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-//               >
-//                 Add New Demands
-//               </Button>
-//             </div>
-//           </div>
-
-//           {/* Table – with header search fields */}
-//           <DemandTable
-//             rows={rows}
-//             columns={ALL_COLUMNS}
-//             visibleColumns={visibleColumns}
-//             dropdowns={dropdowns}
-//             onViewRow={onViewRow}
-//             filters={filters}
-//             filterConfig={filterConfig}
-//             onFilterChange={setFilter}
-//             onClearAllFilters={() => {
-//               setFilters((prev) =>
-//                 Object.keys(prev).reduce((acc, k) => ({ ...acc, [k]: "" }), {})
-//               );
-//               setCurrentPage(1);
-//             }}
-//           />
-
-//           {/* Pagination controls */}
-//           <div className="mt-4 flex justify-end">
-//             <Pagination
-//               current={currentPage}
-//               pageSize={pageSize}
-//               total={totalItems}
-//               showSizeChanger
-//               onChange={onPageChange}
-//               onShowSizeChange={onPageSizeChange}
-//               showTotal={(total, range) => `${range[0]}-${range[1]} of ${total}`}
-//             />
-//           </div>
-//         </div>
-//       </Layout>
-
-//       {/* Demand Details Modal (fetches attached profiles from backend itself) */}
-//       <DemandDetailModal
-//         open={detailOpen}
-//         onClose={closeDetails}
-//         row={detailRow}
-//         statusChip={detailRow?.status}
-//       />
-//     </>
-//   );
-// }
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Spin, Alert, Button, message, Pagination } from "antd";
+import { Spin, Alert, Button, Pagination,message } from "antd";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 
 import Layout from "../../Layout.jsx";
@@ -477,74 +11,122 @@ import DemandDetailModal from "./DemandDetailModal.jsx";
 import { exportDemandSheet } from "../../api/Export/demandsheet.js";
 import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
+import { usePermissions } from "../../Auth/PermissionProvider.jsx";
 
-// ---------- helpers to flatten backend objects ----------
+/* ================= HELPERS ================= */
 const nameOf = (obj) =>
   obj && typeof obj === "object" ? obj.name ?? "" : String(obj ?? "");
 
 const joinNames = (arr) =>
-  Array.isArray(arr)
-    ? arr.map(nameOf).filter(Boolean).join(", ")
-    : nameOf(arr);
+  Array.isArray(arr) ? arr.map(nameOf).filter(Boolean).join(", ") : nameOf(arr);
 
-// keep only digits
 const onlyDigits = (s = "") => String(s ?? "").replace(/\D+/g, "");
 
-// split comma/semicolon/newline separated names into array
 const splitNames = (v) =>
   String(v ?? "")
     .split(/[,;\n]/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-/**
- * Normalize backend DTO (objects with {id,name}, arrays) to flat table row.
- * Prefers displayDemandId (e.g., "CTO-100") as demandId for the table chip.
- */
-const normalizeDemandDto = (d) => ({
-  demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
-  rrNumber: String(d.rrNumber ?? ""),
+// const normalizeDemandDto = (d) => ({
+//   demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
+//   rrNumber: String(d.rrNumber ?? ""),
+//   lob: nameOf(d.lob),
+//   skillCluster: nameOf(d.skillCluster),
+//   hiringManager: nameOf(d.hiringManager),
+//   deliveryManager: nameOf(d.deliveryManager),
+//   pm: nameOf(d.projectManager),
+//   pmo: nameOf(d.pmo),
+//   salesSpoc: nameOf(d.salesSpoc),
+//   hbu: nameOf(d.hbu),
+//   primarySkills: joinNames(d.primarySkills),
+//   secondarySkills: joinNames(d.secondarySkills),
+//   demandLocation: joinNames(d.demandLocations),
+//   priority: nameOf(d.priority),
+//   band: nameOf(d.band),
+//   experience: d.experience ?? "",
+//   status: nameOf(d.status),
+//   demandTimeline: nameOf(d.demandTimeline),
+//   demandType: nameOf(d.demandType),
+//   demandReceivedDate: d.demandReceivedDate ?? "",
+//   remark: d.remark ?? "",
+//   karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
+//   id: d.id,
+//   jdFileName: d.jdFileName ?? d.fileName ?? null,
+// });
 
-  // People / org (flatten {id,name} -> name)
-  lob: nameOf(d.lob),
-  skillCluster: nameOf(d.skillCluster),
-  hiringManager: nameOf(d.hiringManager),
-  deliveryManager: nameOf(d.deliveryManager),
-  pm: nameOf(d.projectManager),
-  // pmoSpoc: nameOf(d.pmoSpoc),
-  pmo: nameOf(d.pmo),
-  salesSpoc: nameOf(d.salesSpoc),
-  hbu: nameOf(d.hbu),
 
-  // Skills & locations
-  primarySkills: joinNames(d.primarySkills),
-  secondarySkills: joinNames(d.secondarySkills),
-  demandLocation: joinNames(d.demandLocations),
+const normalizeDemandDto = (d) => {
+  const lobName = nameOf(d.lob);
+  const subLobName = nameOf(d.subLob);
 
-  // Meta
-  priority: nameOf(d.priority),
-  band: nameOf(d.band),
-  experience: d.experience ?? "",
-  status: nameOf(d.status),
-  demandTimeline: nameOf(d.demandTimeline),
-  demandType: nameOf(d.demandType),
+  // ✅ FINAL DEMAND ID DISPLAY LOGIC
+  let displayId = d.displayDemandId ?? d.demandId ?? d.id ?? "";
 
-  // Dates & extra
-  demandReceivedDate: d.demandReceivedDate ?? "",
-  remark: d.remark ?? "",
+  // ✅ ONLY FOR CIB → use Sub‑LOB
+  if (
+    lobName?.toUpperCase() === "CIB" &&
+    subLobName
+  ) {
+    const rawId =
+      String(d.demandId ?? d.id ?? "")
+        .replace(/^(.*?-)/, ""); // remove existing prefix if any
 
-  // Presentable Karat flag ("Yes" | "No" | "")
-  karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
+    displayId = `${subLobName}-${rawId}`;
+  }
 
-  // Raw id / file name
-  id: d.id,
-  jdFileName: d.jdFileName ?? d.fileName ?? null,
-});
+  return {
+    demandId: displayId,
+    rrNumber: String(d.rrNumber ?? ""),
+    lob: lobName,
+    skillCluster: nameOf(d.skillCluster),
+    hiringManager: nameOf(d.hiringManager),
+    deliveryManager: nameOf(d.deliveryManager),
+    pm: nameOf(d.projectManager),
+    pmo: nameOf(d.pmo),
+    salesSpoc: nameOf(d.salesSpoc),
+    hbu: nameOf(d.hbu),
+    primarySkills: joinNames(d.primarySkills),
+    secondarySkills: joinNames(d.secondarySkills),
+    demandLocation: joinNames(d.demandLocations),
+    priority: nameOf(d.priority),
+    band: nameOf(d.band),
+    experience: d.experience ?? "",
+    status: nameOf(d.status),
+    demandTimeline: nameOf(d.demandTimeline),
+    demandType: nameOf(d.demandType),
+    demandReceivedDate: d.demandReceivedDate ?? "",
+    remark: d.remark ?? "",
+    karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
+    id: d.id,
+    jdFileName: d.jdFileName ?? d.fileName ?? null,
+  };
+};
 
 export default function DemandSheet1() {
   const navigate = useNavigate();
 
-  // === Columns in required sequence (as per your order) ===
+
+  //permission check
+  const { can } = usePermissions();
+  const canCreateDemand = can("DashBoard", "Demands", "Create Demands");
+  const canViewDemands = can("DashBoard", "Demands", "View Demands");
+  const canExportExcel = can("DashBoard", "Demands", "Export Excel");
+  const canViewDrafts = can("DashBoard", "Demands", "View Drafts");
+  const canUpdateDemands = can("DashBoard", "Demands", "Update Demands");
+  const canUpdateDrafts = can("DashBoard", "Demands", "Update Drafts");
+  const canAttachProfiles = can("DashBoard", "Demands", "Attach Profiles");
+  const canViewProfileData = can("DashBoard", "Demands", "Profile Data");
+  const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
+  const canViewHistory = can("DashBoard", "Demands", "History");
+
+console.log("PERMISSIONS:", canUpdateDemands);
+const { list } = usePermissions();
+console.log("PERM LIST:", list.modulesByName?.DashBoard?.Demands);
+
+
+
+  /* ================= COLUMNS (✅ FULL SET RESTORED) ================= */
   const ALL_COLUMNS = [
     { key: "demandId", label: "Demand ID", alwaysVisible: true },
     { key: "rrNumber", label: "RR" },
@@ -563,21 +145,20 @@ export default function DemandSheet1() {
     { key: "hiringManager", label: "Hiring Manager" },
     { key: "deliveryManager", label: "Delivery Manager" },
     { key: "pm", label: "PM" },
-    // { key: "pmoSpoc", label: "PMO SPOC" },
     { key: "salesSpoc", label: "Sales Spoc" },
     { key: "pmo", label: "PMO" },
     { key: "band", label: "Band" },
     { key: "experience", label: "Experience" },
+
+    // ✅ EXTRA COLUMNS (selectable from column panel)
     { key: "statusNote", label: "Status Note" },
-    // keep available (not default-visible)
-    { key: "prodProgramName", label: "Pod /Programme Name" },
-    { key: "demandReceivedDate", label: "Demand Recieved Date" },
+    { key: "prodProgramName", label: "Pod / Programme Name" },
+    { key: "demandReceivedDate", label: "Demand Received Date" },
     { key: "priorityComment", label: "Priority Comment" },
-    { key: "currentProfileShared", label: "Current Profile Shared (Drop Down)" },
+    { key: "currentProfileShared", label: "Current Profile Shared" },
     { key: "externalInternal", label: "External / Internal" },
   ];
 
-  // Default visible columns matching the same order
   const defaultVisible = [
     "demandId",
     "rrNumber",
@@ -596,36 +177,30 @@ export default function DemandSheet1() {
     "hiringManager",
     "deliveryManager",
     "pm",
-    // "pmoSpoc",
     "salesSpoc",
     "pmo",
     "band",
     "experience",
   ];
 
-  // API state
+  /* ================= STATE ================= */
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
-
-  // Dropdowns (for filter selects)
   const [dropdowns, setDropdowns] = useState(null);
   const [ddLoading, setDdLoading] = useState(false);
 
-  // Pagination state (UI is 1-based)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Columns selector state
   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
   const [columnsEnabled, setColumnsEnabled] = useState(false);
 
-  // Demand details modal
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRow, setDetailRow] = useState(null);
 
-  // ---------------- Filters (header) ----------------
+  /* ================= FILTERS ================= */
   const [filters, setFilters] = useState({
     demandId: "",
     rrNumber: "",
@@ -633,9 +208,9 @@ export default function DemandSheet1() {
     skillCluster: "",
     primarySkills: "",
     secondarySkills: "",
-    priority: "", // P1/P2/P3
+    priority: "",
     status: "",
-    karat: "", // Yes/No
+    karat: "",
     hbu: "",
     demandTimeline: "",
     demandType: "",
@@ -643,7 +218,6 @@ export default function DemandSheet1() {
     hiringManager: "",
     deliveryManager: "",
     pm: "",
-    // pmoSpoc: "",
     salesSpoc: "",
     pmo: "",
     band: "",
@@ -656,38 +230,18 @@ export default function DemandSheet1() {
       Array.isArray(arr) ? { type: "select", options: arr } : text;
 
     return {
-      // Demand ID input with arrows (spinner)
-      demandId: {
-        type: "number",
-        inputProps: {
-          placeholder: "ID",
-          step: 1,
-          min: 0,
-        },
-      },
+      demandId: { type: "number", inputProps: { placeholder: "ID", step: 1 } },
       rrNumber: text,
       lob: text,
       skillCluster: text,
       primarySkills: text,
       secondarySkills: text,
-      priority: {
-        type: "select",
-        options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }],
-      },
+      priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
       status: text,
       karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] },
       hbu: text,
-      demandTimeline: mkSel(dropdowns?.demandTimeline), // expects [{id,name}]
-      demandType: mkSel(dropdowns?.demandType), // expects [{id,name}]
-      demandLocation: text,
-      hiringManager: text,
-      deliveryManager: text,
-      pm: text,
-      // pmoSpoc: text,
-      salesSpoc: text,
-      pmo: text,
-      band: text,
-      experience: text,
+      demandTimeline: mkSel(dropdowns?.demandTimeline),
+      demandType: mkSel(dropdowns?.demandType),
     };
   }, [dropdowns]);
 
@@ -696,162 +250,78 @@ export default function DemandSheet1() {
     [filters]
   );
 
-  const setFilter = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setCurrentPage(1);
-  };
-
-  /**
-   * Map UI filters -> backend search payload (matching your Postman contract).
-   */
+  /* ================= SEARCH PAYLOAD ================= */
   const buildFilterPayload = (f) => {
     const payload = {};
 
-    // Demand ID: allow "MSS-104" or "104"
-    if (f.demandId !== "" && f.demandId != null) {
-      const dStr = String(f.demandId).trim();
-      const digits = onlyDigits(dStr);
-      if (digits) payload.demandId = Number(digits);
+    if (f.demandId) {
+      const d = onlyDigits(f.demandId);
+      if (d) payload.demandId = Number(d);
     }
-
-    // RR number (if backend supports it)
     if (f.rrNumber) {
-      const rrDigits = onlyDigits(f.rrNumber);
-      payload.rrNumber = rrDigits
-        ? Number(rrDigits)
-        : String(f.rrNumber).trim();
+      const r = onlyDigits(f.rrNumber);
+      payload.rrNumber = r ? Number(r) : f.rrNumber;
     }
 
-    // Names that backend expects with `...Name`
-    if (f.lob) payload.lobName = String(f.lob).trim();
-    if (f.hbu) payload.hbuName = String(f.hbu).trim();
-    if (f.skillCluster) payload.skillClusterName = String(f.skillCluster).trim();
+    if (f.lob) payload.lobName = f.lob;
+    if (f.skillCluster) payload.skillClusterName = f.skillCluster;
+    if (f.hiringManager) payload.hiringManagerName = f.hiringManager;
+    if (f.deliveryManager) payload.deliveryManagerName = f.deliveryManager;
+    if (f.pm) payload.projectManagerName = f.pm;
+    if (f.salesSpoc) payload.salesSpocName = f.salesSpoc;
+    if (f.pmo) payload.pmoName = f.pmo;
 
-    if (f.hiringManager)
-      payload.hiringManagerName = String(f.hiringManager).trim();
-    if (f.deliveryManager)
-      payload.deliveryManagerName = String(f.deliveryManager).trim();
-    if (f.pm) payload.projectManagerName = String(f.pm).trim();
-    // if (f.pmoSpoc) payload.pmoSpocName = String(f.pmoSpoc).trim();
-    if (f.salesSpoc) payload.salesSpocName = String(f.salesSpoc).trim();
-    if (f.pmo) payload.pmoName = String(f.pmo).trim();
+    if (f.status) payload.status = f.status;
+    if (f.karat) payload.karatFlag = f.karat.toLowerCase() === "yes";
+    if (f.priority) payload.priority = f.priority;
 
-    // Status (string)
-    if (f.status) payload.status = String(f.status).trim();
-
-    // Karat -> backend boolean `karatFlag`
-    if (f.karat) {
-      const v = String(f.karat).trim().toLowerCase();
-      if (v === "yes") payload.karatFlag = true;
-      else if (v === "no") payload.karatFlag = false;
-    }
-
-    // Demand Location -> names array
-    const locNames = splitNames(f.demandLocation);
-    if (locNames.length) payload.demandLocationNames = locNames;
-
-    // Primary / Secondary skills -> names arrays
     const prim = splitNames(f.primarySkills);
     if (prim.length) payload.primarySkillNames = prim;
 
     const sec = splitNames(f.secondarySkills);
     if (sec.length) payload.secondarySkillNames = sec;
 
-    // Priority, Demand Timeline/Type, Band, Experience (pass as-is if present)
-    if (f.priority) payload.priority = String(f.priority).trim();
-    if (f.demandTimeline) payload.demandTimeline = String(f.demandTimeline).trim();
-    if (f.demandType) payload.demandType = String(f.demandType).trim();
-    if (f.band) payload.band = String(f.band).trim();
-    if (f.experience) payload.experience = String(f.experience).trim();
-
     return payload;
   };
 
-  const loadDropdowns = async () => {
-    try {
-      setDdLoading(true);
-      const dd = await getDropDownData();
-      const data = dd?.data || dd;
-      setDropdowns(data || {});
-    } catch (err) {
-      console.error("dropdowns load error:", err);
-      message.error("Failed to load dropdown data");
-    } finally {
-      setDdLoading(false);
-    }
-  };
-
+  /* ================= API ================= */
   const loadDemands = useCallback(
-    async (uiPage = currentPage, uiSize = pageSize) => {
-      try {
-        setLoading(true);
-        const apiPage = Math.max(0, Number(uiPage) - 1);
-        const apiSize = Number(uiSize);
+    async (page = 1, size = 10) => {
+      setLoading(true);
+      const apiPage = page - 1;
+      const sort = "displayDemandId,desc";
 
-        // 🔽 IMPORTANT: Always ask backend to sort by Demand ID DESC *before* pagination
-        // Try standard Spring sort first; your getDemands API should append this to query string.
-        const sort = "displayDemandId,desc"; // or "demandId,desc" if that's your column name
+      const resp = hasAnyFilter
+        ? await searchDemands(buildFilterPayload(filters), apiPage, size, sort)
+        : await getDemandsheet(apiPage, size, sort);
 
-        let resp;
-        if (hasAnyFilter) {
-          const payload = buildFilterPayload(filters);
-          resp = await searchDemands(payload, apiPage, apiSize, sort);
-        } else {
-          resp = await getDemandsheet(apiPage, apiSize, sort);
-        }
-
-        const list = Array.isArray(resp?.data?.content)
-          ? resp.data.content
-          : Array.isArray(resp?.content)
-          ? resp.content
-          : Array.isArray(resp)
-          ? resp
-          : [];
-
-        const total =
-          resp?.data?.totalElements ??
-          resp?.totalElements ??
-          resp?.data?.total ??
-          resp?.total ??
-          (Array.isArray(resp) ? resp.length : 0);
-
-        const pageIndex = resp?.data?.number ?? resp?.number ?? apiPage; // 0-based
-        const pageSz = resp?.data?.size ?? resp?.size ?? apiSize;
-
-        const normalized = list.map(normalizeDemandDto);
-
-        // ❌ Do NOT sort here; keep server order (already DESC by demand id)
-        setRows(normalized);
-        setTotalItems(Number.isFinite(total) ? total : normalized.length);
-        setCurrentPage(Number(pageIndex) + 1);
-        setPageSize(pageSz);
-      } catch (err) {
-        const msg =
-          err?.userMessage ||
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load demands";
-        setApiError(msg);
-      } finally {
-        setLoading(false);
-      }
+      const data = resp?.data || resp;
+      setRows((data?.content || []).map(normalizeDemandDto));
+      setTotalItems(data?.totalElements || 0);
+      setCurrentPage(apiPage + 1);
+      setPageSize(size);
+      setLoading(false);
     },
-    [currentPage, pageSize, filters, hasAnyFilter]
+    [filters, hasAnyFilter]
   );
 
   useEffect(() => {
     loadDropdowns();
     loadDemands(1, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadDemands(1, pageSize);
-    }, 400);
+    const t = setTimeout(() => loadDemands(1, pageSize), 400);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
+
+  const loadDropdowns = async () => {
+    setDdLoading(true);
+    const dd = await getDropDownData();
+    setDropdowns(dd?.data || dd || {});
+    setDdLoading(false);
+  };
+
 
   const handleExport = async () => {
     try {
@@ -865,6 +335,8 @@ export default function DemandSheet1() {
     }
   };
 
+
+
   const onPageChange = (page, size) => {
     setCurrentPage(page);
     setPageSize(size);
@@ -877,6 +349,7 @@ export default function DemandSheet1() {
   };
 
   const onViewRow = (row) => {
+
     setDetailRow(row);
     setDetailOpen(true);
   };
@@ -907,86 +380,79 @@ export default function DemandSheet1() {
     );
   }
 
+  /* ================= UI ================= */
   return (
     <>
       <Layout>
-        <div className="">
-          {/* SAME ROW: left = ColumnsSelector, center = title, right = buttons */}
-          <div className="mb-4 grid grid-cols-3 w-full items-center">
-            <ColumnsSelector
-              columnsEnabled={columnsEnabled}
-              setColumnsEnabled={setColumnsEnabled}
-              ALL_COLUMNS={ALL_COLUMNS}
-              visibleColumns={visibleColumns}
-              toggleColumn={(key) =>
-                setVisibleColumns((prev) => {
+        <div className="flex gap-4 transition-all duration-300">
+          {/* LEFT SLIDER */}
+          <div className={`transition-all duration-300 overflow-hidden ${columnsEnabled ? "w-72" : "w-0"}`}>
+            {columnsEnabled && (
+              <ColumnsSelector
+                columnsEnabled={columnsEnabled}
+                setColumnsEnabled={setColumnsEnabled}
+                ALL_COLUMNS={ALL_COLUMNS}
+                visibleColumns={visibleColumns}
+                toggleColumn={(key) => {
                   const meta = ALL_COLUMNS.find((c) => c.key === key);
-                  if (meta?.alwaysVisible) return prev;
-                  return prev.includes(key)
-                    ? prev.filter((k) => k !== key)
-                    : [...prev, key];
-                })
-              }
-            />
-            <div>
-              <h1 className="text-lg font-bold">Demand Sheet</h1>
-            </div>
-            <div className="flex items-start justify-end gap-1 pt-1">
-              <Button onClick={() => navigate("/drafts1")}>View Draft</Button>
-              <Button
-                type="default"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  try {
-                    localStorage.removeItem("step1DraftId");
-                  } catch {}
-                  navigate("/addDemands1");
+                  if (meta?.alwaysVisible) return;
+                  setVisibleColumns((prev) =>
+                    prev.includes(key)
+                      ? prev.filter((k) => k !== key)
+                      : [...prev, key]
+                  );
                 }}
-                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-              >
-                Add New Demands
-              </Button>
-              <Button
-                type="default"
-                icon={<ExportOutlined />}
-                loading={loading}
-                onClick={handleExport}
-                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-              >
-                Export DemandSheet
-              </Button>
-            </div>
+              />
+            )}
           </div>
 
-          {/* Table – with header search fields */}
-          <DemandTable
-            rows={rows}
-            columns={ALL_COLUMNS}
-            visibleColumns={visibleColumns}
-            dropdowns={dropdowns}
-            onViewRow={onViewRow}
-            filters={filters}
-            filterConfig={filterConfig}
-            onFilterChange={setFilter}
-            onClearAllFilters={() => {
-              setFilters((prev) =>
-                Object.keys(prev).reduce((acc, k) => ({ ...acc, [k]: "" }), {})
-              );
-              setCurrentPage(1);
-            }}
-          />
+          {/* MAIN CONTENT */}
+          <div className="flex-1 min-w-0">
+            <div className="mb-4 flex justify-between">
+              <Button onClick={() => setColumnsEnabled((v) => !v)}>⚙ Columns</Button>
+              <h1 className="text-lg font-bold">Demand Sheet</h1>
+              <div className="flex gap-2">
 
-          {/* Pagination controls */}
-          <div className="mt-4 flex justify-end">
-            <Pagination
-              current={currentPage}
-              pageSize={pageSize}
-              total={totalItems}
-              showSizeChanger
-              onChange={onPageChange}
-              onShowSizeChange={onPageSizeChange}
-              showTotal={(total, range) => `${range[0]}-${range[1]} of ${total}`}
+                {canViewDrafts && (
+                  <Button onClick={() => navigate("/drafts1")}>View Draft</Button>)}
+
+                {canCreateDemand && (
+                  <Button icon={<PlusOutlined />} onClick={() => navigate("/addDemands1")} className="bg-green-800 text-white">
+                    Add New Demands
+                  </Button>
+                )}
+
+                {canExportExcel && (
+                  <Button icon={<ExportOutlined />} onClick={exportDemandSheet} className="bg-green-800 text-white">
+                    Export DemandSheet
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <DemandTable
+              rows={rows}
+              columns={ALL_COLUMNS}
+              visibleColumns={visibleColumns}
+              dropdowns={dropdowns}
+              filters={filters}
+              filterConfig={filterConfig}
+              onFilterChange={(k, v) => setFilters((p) => ({ ...p, [k]: v }))}
+              onViewRow={onViewRow}
+              canUpdateDemands={canUpdateDemands}
+              canViewDemands={canViewDemands}
+
             />
+
+            <div className="mt-4 flex justify-end">
+              <Pagination
+                current={currentPage}
+                pageSize={pageSize}
+                total={totalItems}
+                showSizeChanger
+                onChange={(page, size) => loadDemands(page, size)}
+              />
+            </div>
           </div>
         </div>
       </Layout>

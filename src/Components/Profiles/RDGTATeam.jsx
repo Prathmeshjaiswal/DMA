@@ -285,7 +285,7 @@ export default function RDGTATeam() {
     return "";
   }, [location]);
 
-  
+
 
   // UPDATED: final profile type selection order: Role > URL/state > empty
   const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
@@ -337,46 +337,46 @@ export default function RDGTATeam() {
         ]);
 
         if (mounted) {
-  const adapted = adaptOptions(profileDto);
+          const adapted = adaptOptions(profileDto);
 
-  setDropdowns(profileDto);
-  setOptions(adapted);
-  const codes = umResp?.data?.countryCodes || [];
-setCountries(codes);
+          setDropdowns(profileDto);
+          setOptions(adapted);
+          const codes = umResp?.data?.countryCodes || [];
+          setCountries(codes);
 
-// ✅ DEFAULT country = India (+91)
-setForm((prev) => {
-  if (prev.countryId) return prev;
+          // ✅ DEFAULT country = India (+91)
+          setForm((prev) => {
+            if (prev.countryId) return prev;
 
-  const india = codes.find(c => c.callingCode === "+91");
+            const india = codes.find(c => c.callingCode === "+91");
 
-  if (india && prev.phoneNumber) {
-    const res = validatePhoneByCountry(prev.phoneNumber, "+91");
-    setPhoneError(res.ok ? "" : res.reason);
-  }
+            if (india && prev.phoneNumber) {
+              const res = validatePhoneByCountry(prev.phoneNumber, "+91");
+              setPhoneError(res.ok ? "" : res.reason);
+            }
 
-  return {
-    ...prev,
-    countryId: india ? String(india.id) : "",
-  };
-});
+            return {
+              ...prev,
+              countryId: india ? String(india.id) : "",
+            };
+          });
 
 
-  // ✅ ✅ ✅ SET DEFAULT STATUS FOR CREATE
-  setForm((prev) => {
-    // Only set default if not already selected
-    if (prev.profileStatus) return prev;
+          // ✅ ✅ ✅ SET DEFAULT STATUS FOR CREATE
+          setForm((prev) => {
+            // Only set default if not already selected
+            if (prev.profileStatus) return prev;
 
-    const defaultStatus = findDefaultKaratInProgressStatus(
-      adapted.profileStatus
-    );
+            const defaultStatus = findDefaultKaratInProgressStatus(
+              adapted.profileStatus
+            );
 
-    return {
-      ...prev,
-      profileStatus: defaultStatus,
-    };
-  });
-}
+            return {
+              ...prev,
+              profileStatus: defaultStatus,
+            };
+          });
+        }
 
       } catch (e) {
         console.error("[AddProfile] dropdowns load error:", e);
@@ -421,7 +421,7 @@ setForm((prev) => {
     }
   };
 
-  
+
 
   const handleFile = (e) => {
     const f = e.target.files?.[0] || null;
@@ -525,7 +525,7 @@ setForm((prev) => {
       phoneNumber: onlyDigits(form.phoneNumber), // UPDATED
       isActive: true,
       experience: Number(form.experience), // UPDATED: backend uses 'experience'
-        profileStatusId: form.profileStatus?.value ?? null,
+      profileStatusId: form.profileStatus?.value ?? null,
       skillClusterId: form.skillCluster?.value ? Number(form.skillCluster.value) : null,
       locationId: form.location ? Number(form.location) : null,
       hbuId: form.hbu ? Number(form.hbu) : null,
@@ -715,35 +715,35 @@ setForm((prev) => {
             <div>
               <div className="flex items-center gap-2 mt-1">
                 <select
-  className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
-  name="countryId"
-  value={form.countryId}
-  oonChange={(e) => {
-  const val = onlyDigits(e.target.value);
+                  className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  name="countryId"
+                  value={form.countryId}
+                  oonChange={(e) => {
+                    const val = onlyDigits(e.target.value);
 
-  setForm((p) => ({ ...p, phoneNumber: val }));
-  setPhoneTouched(true);
+                    setForm((p) => ({ ...p, phoneNumber: val }));
+                    setPhoneTouched(true);
 
-  // ✅ use latest countryId safely
-  const countryId = form.countryId;
-  const selected = countryCodes.find(
-    (c) => String(c.id) === String(countryId)
-  );
+                    // ✅ use latest countryId safely
+                    const countryId = form.countryId;
+                    const selected = countryCodes.find(
+                      (c) => String(c.id) === String(countryId)
+                    );
 
-  if (selected?.callingCode && val) {
-    const res = validatePhoneByCountry(val, selected.callingCode);
-    setPhoneError(res.ok ? "" : res.reason);
-  } else {
-    setPhoneError("");
-  }
-}}
->
-  {countryCodes.map((c) => (
-    <option key={c.id} value={c.id}>
-      {c.callingCode}
-    </option>
-  ))}
-</select>
+                    if (selected?.callingCode && val) {
+                      const res = validatePhoneByCountry(val, selected.callingCode);
+                      setPhoneError(res.ok ? "" : res.reason);
+                    } else {
+                      setPhoneError("");
+                    }
+                  }}
+                >
+                  {countryCodes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.callingCode}
+                    </option>
+                  ))}
+                </select>
                 <div className="flex-1">
                   {/* UPDATED: use inputCls to match size with other inputs */}
                   <input

@@ -1,4 +1,3 @@
-
 import React from "react";
 
 export default function ColumnsSelector({
@@ -10,9 +9,9 @@ export default function ColumnsSelector({
   className = "",
 }) {
   return (
-    <section className={`w-full md:sticky md:top-4 self-start ${className}`}>
+    <section className={`w-full ${className}`}>
       <div className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between">
           <span className="font-medium text-gray-800">Columns</span>
           <label className="inline-flex items-center gap-2 text-sm">
             <input
@@ -25,16 +24,22 @@ export default function ColumnsSelector({
           </label>
         </div>
 
-        {/* Scrollable area */}
         {columnsEnabled && (
-          <div className="flex flex-col gap-2 max-h-80 overflow-auto pr-1">
+          <div className="flex flex-col gap-2 max-h-[70vh] overflow-auto pr-1">
             {ALL_COLUMNS.map((col) => (
               <label
                 key={col.key}
                 className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm
-                  ${col.alwaysVisible ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}
-                  ${visibleColumns.includes(col.key) ? "border-indigo-500 bg-indigo-50" : "border-gray-300 bg-gray-50"}`}
-                title={col.alwaysVisible ? "Always visible" : ""}
+                  ${
+                    col.alwaysVisible
+                      ? "opacity-60 cursor-not-allowed"
+                      : "cursor-pointer"
+                  }
+                  ${
+                    visibleColumns.includes(col.key)
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-gray-300 bg-gray-50"
+                  }`}
               >
                 <input
                   type="checkbox"

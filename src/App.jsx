@@ -31,11 +31,11 @@ import OnboardingList from "./Components/OnBoarding/OnboardingList.jsx"
 
 
 
-// ⬇️ NEW: route-level permission guard
+// ⬇ NEW: route-level permission guard
 import RequirePermission from './Components/Auth/RequirePermission.jsx'
 // <-- adjust path if needed
 
-// ⬇️ add a tiny component (inline) for unauthorized page, or create a separate file if you prefer
+//  add a tiny component (inline) for unauthorized page, or create a separate file if you prefer
 const Unauthorized = () => (
   <div style={{ padding: 24 }}>
     <h2>403 — Unauthorized</h2>
@@ -56,7 +56,7 @@ function App() {
           <Route path="/DashBoard" element={<ProtectedRoute><DashBoard /></ProtectedRoute>} />
           <Route path="/OnBoardingTracker" element={<ProtectedRoute><OnBoardingTracker /></ProtectedRoute>} />
 
-          {/* ✅ UPDATED: Map to specific child modules under DashBoard */}
+          {/* UPDATED: Map to specific child modules under DashBoard */}
           <Route
             path="/ProfileTracker"
             element={
@@ -117,7 +117,7 @@ function App() {
 
           <Route path="/EditDemand" element={
             <ProtectedRoute>
-              <RequirePermission module="User Management" child="Users Sheet">
+              <RequirePermission module="DashBoard" child="Demands" action="Update Demands">
                 <EditDemand />
               </RequirePermission>
             </ProtectedRoute>
@@ -175,12 +175,12 @@ function App() {
             }
           />
 
-          {/* ✅ UPDATED: Demands routes require child "Demands" */}
+          {/* UPDATED: Demands routes require child "Demands" */}
           <Route
             path="/adddemands2"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
+                <RequirePermission module="DashBoard" child="Demands" action="Create Demands"> {/* UPDATED */}
                   <AddDemands2 />
                 </RequirePermission>
               </ProtectedRoute>
@@ -190,7 +190,7 @@ function App() {
             path="/adddemands1"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
+                <RequirePermission module="DashBoard" child="Demands" action="Create Demands"> {/* UPDATED */}
                   <AddDemands1 />
                 </RequirePermission>
               </ProtectedRoute>
@@ -200,7 +200,7 @@ function App() {
           {/* Minimal Drafts route (protected) */}
           <Route path="/drafts1" element={
             <ProtectedRoute>
-              <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
+              <RequirePermission module="DashBoard" child="Demands" action="View Drafts"> {/* UPDATED */}
                 <Draft1 />
               </RequirePermission>
             </ProtectedRoute>
