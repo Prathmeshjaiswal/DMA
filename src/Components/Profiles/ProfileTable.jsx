@@ -36,6 +36,8 @@ export default function ProfileTable({
   // NEW: search plumbing
   query = {},
   onQueryChange,
+  canUpdateProfile = false,
+  canViewProfile = false,
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
@@ -86,10 +88,10 @@ export default function ProfileTable({
     summary: row?.summary ?? "",
 
 
-   profileStatusId:
-  row?.profileStatusId != null
-    ? String(row.profileStatusId)
-    : undefined,
+    profileStatusId:
+      row?.profileStatusId != null
+        ? String(row.profileStatusId)
+        : undefined,
 
 
 
@@ -120,12 +122,12 @@ export default function ProfileTable({
 
   // ✅ Populate form only after the modal is open and the Form is mounted/connected
   useEffect(() => {
-  if (editOpen && editRow && opts.profileStatus.length > 0) {
-    form.setFieldsValue(buildInitialValues(editRow));
-  }
-}, [editOpen, editRow, opts.profileStatus, form]);
+    if (editOpen && editRow && opts.profileStatus.length > 0) {
+      form.setFieldsValue(buildInitialValues(editRow));
+    }
+  }, [editOpen, editRow, opts.profileStatus, form]);
 
-  
+
   const closeEdit = () => {
     setEditOpen(false);
     setEditRow(null);
@@ -178,13 +180,13 @@ export default function ProfileTable({
 
       // -------- STATUS ✅ FIXED --------
       const profileStatusId =
-  values.profileStatusId != null
-    ? Number(values.profileStatusId)
-    : undefined;
+        values.profileStatusId != null
+          ? Number(values.profileStatusId)
+          : undefined;
 
-if (profileStatusId != null) {
-  patch.profileStatusId = profileStatusId;
-}
+      if (profileStatusId != null) {
+        patch.profileStatusId = profileStatusId;
+      }
 
 
       // -------- LOCATION / HBU / SKILLS --------
@@ -341,30 +343,34 @@ if (profileStatusId != null) {
             style={{ pointerEvents: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Tooltip title="View">
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewRow?.(row);
-                }}
-              />
-            </Tooltip>
+            {canViewProfile && (
+              <Tooltip title="View">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewRow?.(row);
+                  }}
+                />
+              </Tooltip>
+            )}
 
-            <Tooltip title={hasId ? "Edit" : "Edit (ID missing)"}>
-              <Button
-                type="text"
-                size="small"
-                icon={<EditOutlined />}
-                disabled={!hasId}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (hasId) openEdit(row);
-                }}
-              />
-            </Tooltip>
+            {canUpdateProfile && (
+              <Tooltip title={hasId ? "Edit" : "Edit (ID missing)"}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  disabled={!hasId}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (hasId) openEdit(row);
+                  }}
+                />
+              </Tooltip>
+            )}
 
             <Tooltip title={hasCv ? `Download CV (${fileName} )` : "No CV"}>
               <Button
