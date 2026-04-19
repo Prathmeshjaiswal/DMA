@@ -662,7 +662,7 @@ export default function AddDemands1() {
   //clear form
   const handleClearForm = () => {
     setForm(INITIAL_FORM());
-    setSubLobError(false);
+    
 
     // Optional: clear draftId ONLY for new creation
     // If you want to keep editing the same draft, comment this
