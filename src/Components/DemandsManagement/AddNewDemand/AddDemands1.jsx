@@ -28,6 +28,7 @@ import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
 
 // ------------------------ helpers ------------------------
 
+
 // Build react-select value for multi-select from numeric IDs
 const toSelectValues = (ids, optionList) =>
   Array.isArray(ids)
@@ -239,6 +240,9 @@ function OtherableSelect({
 
 
 
+const today = new Date();
+today.setHours(0, 0, 0, 0); // normalize to day start
+
 
 // ------------------------ component ------------------------
 export default function AddDemands1() {
@@ -248,7 +252,7 @@ export default function AddDemands1() {
 
   const prevLobRef = useRef(null);
   const [searchParams] = useSearchParams();
-const draftIdFromQuery = Number(searchParams.get("draftId"));
+  const draftIdFromQuery = Number(searchParams.get("draftId"));
 
 
   const location = useLocation();
@@ -271,15 +275,15 @@ const draftIdFromQuery = Number(searchParams.get("draftId"));
 
 
   const [draftId, setDraftId] = useState(() => {
-  const fromNav = Number(location?.state?.draftId);
-  const fromQuery = draftIdFromQuery;
+    const fromNav = Number(location?.state?.draftId);
+    const fromQuery = draftIdFromQuery;
 
-  return Number.isFinite(fromNav)
-    ? fromNav
-    : Number.isFinite(fromQuery)
-    ? fromQuery
-    : null;
-});
+    return Number.isFinite(fromNav)
+      ? fromNav
+      : Number.isFinite(fromQuery)
+        ? fromQuery
+        : null;
+  });
 
   // ✅ Start with a fresh blank form every time (unless editing a draft)
   const [form, setForm] = useState(() => INITIAL_FORM());
@@ -346,6 +350,11 @@ const draftIdFromQuery = Number(searchParams.get("draftId"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+
+
+
+
+
   const options = useMemo(() => {
     const d = dropdowns || {};
     return {
@@ -408,10 +417,10 @@ const draftIdFromQuery = Number(searchParams.get("draftId"));
   );
 
 
-useEffect(() => {
-  console.log("DRAFT ID USED:", draftId);
-  console.log("SUBLOB (on render):", form.subLob);
-}, [draftId, form.subLob]);
+  useEffect(() => {
+    // console.log("DRAFT ID USED:", draftId);
+    // console.log("SUBLOB (on render):", form.subLob);
+  }, [draftId, form.subLob]);
 
   // useEffect(() => {
   //   if (!cibLobId) return;
@@ -433,7 +442,7 @@ useEffect(() => {
 
 
   useEffect(() => {
-    console.log("SUBLOB VALUE:", form.subLob);
+    // console.log("SUBLOB VALUE:", form.subLob);
   }, [form.subLob]);
 
   const handleChange = (e) => {
@@ -454,6 +463,13 @@ useEffect(() => {
         setLoading(true);
         const res = await getStep1Draft(idNum);
         const data = res?.data || res;
+
+        console.log(" RAW BACKEND DRAFT DATA:", data);
+        console.log(" BACKEND EXPERIENCE (number):", data?.experience);
+        console.log(" typeof backend experience:", typeof data?.experience);
+
+
+
 
         setForm((prev) => ({
           ...prev,
@@ -531,6 +547,64 @@ useEffect(() => {
     })();
   }, [draftId]);
 
+
+
+
+
+  //demnd recevice date -based on current future
+  const demandTimelineLabel = useMemo(() => {
+    return options?.demandTimeline?.find(
+      (o) => String(o.value) === String(form.demandTimeline)
+    )?.label?.toLowerCase();
+  }, [form.demandTimeline, options?.demandTimeline]);
+
+
+  const { minDate, maxDate } = useMemo(() => {
+    if (demandTimelineLabel === "current") {
+      return {
+        minDate: null,   // any past date allowed
+        maxDate: today,  // future blocked
+      };
+    }
+
+    if (demandTimelineLabel === "future") {
+      return {
+        minDate: today,  // today & future allowed
+        maxDate: null,   // no upper limit
+      };
+    }
+
+    // default: allow all
+    return { minDate: null, maxDate: null };
+  }, [demandTimelineLabel]);
+
+
+  useEffect(() => {
+    if (!form.demandReceivedDate || !demandTimelineLabel) return;
+
+    const selectedDate = new Date(form.demandReceivedDate);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    // Timeline = CURRENT → no future dates
+    if (demandTimelineLabel === "current" && selectedDate > today) {
+      setForm((p) => ({
+        ...p,
+        demandReceivedDate: format(today, "dd-MMM-yyyy"),
+      }));
+    }
+
+    // Timeline = FUTURE → no past dates
+    if (demandTimelineLabel === "future" && selectedDate < today) {
+      setForm((p) => ({
+        ...p,
+        demandReceivedDate: format(today, "dd-MMM-yyyy"),
+      }));
+    }
+  }, [demandTimelineLabel]);
+
+
+
+
   // ✅ Defaults — only these are preselected for NEW demand
   useEffect(() => {
     setForm((prev) => {
@@ -585,6 +659,17 @@ useEffect(() => {
 
 
 
+  //clear form
+  const handleClearForm = () => {
+    setForm(INITIAL_FORM());
+    setSubLobError(false);
+
+    // Optional: clear draftId ONLY for new creation
+    // If you want to keep editing the same draft, comment this
+    setDraftId(null);
+  };
+
+
 
 
 
@@ -610,27 +695,27 @@ useEffect(() => {
 
 
     // ✅ Enforce Sub‑LOB for CIB
-if (String(form.lob) === String(cibLobId) && !form.subLob) {
-  setSubLobError(true);
-  return message.warning("Please select Sub‑LOB for CIB.");
-}
+    if (String(form.lob) === String(cibLobId) && !form.subLob) {
+      setSubLobError(true);
+      return message.warning("Please select Sub‑LOB for CIB.");
+    }
 
     // Optional: you can enforce experience >= 0 if present
     if (form.experience !== "" && Number(form.experience) < 0) {
       return message.warning("Experience cannot be negative.");
     }
 
-    console.log("BEFORE SUBMIT:");
-console.log("DRAFT ID:", draftId);
-console.log("LOB:", form.lob);
-console.log("SUBLOB:", form.subLob);
+    // console.log("BEFORE SUBMIT:");
+    // console.log("DRAFT ID:", draftId);
+    // console.log("LOB:", form.lob);
+    // console.log("SUBLOB:", form.subLob);
 
 
     setLoading(true);
     try {
       // const request = buildDraftCreateRequest(form);
       const request = buildDraftCreateRequest(form, cibLobId);
-      console.log("FINAL PAYLOAD:", request);
+      // console.log("FINAL PAYLOAD:", request);
 
 
       let resp;
@@ -797,17 +882,17 @@ console.log("SUBLOB:", form.subLob);
                     name="lob"
                     optionsList={options?.lob}
                     value={form.lob}
-                   onChange={(val) => {
-  setForm(prev => {
-    const isCib = String(val) === String(cibLobId);
-    return {
-      ...prev,
-      lob: val,
-      subLob: isCib ? prev.subLob : "",
-    };
-  });
-  setSubLobError(false);
-}}
+                    onChange={(val) => {
+                      setForm(prev => {
+                        const isCib = String(val) === String(cibLobId);
+                        return {
+                          ...prev,
+                          lob: val,
+                          subLob: isCib ? prev.subLob : "",
+                        };
+                      });
+                      setSubLobError(false);
+                    }}
                   />
 
                   {/* ✅ Sub‑LOB ONLY WHEN CIB */}
@@ -822,18 +907,18 @@ console.log("SUBLOB:", form.subLob);
                         name="subLob"
                         optionsList={options?.subLob}
                         value={form.subLob}
-                       
-onChange={(val) => {
-  setForm(p => ({ ...p, subLob: val }));
-  setSubLobError(false);
-}}
+
+                        onChange={(val) => {
+                          setForm(p => ({ ...p, subLob: val }));
+                          setSubLobError(false);
+                        }}
 
                       />
                       {String(form.lob) === String(cibLobId) && subLobError && (
-  <div className="ml-6 mt-1 text-xs text-red-600">
-    Sub‑LOB is required when Line of Business is CIB.
-  </div>
-)}
+                        <div className="ml-6 mt-1 text-xs text-red-600">
+                          Sub‑LOB is required when Line of Business is CIB.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1240,36 +1325,16 @@ onChange={(val) => {
                       setForm((prev) => ({ ...prev, demandLocation: arr }));
                     }}
                     styles={sharedMultiSelectStyles}
-                  // styles={{
-                  //   control: (base) => ({
-                  //     ...base,
-                  //     //       minHeight: "40px", // h-10 → 40px
-                  //     height: "35px",
-                  //     //       width: "80px", // w-20 (you can change)
-                  //   }),
-                  //   //     valueContainer: (base) => ({
-                  //   //       ...base,
-                  //   //       height: "40px",
-                  //   //       paddingTop: "2px",
-                  //   //     }),
-                  //   {sharedMultiSelectStyles}
-
-                  // }}
-
 
                   />
 
-                  {/*                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2"> */}
-                  {/*                   <EnvironmentOutlined /> */}
-                  {/*                   <span>Select one or more locations.</span> */}
-                  {/*                 </div> */}
                 </div>
               </div>
 
               <div>
                 <label className={labelCls}>Demand Received Date</label>
                 <div className="relative mt-1">
-                  <DatePicker
+                  {/* <DatePicker
                     selected={form.demandReceivedDate ? new Date(form.demandReceivedDate) : new Date()}
                     onChange={(date) =>
                       setForm({
@@ -1280,6 +1345,27 @@ onChange={(val) => {
                     dateFormat="dd-MMM-yyyy"
                     className={`${inputCls} pr-10`}
                     placeholderText="dd-MMM-yyyy"
+                  /> */}
+
+
+                  <DatePicker
+                    selected={
+                      form.demandReceivedDate
+                        ? new Date(form.demandReceivedDate)
+                        : today
+                    }
+                    onChange={(date) =>
+                      setForm({
+                        ...form,
+                        demandReceivedDate: date ? format(date, "dd-MMM-yyyy") : "",
+                      })
+                    }
+                    dateFormat="dd-MMM-yyyy"
+                    className={`${inputCls} pr-10`}
+                    placeholderText="dd-MMM-yyyy"
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    showPopperArrow={false}
                   />
                   <CalendarOutlined className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
                 </div>
@@ -1307,6 +1393,19 @@ onChange={(val) => {
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
+
+
+          {/* ✅ Clear Button */}
+          <button
+            type="button"
+            onClick={handleClearForm}
+            disabled={loading}
+            className="rounded-md border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-70"
+          >
+            Clear
+          </button>
+
+
           <button
             type="submit"
             className="rounded-md bg-gray-900 text-white px-5 py-2 text-sm font-semibold hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-70"
