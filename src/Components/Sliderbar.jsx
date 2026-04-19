@@ -9,7 +9,7 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
     
   const navigate = useNavigate();
   const location = useLocation();
-  console.log("✅ Sidebar mounted", { isOpen })
+  // console.log("✅ Sidebar mounted", { isOpen })
   const { hasChild, can } = usePermissions();
 
   /** COLORS: Centralized theme tokens for consistent styling. */
@@ -48,11 +48,11 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
   const { list } = usePermissions();
 
   useEffect(() => {
-    console.log("FULL PERMISSIONS:", list);
-    console.log(
-      "Dashboard children:",
-      list?.modulesByName?.DashBoard
-    );
+    // console.log("FULL PERMISSIONS:", list);
+    // console.log(
+    //   "Dashboard children:",
+    //   list?.modulesByName?.DashBoard
+    // );
   }, [list]);
 
   /** Track group open/close (auto-open when on Track routes) */

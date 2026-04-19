@@ -177,6 +177,8 @@ export default function Dashboard() {
   );
 };
 
+// Example:
+// console.log(displayFormat(moment())); // e.g., "19-Apr-2026"
 
 
   const cards = useMemo(() => ([

@@ -8,7 +8,7 @@ import Sliderbar from "./Sliderbar";
 
 
 export default function Layout({ children }) {
-  console.log("🔥 COMPONENTS Layout.jsx rendered");
+  // console.log("🔥 COMPONENTS Layout.jsx rendered");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
