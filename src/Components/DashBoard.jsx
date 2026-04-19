@@ -166,7 +166,18 @@ export default function Dashboard() {
     fetchAll(fmtYMD(f), fmtYMD(t));
   };
 
-  const displayFormat = (v) => v ? v.format('DD-MMM-YYYY').toLowerCase() : '';
+  // const displayFormat = (v) => v ? v.format('DD-MMM-YYYY').toUpperCase() : '';
+  const displayFormat = (v) => {
+  if (!v) return '';
+  // Format as DD-MMM-YYYY, then adjust month capitalization
+  const formatted = v.format('DD-MMM-YYYY');
+  return formatted.replace(
+    /-([A-Z])([A-Z]{2})-/,
+    (_, first, rest) => `-${first}${rest.toLowerCase()}-`
+  );
+};
+
+
 
   const cards = useMemo(() => ([
     { key: 'totalDemands', label: 'Total Demands', labelClass: 'text-sm text-orange-400', value: count.totalDemands },
