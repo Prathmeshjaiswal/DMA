@@ -131,6 +131,12 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
           <Btn onClick={() => navigate("/demandsheet1")}>Demands</Btn>
         )}
 
+          {/* Profiles */}
+        {allowProfiles && (
+          <Btn onClick={() => navigate("/profileSheet")}>Profiles</Btn>
+        )}
+
+
         {/* Track (group) */}
         {allowTrack && (
           <div>
@@ -169,11 +175,7 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
           </div>
         )}
 
-        {/* Profiles */}
-        {allowProfiles && (
-          <Btn onClick={() => navigate("/profileSheet")}>Profiles</Btn>
-        )}
-
+      
         {/* HBU */}
         {/*         {allowHBU && <Btn onClick={() => navigate("/HBU")}>HBU</Btn>} */}
 
