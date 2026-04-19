@@ -30,6 +30,8 @@ export default function DemandTable({
   className = "",
   onViewRow = () => { },
 
+  loading = false,
+
   canViewDemands = false,
   canUpdateDemands = false,
 
@@ -69,47 +71,55 @@ export default function DemandTable({
             filters={filters}
             filterConfig={filterConfig}
             onFilterChange={onFilterChange}
+
           />
 
           <tbody>
-            {rows.map((row, idx) => {
-              const rowKey = row?.demandId ?? row?.id ?? `row-${idx}`;
-              const isEditing = editingId === (row?.demandId ?? row?.id);
-              const isEditingAny = Boolean(editingId);
-              const isLocked = isEditingAny && !isEditing;
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={visibleColumns.length + 1}
+                  className="text-center py-8 text-gray-500"
+                >
+                  Loading...
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, idx) => {
+                const rowKey = row?.demandId ?? row?.id ?? `row-${idx}`;
+                const isEditing = editingId === (row?.demandId ?? row?.id);
+                const isEditingAny = Boolean(editingId);
+                const isLocked = isEditingAny && !isEditing;
 
-              if (isEditing) {
+                if (isEditing) {
+                  return (
+                    <RowEdit
+                      key={rowKey}
+                      row={row}
+                      columns={columns}
+                      visibleColumns={visibleColumns}
+                      dropdowns={dropdowns}
+                      onSaved={cancelEdit}
+                      cancelEdit={cancelEdit}
+                    />
+                  );
+                }
+
                 return (
-                  <RowEdit
+                  <RowView
                     key={rowKey}
                     row={row}
                     columns={columns}
                     visibleColumns={visibleColumns}
-                    dropdowns={dropdowns}
-                    onSaved={() => {
-                      cancelEdit?.();
-                    }}
-                    cancelEdit={cancelEdit}
+                    startEdit={startEdit}
+                    isLocked={isLocked}
+                    onViewRow={onViewRow}
+                    canUpdateDemands={canUpdateDemands}
+                    canViewDemands={canViewDemands}
                   />
                 );
-              }
-
-              return (
-                <RowView
-                  key={rowKey}
-                  row={row}
-                  columns={columns}
-                  visibleColumns={visibleColumns}
-                  startEdit={startEdit}
-                  isLocked={isLocked}
-                  onViewRow={onViewRow}
-
-                  canUpdateDemands={canUpdateDemands}
-                  canViewDemands={canViewDemands}
-
-                />
-              );
-            })}
+              })
+            )}
           </tbody>
         </table>
       </div>

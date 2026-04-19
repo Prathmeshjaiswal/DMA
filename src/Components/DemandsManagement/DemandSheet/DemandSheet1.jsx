@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Spin, Alert, Button, Pagination,message } from "antd";
+import { Spin, Alert, Button, Pagination, message } from "antd";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 
 import Layout from "../../Layout.jsx";
@@ -120,9 +120,9 @@ export default function DemandSheet1() {
   const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
   const canViewHistory = can("DashBoard", "Demands", "History");
 
-// console.log("PERMISSIONS:", canUpdateDemands);
-// const { list } = usePermissions();
-// console.log("PERM LIST:", list.modulesByName?.DashBoard?.Demands);
+  // console.log("PERMISSIONS:", canUpdateDemands);
+  // const { list } = usePermissions();
+  // console.log("PERM LIST:", list.modulesByName?.DashBoard?.Demands);
 
 
 
@@ -151,11 +151,11 @@ export default function DemandSheet1() {
     { key: "experience", label: "Experience" },
 
     // ✅ EXTRA COLUMNS (selectable from column panel)
-    { key: "statusNote", label: "Status Note" },
+    // { key: "statusNote", label: "Status Note" },
     { key: "prodProgramName", label: "Pod / Programme Name" },
     { key: "demandReceivedDate", label: "Demand Received Date" },
-    { key: "priorityComment", label: "Priority Comment" },
-    { key: "currentProfileShared", label: "Current Profile Shared" },
+    // { key: "priorityComment", label: "Priority Comment" },
+    // { key: "currentProfileShared", label: "Current Profile Shared" },
     { key: "externalInternal", label: "External / Internal" },
   ];
 
@@ -185,7 +185,10 @@ export default function DemandSheet1() {
 
   /* ================= STATE ================= */
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);  // initial load
+  const [tableLoading, setTableLoading] = useState(false); // search/filter/pagination
+
   const [apiError, setApiError] = useState(null);
   const [dropdowns, setDropdowns] = useState(null);
   const [ddLoading, setDdLoading] = useState(false);
@@ -236,6 +239,17 @@ export default function DemandSheet1() {
       skillCluster: text,
       primarySkills: text,
       secondarySkills: text,
+
+
+      hiringManager: text,
+      deliveryManager: text,
+      pm: text,
+      salesSpoc: text,
+      pmo: text,
+      band: text,
+      experience: text,
+      demandLocation: text,
+
       priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
       status: text,
       karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] },
@@ -287,7 +301,7 @@ export default function DemandSheet1() {
   /* ================= API ================= */
   const loadDemands = useCallback(
     async (page = 1, size = 10) => {
-      setLoading(true);
+      setTableLoading(true);
       const apiPage = page - 1;
       const sort = "displayDemandId,desc";
 
@@ -300,15 +314,21 @@ export default function DemandSheet1() {
       setTotalItems(data?.totalElements || 0);
       setCurrentPage(apiPage + 1);
       setPageSize(size);
-      setLoading(false);
+      setTableLoading(false);
     },
     [filters, hasAnyFilter]
   );
 
+
   useEffect(() => {
-    loadDropdowns();
-    loadDemands(1, pageSize);
+    (async () => {
+      setPageLoading(true);
+      await loadDropdowns();
+      await loadDemands(1, pageSize);
+      setPageLoading(false);
+    })();
   }, []);
+
 
   useEffect(() => {
     const t = setTimeout(() => loadDemands(1, pageSize), 400);
@@ -358,16 +378,24 @@ export default function DemandSheet1() {
     setDetailRow(null);
   };
 
-  if (loading || ddLoading) {
+  // if (loading || ddLoading) {
+  //   return (
+  //     <div
+  //       style={{
+  //         display: "flex",
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         height: "200px",
+  //       }}
+  //     >
+  //       <Spin size="large" tip="Loading..." />
+  //     </div>
+  //   );
+  // }
+
+  if (pageLoading || ddLoading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "200px",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "center", height: "200px" }}>
         <Spin size="large" tip="Loading..." />
       </div>
     );
@@ -432,6 +460,7 @@ export default function DemandSheet1() {
 
             <DemandTable
               rows={rows}
+              loading={tableLoading}
               columns={ALL_COLUMNS}
               visibleColumns={visibleColumns}
               dropdowns={dropdowns}

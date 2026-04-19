@@ -7,7 +7,7 @@ export const getDemandsheet = async (page = null, size = null) => {
 
 
   const res = await api.get(url);
-  console.log('[getDemandsheet] response status:', res.data);
+  // console.log('[getDemandsheet] response status:', res.data);
   return res.data;
 };
 
