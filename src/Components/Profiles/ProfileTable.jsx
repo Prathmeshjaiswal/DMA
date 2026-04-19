@@ -245,9 +245,9 @@ export default function ProfileTable({
   };
 
 
-  console.log("ProfileTable dropdownOptions:", dropdownOptions);
-  console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
-  ``
+  // console.log("ProfileTable dropdownOptions:", dropdownOptions);
+  // console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
+  // ``
 
   // ------- columns (narrow widths & ellipsis) -------
   const antdColumns = useMemo(() => {

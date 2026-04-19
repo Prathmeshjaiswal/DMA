@@ -271,8 +271,15 @@ export default function ProfileSheet() {
 
   // role
   const roleName = getCurrentRoleName();
+  
   const adminView = isAdminRole(roleName);
   const showEmpId = isRDGRole(roleName) || isAdminRole(roleName);
+
+  
+// const isPmoRole = String(roleName || "")
+//   .toLowerCase()
+//   .includes("pmo");
+
   const currentUserId = useMemo(() => getCurrentUserId(), []);
 
   // All possible columns (PAN included here but filtered by SHOW_PAN)
@@ -296,18 +303,34 @@ export default function ProfileSheet() {
   );
 
   // Apply flag to actually send columns to table (removes PAN column when SHOW_PAN === 0)
-  const ALL_COLUMNS = useMemo(
-    () => (SHOW_PAN ? ALL_COLUMNS_BASE : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber")),
-    [SHOW_PAN, ALL_COLUMNS_BASE]
-  );
+  // const ALL_COLUMNS = useMemo(
+  //   () => (SHOW_PAN ? ALL_COLUMNS_BASE : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber")),
+  //   [SHOW_PAN, ALL_COLUMNS_BASE]
+  // );
+
+//   const ALL_COLUMNS = useMemo(() => {
+//   return isPmoRole
+//     ? ALL_COLUMNS_BASE
+//     : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
+// }, [isPmoRole, ALL_COLUMNS_BASE]);
+
+const ALL_COLUMNS = useMemo(() => {
+  return canPanVisibility
+    ? ALL_COLUMNS_BASE
+    : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
+}, [canPanVisibility, ALL_COLUMNS_BASE]);
 
   // Default visible (PAN present in base list but filtered by flag below)
   const defaultVisibleBase = useMemo(
     () => [
       "candidateName",
       "emailId",
-      "panNumber", // filtered out when SHOW_PAN === 0
-      ...(showEmpId ? ["empId"] : []),
+          ...(canPanVisibility ? ["panNumber"] : []),
+    // ...(isPmoRole ? ["panNumber"] : []), // ✅ CONDITIONAL
+    ...(showEmpId ? ["empId"] : []),
+
+      // "panNumber", // filtered out when SHOW_PAN === 0
+      // ...(showEmpId ? ["empId"] : []),
       "profileStatus",
       "phoneNumber",
       "experienceYears",
@@ -318,12 +341,13 @@ export default function ProfileSheet() {
       "hbu",
     ],
     [showEmpId]
+    // [showEmpId,isPmoRole]
   );
 
   const defaultVisible = useMemo(
-    () => (SHOW_PAN ? defaultVisibleBase : defaultVisibleBase.filter((k) => k !== "panNumber")),
-    [SHOW_PAN, defaultVisibleBase]
-  );
+  () => defaultVisibleBase,
+  [defaultVisibleBase]
+);
 
   // paging + data
   const [rows, setRows] = useState([]);
