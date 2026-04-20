@@ -342,9 +342,9 @@ export default function DemandDetailModal({
   const { can } = usePermissions();
 
   const canAttachProfiles = can("DashBoard", "Demands", "Attach Profiles");
-  const canViewProfileData = can("DashBoard", "Demands", "Profile Data");
+  const canViewProfileData = can("DashBoard", "Demands", "Profile Shared Details");
   const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
-  const canViewHistory = can("DashBoard", "Demands", "History")
+  const canViewHistory = can("DashBoard", "Demands", "Demand History")
 
 
 

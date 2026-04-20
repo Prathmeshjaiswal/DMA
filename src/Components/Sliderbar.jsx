@@ -42,7 +42,7 @@ export default function Sliderbar({ isOpen, onClose, width = 256 }) {
     "Onboarding Tracker"
   );
 
-  const allowProfiles = hasChild("DashBoard", "RDG/TA");
+  const allowProfiles = hasChild("DashBoard", "Profiles");
   const allowHBU = hasChild("DashBoard", "HBU");
   const allowReports = hasChild("DashBoard", "Reports");
   const { list } = usePermissions();

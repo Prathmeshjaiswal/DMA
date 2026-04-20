@@ -462,7 +462,7 @@ export default function OnboardingList() {
   //permission check
   const { can } = usePermissions();
   const canUpdateOnboardingTracker = can("DashBoard", "Track", "Update onboardingTracker");
-  const canExcelExport = can("DashBoard", "Track", "Export OnboardingExcel");
+  const canExcelExport = can("DashBoard", "Track", "Export OnboardingTrackerSheet");
 
   // Fetch dropdowns once
   useEffect(() => {

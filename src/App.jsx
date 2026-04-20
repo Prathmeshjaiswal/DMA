@@ -72,7 +72,7 @@ function App() {
             path="/RDGTATeam"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}
+                <RequirePermission module="DashBoard" child="Profiles"> {/* UPDATED */}
                   <RDGTATeam />
                 </RequirePermission>
               </ProtectedRoute>
@@ -220,7 +220,7 @@ function App() {
 
           <Route path="/profileSheet" element={
             <ProtectedRoute>
-              <RequirePermission module="DashBoard" child="RDG/TA"> {/* UPDATED */}
+              <RequirePermission module="DashBoard" child="Profiles"> {/* UPDATED */}
                 <ProfileSheet />
               </RequirePermission>
             </ProtectedRoute>

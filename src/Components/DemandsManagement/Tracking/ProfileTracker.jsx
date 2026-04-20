@@ -629,7 +629,7 @@ export default function ProfileTracker() {
 
   const { can } = usePermissions();
 
-  const canExportExcel = can("DashBoard", "Track", "Excel Export");
+  const canExportExcel = can("DashBoard", "Track", "Export ProfileTrackerSheet");
   const canUpdateProfileTracker = can("DashBoard", "Track", "Update ProfileTracker")
 
   useEffect(() => {

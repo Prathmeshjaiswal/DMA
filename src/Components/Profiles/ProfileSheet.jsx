@@ -241,15 +241,15 @@ export default function ProfileSheet() {
   //permission check
 
   const { can ,list} = usePermissions();
-  const canAttachDemand = can("DashBoard", "RDG/TA", "Attach Demand");
-  const canCreateProfile = can("DashBoard", "RDG/TA", "Create Profile");
-  const canViewDemandData = can("DashBoard", "RDG/TA", "Demand Data");
-  const canExcelExport = can("DashBoard", "RDG/TA", "Export Excel");
-  const canViewHistory = can("DashBoard", "RDG/TA", "History");
-  const canViewOnboardingdata = can("DashBoard", "RDG/TA", "Onboarding Data");
-  const canPanVisibility = can("DashBoard", "RDG/TA", "Pan Visibility");
-  const canUpdateProfile = can("DashBoard", "RDG/TA", "Update Profile");
-  const canViewProfile = can("DashBoard", "RDG/TA", "View Profile");
+  const canAttachDemand = can("DashBoard", "Profiles", "Attach Demand");
+  const canCreateProfile = can("DashBoard", "Profiles", "Create Profile");
+  const canViewDemandData = can("DashBoard", "Profiles", "Demand Detail");
+  const canExcelExport = can("DashBoard", "Profiles", "Export Profile Sheet");
+  const canViewHistory = can("DashBoard", "Profiles", "Profile History");
+  const canViewOnboardingdata = can("DashBoard", "Profiles", "Onboarding Data");
+  const canPanVisibility = can("DashBoard", "Profiles", "Pan Visibility");
+  const canUpdateProfile = can("DashBoard", "Profiles", "Update Profile");
+  const canViewProfile = can("DashBoard", "Profiles", "View Profile");
 
 
  

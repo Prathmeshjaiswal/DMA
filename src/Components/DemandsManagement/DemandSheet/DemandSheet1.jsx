@@ -111,14 +111,14 @@ export default function DemandSheet1() {
   const { can } = usePermissions();
   const canCreateDemand = can("DashBoard", "Demands", "Create Demands");
   const canViewDemands = can("DashBoard", "Demands", "View Demands");
-  const canExportExcel = can("DashBoard", "Demands", "Export Excel");
+  const canExportExcel = can("DashBoard", "Demands", "Export DemandSheet");
   const canViewDrafts = can("DashBoard", "Demands", "View Drafts");
   const canUpdateDemands = can("DashBoard", "Demands", "Update Demands");
   const canUpdateDrafts = can("DashBoard", "Demands", "Update Drafts");
   const canAttachProfiles = can("DashBoard", "Demands", "Attach Profiles");
-  const canViewProfileData = can("DashBoard", "Demands", "Profile Data");
+  const canViewProfileData = can("DashBoard", "Demands", "Profile Shared Details");
   const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
-  const canViewHistory = can("DashBoard", "Demands", "History");
+  const canViewHistory = can("DashBoard", "Demands", "Demand History");
 
   // console.log("PERMISSIONS:", canUpdateDemands);
   // const { list } = usePermissions();
@@ -285,15 +285,36 @@ export default function DemandSheet1() {
     if (f.salesSpoc) payload.salesSpocName = f.salesSpoc;
     if (f.pmo) payload.pmoName = f.pmo;
 
-    if (f.status) payload.status = f.status;
-    if (f.karat) payload.karatFlag = f.karat.toLowerCase() === "yes";
-    if (f.priority) payload.priority = f.priority;
+
+    if (f.status) payload.statusName = f.status;
+    if (f.priority) payload.priorityName = f.priority;
+    if (f.demandType) payload.demandTypeName = f.demandType;
+    if (f.hbu) payload.hbuName = f.hbu;
+
+    
+if (f.demandType) {
+    payload.demandTypeName = f.demandType;
+  }
+
+  if (f.band) {
+    payload.bandName = String(f.band);
+  }
+
+
 
     const prim = splitNames(f.primarySkills);
     if (prim.length) payload.primarySkillNames = prim;
 
     const sec = splitNames(f.secondarySkills);
     if (sec.length) payload.secondarySkillNames = sec;
+
+
+
+    if (f.demandLocation) {
+      payload.locationNames = splitNames(f.demandLocation);
+    }
+
+
 
     return payload;
   };
