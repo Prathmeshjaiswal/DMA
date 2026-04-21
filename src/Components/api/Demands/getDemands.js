@@ -15,7 +15,7 @@ export const getDemandsheet = async (page = null, size = null) => {
 export async function searchDemands(filter = {}, page = 0, size = 10) {
   const res = await api.post('/addNewDemand/search', filter, {
     params: { page, size },
-    headers: { 'Content-Type': 'application/json' },
+   
   });
   return res?.data ?? res;
 }

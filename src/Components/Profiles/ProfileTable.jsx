@@ -15,10 +15,19 @@ import {
 } from "antd";
 import {
   EyeOutlined,
+  EyeInvisibleOutlined,
   DownloadOutlined,
   EditOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+
+// ✅ Mask PAN – show only last 4 characters// ✅ Mask PAN – show only};
+
+const maskPan = (pan) => {
+  const p = String(pan || "");
+  if (p.length <= 4) return p;
+  return "XXXXXX" + p.slice(-4);
+};
 
 export default function ProfileTable({
   rows = [],
@@ -38,6 +47,7 @@ export default function ProfileTable({
   onQueryChange,
   canUpdateProfile = false,
   canViewProfile = false,
+  canPanVisibility = false,
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
@@ -46,6 +56,9 @@ export default function ProfileTable({
 
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
+
+  // Track which row PAN is visible
+  const [visiblePanRowId, setVisiblePanRowId] = useState(null);
 
   const opts = {
     locations: dropdownOptions?.demandLocation ?? [],
@@ -126,6 +139,11 @@ export default function ProfileTable({
       form.setFieldsValue(buildInitialValues(editRow));
     }
   }, [editOpen, editRow, opts.profileStatus, form]);
+
+  useEffect(() => {
+  setVisiblePanRowId(null);
+}, [rows]);
+
 
 
   const closeEdit = () => {
@@ -254,6 +272,7 @@ export default function ProfileTable({
     const base = columns
       .filter((c) => visibleColumns.includes(c.key))
       .map((c) => {
+        const isPan = c.key === "panNumber";
         const isSkill =
           c.key === "skillCluster" ||
           c.key === "primarySkills" ||
@@ -291,8 +310,36 @@ export default function ProfileTable({
               )}
             </div>
           ),
-          render: (text) => {
+          render: (text, row) => {
             const value = text == null || text === "" ? "-" : String(text);
+
+            // ✅ PAN COLUMN LOGIC
+            if (c.key === "panNumber") {
+              const rowId = ensureId(row);
+              const isVisible = visiblePanRowId === rowId;
+
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono tracking-wide">
+                    {isVisible ? value : maskPan(value)}
+                  </span>
+
+                  {value !== "-" && (
+                    <Button type="text"
+                      size="small"
+                       disabled={!canPanVisibility}
+                      icon={isVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!canPanVisibility) return;
+                        setVisiblePanRowId(isVisible ? null : rowId);
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            }
+
             if (isSkill) {
               return (
                 <Tooltip
@@ -304,6 +351,7 @@ export default function ProfileTable({
                 </Tooltip>
               );
             }
+
             return <div className="text-gray-800">{value}</div>;
           },
           onHeaderCell: () => ({
@@ -336,6 +384,10 @@ export default function ProfileTable({
 
           fileName = raw;
         }
+
+
+
+
 
         return (
           <div
@@ -387,7 +439,17 @@ export default function ProfileTable({
     });
 
     return base;
-  }, [columns, visibleColumns, onViewRow, openSearch, query, onQueryChange]);
+  }, 
+[  columns,
+  visibleColumns,
+  onViewRow,
+  openSearch,
+  query,
+  onQueryChange,
+  canPanVisibility,
+  visiblePanRowId
+]);
+
 
   const pagination = useMemo(
     () => ({

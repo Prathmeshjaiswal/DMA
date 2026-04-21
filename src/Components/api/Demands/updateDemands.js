@@ -13,9 +13,7 @@ export const submitUpdateDemand = async ({ id,updateDemandDTO, file }) => {
   formData.append('payload', JSON.stringify(updateDemandDTO));
 
   const res = await api.put(`/addNewDemand/demands/${id}`, formData, {
-    headers: {
-//    'Content-Type': undefined
-    },
+ 
   });
 
   console.log('[submitUpdateDemand] response status:', res.status);

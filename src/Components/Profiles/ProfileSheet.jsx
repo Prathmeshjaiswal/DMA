@@ -20,6 +20,7 @@ import {
 
 import { usePermissions } from "../Auth/PermissionProvider.jsx";
 /* --------------------- helpers --------------------- */
+
 // ---------- role helpers ----------
 function tryJson(s) {
   try {
@@ -287,7 +288,7 @@ export default function ProfileSheet() {
     () => [
       { key: "candidateName", label: "Candidate Name" },
       { key: "emailId", label: "Email ID" },
-      { key: "panNumber", label: "PAN Number" }, // will be hidden when SHOW_PAN === 0
+      { key: "panNumber", label: "PAN Number" }, 
       { key: "empId", label: "Employee ID" },
       { key: "profileStatus", label: "Status" },
       { key: "phoneNumber", label: "Phone" },
@@ -635,6 +636,7 @@ const ALL_COLUMNS = useMemo(() => {
 
             canUpdateProfile={canUpdateProfile}
             canViewProfile={canViewProfile}
+            canPanVisibility={canPanVisibility}
 
           />
 

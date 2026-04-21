@@ -34,7 +34,6 @@ export async function attachDemandsToProfileApi(profilePkId, demandIds = []) {
 export async function getDemandsByProfileApi(profileId) {
   if (!profileId) throw new Error("profileId is required");
   const res = await api.get(`/profile-track/${profileId}/demands`, {
-    headers: { "Cache-Control": "no-cache" }, // avoid caching in some browsers
   });
   const payload = unwrap(res);
 

@@ -3,8 +3,8 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:8080',
+  // baseURL: 'http://51.20.178.59:8080',
  
-  headers: { Accept: 'application/json' }, // (optional)
 });
 
 // ---- Request Interceptor ----

@@ -220,7 +220,7 @@ export const submitStep2 = async (payload) => {
 
 // === Dropdowns (no change) ===
 export const getDropDownData = async () => {
-  const res = await api.get('/addNewDemand/home', { headers: { Accept: 'application/json' } });
+  const res = await api.get('/addNewDemand/home',);
   return res.data?.data ?? res.data;
 };
 

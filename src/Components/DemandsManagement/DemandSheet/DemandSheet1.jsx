@@ -301,6 +301,30 @@ if (f.demandType) {
   }
 
 
+  // ✅ EXPERIENCE RANGE FILTER (minExperience, maxExperience, experienceRange)
+if (f.experience) {
+  const raw = String(f.experience).trim();
+
+  // Save original string for backend (if it uses experienceRange)
+  payload.experienceRange = raw;
+
+  // Case 1: Range like "3-5"
+  if (raw.includes("-")) {
+    const [min, max] = raw.split("-").map(v => Number(v.trim()));
+    if (!isNaN(min)) payload.minExperience = min;
+    if (!isNaN(max)) payload.maxExperience = max;
+  }
+  // Case 2: Single value like "5"
+  else {
+    const val = Number(raw);
+    if (!isNaN(val)) {
+      payload.minExperience = val;
+      payload.maxExperience = val;
+    }
+  }
+}
+
+
 
     const prim = splitNames(f.primarySkills);
     if (prim.length) payload.primarySkillNames = prim;

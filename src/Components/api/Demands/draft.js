@@ -28,7 +28,7 @@ export const saveDraft = async (draftPayload = {}) => {
   try {
     const body = toFormUrlEncoded(draftPayload);
     const res = await api.put('/draft/create', body, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+     
     });
     return res.data;
   } catch (err) {
@@ -41,7 +41,7 @@ export const saveDraft = async (draftPayload = {}) => {
 export const listDrafts = async () => {
   try {
     const res = await api.get('/draft/viewdraft', {
-      headers: { Accept: 'application/json' },
+     
     });
     const payload = res.data;
     if (Array.isArray(payload)) return payload;
@@ -58,7 +58,7 @@ export const getStep1Draft = async (draftId) => {
   if (!draftId && draftId !== 0) throw new Error('draftId is required');
   try {
     const res = await api.get(`/draft/viewdraft/${draftId}`, {
-      headers: { Accept: 'application/json' },
+     
     });
     return res.data;
   } catch (err) {
@@ -111,9 +111,7 @@ export const updateDraft = async ({ draftId, request, files = [] }) => {
   (files || []).forEach((f) => f && fd.append('files', f, f.name));
 
   const res = await api.put(`/draft/edit/${idNum}`, fd, {
-    headers: {
-      // Let browser set multipart boundary
-    },
+  
   });
   return res.data;
 };
