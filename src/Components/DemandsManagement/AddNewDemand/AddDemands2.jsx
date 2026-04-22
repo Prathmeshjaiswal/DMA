@@ -108,10 +108,10 @@ export default function AddDemands2() {
     const cleaned = (value || '').replace(/\D/g, '');
 
 
-    // // ✅ restrict to max 8 digits
-    // if (cleaned.length > 8) {
-    //   cleaned = cleaned.slice(0, 8);
-    // }
+    // restrict to max 8 digits
+    if (cleaned.length > 8) {
+      cleaned = cleaned.slice(0, 8);
+    }
 
 
 
@@ -482,7 +482,7 @@ export default function AddDemands2() {
         skillClusterId: toNum(pickFirst(meta?.skillClusterId, meta?.skillCluster?.value, meta?.skillCluster)),
         statusId: toNum(pickFirst(meta?.statusId, meta?.status)),
 
-        // ✅ ✅ CRITICAL: include karatFlag so it persists to add_demands.karat_flag
+        //  CRITICAL: include karatFlag so it persists to add_demands.karat_flag
         karatFlag: Number.isFinite(normalizedKarat) ? normalizedKarat : 0,
       };
 
@@ -581,7 +581,7 @@ export default function AddDemands2() {
                         </div>
 
                         {/* RR number */}
-                        <input
+                        {/* <input
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
@@ -589,10 +589,10 @@ export default function AddDemands2() {
                           onChange={(e) => onChangeRR(idx, e.target.value)}
                           placeholder="RR No."
                           className="w-2/3 rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
+                        /> */}
 
 
-                          {/* <div className="flex flex-col">
+                          <div className="flex flex-col">
                           <input
                             type="text"
                             inputMode="numeric"
@@ -601,15 +601,15 @@ export default function AddDemands2() {
                             onChange={(e) => onChangeRR(idx, e.target.value)}
                             placeholder="RR No."
                             className="w-2/3 rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                          /> */}
+                          />
 
                           {/*  Inline validation message */}
-                          {/* {rrNumbers[idx] && !isValidRrNumber(rrNumbers[idx]) && (
+                          {rrNumbers[idx] && !isValidRrNumber(rrNumbers[idx]) && (
                             <div className="mt-1 text-xs text-red-600 pr-5">
                               RR number must be 6–8 digits
                             </div>
                           )}
-                        </div> */}
+                        </div>
 
                         {/* JD Input row */}
                         <div className="flex items-start gap-3">

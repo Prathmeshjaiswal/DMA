@@ -327,11 +327,11 @@ export default function ProfileTable({
                   {value !== "-" && (
                     <Button type="text"
                       size="small"
-                       disabled={!canPanVisibility}
+                      //  disabled={!canPanVisibility}
                       icon={isVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!canPanVisibility) return;
+                        // if (!canPanVisibility) return;
                         setVisiblePanRowId(isVisible ? null : rowId);
                       }}
                     />

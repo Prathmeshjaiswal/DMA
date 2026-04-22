@@ -224,6 +224,17 @@ export const getDropDownData = async () => {
   return res.data?.data ?? res.data;
 };
 
+
+
+// src/Components/api/Demands/addDemands.js
+export const copyDemand = async (id) => {
+  const res = await api.post(`/addNewDemand/demands/${id}/copy`);
+  return res.data;
+};
+
+
+
+
 // === toOptions helper (no change) ===
 export const toOptions = (arr) => {
   if (!Array.isArray(arr)) return [];

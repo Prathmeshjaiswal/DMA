@@ -213,7 +213,7 @@ function OtherableSelect({
               {o.label}
             </option>
           ))}
-          <option value="__other__">Other</option>
+          {/* <option value="__other__">Other</option> */}
         </select>
       ) : (
         <div className="mt-1 flex items-center gap-2">
@@ -244,6 +244,9 @@ const today = new Date();
 today.setHours(0, 0, 0, 0); // normalize to day start
 
 
+const IDLE_TIMEOUT = 30 * 1000; // 30 seconds (change as needed)
+
+
 // ------------------------ component ------------------------
 export default function AddDemands1() {
 
@@ -251,6 +254,9 @@ export default function AddDemands1() {
   const [subLobError, setSubLobError] = useState(false);
 
   const prevLobRef = useRef(null);
+
+  const idleTimerRef = useRef(null);
+const lastAutoSaveRef = useRef(0);
   const [searchParams] = useSearchParams();
   const draftIdFromQuery = Number(searchParams.get("draftId"));
 
@@ -453,6 +459,90 @@ export default function AddDemands1() {
     }));
   };
 
+
+  // ✅ COPY MODE: hydrate form from copied demand (preview DTO)
+useEffect(() => {
+  const raw = sessionStorage.getItem("COPIED_DEMAND_DATA");
+  if (!raw) return;
+
+  try {
+    const copied = JSON.parse(raw);
+
+    // ✅ IMPORTANT: ensure clean new creation
+    setDraftId(null);
+
+    setForm((prev) => ({
+      ...prev,
+
+      // ----- BASIC -----
+      lob: String(copied?.lob?.id ?? ""),
+      subLob: String(copied?.subLob?.id ?? ""),
+      noOfPositions: "1", // ✅ always reset to 1
+      demandReceivedDate: todayStr(),
+
+      // ----- BUSINESS -----
+      hbu: String(copied?.hbu?.id ?? ""),
+      hbuSpoc: String(copied?.hbuSpoc?.id ?? ""),
+      band: String(copied?.band?.id ?? ""),
+      priority: String(copied?.priority?.id ?? ""),
+      demandType: String(copied?.demandType?.id ?? ""),
+      demandTimeline: String(copied?.demandTimeline?.id ?? ""),
+      externalInternal: String(copied?.externalInternal?.id ?? ""),
+      status: "", // ✅ reset (status comes from backend later)
+      pod: String(copied?.pod?.id ?? ""),
+      pmo: String(copied?.pmo?.id ?? ""),
+      pmoSpoc: String(copied?.pmoSpoc?.id ?? ""),
+      salesSpoc: String(copied?.salesSpoc?.id ?? ""),
+      hiringManager: String(copied?.hiringManager?.id ?? ""),
+      deliveryManager: String(copied?.deliveryManager?.id ?? ""),
+      pm: String(copied?.projectManager?.id ?? ""),
+      skillCluster: copied?.skillCluster
+        ? {
+            value: Number(copied.skillCluster.id),
+            label: copied.skillCluster.name,
+          }
+        : null,
+
+      // ----- SKILLS -----
+      primarySkills: Array.isArray(copied?.primarySkills)
+        ? copied.primarySkills.map((s) => ({
+            value: Number(s.id),
+            label: s.name,
+          }))
+        : [],
+      secondarySkills: Array.isArray(copied?.secondarySkills)
+        ? copied.secondarySkills.map((s) => ({
+            value: Number(s.id),
+            label: s.name,
+          }))
+        : [],
+
+      // ----- LOCATIONS -----
+      demandLocation: Array.isArray(copied?.demandLocations)
+        ? copied.demandLocations.map((l) => Number(l.id))
+        : [],
+
+      // ----- EXPERIENCE / FLAGS -----
+      experience:
+        copied?.experience != null
+          ? Number(round2(copied.experience)).toFixed(2)
+          : "",
+      karat:
+        copied?.karatFlag === true || copied?.karatFlag === 1
+          ? "yes"
+          : "no",
+      remark: copied?.remark ?? "",
+    }));
+
+  } catch (e) {
+    console.error("Failed to load copied demand:", e);
+  } finally {
+    // ✅ one‑time use only
+    sessionStorage.removeItem("COPIED_DEMAND_DATA");
+  }
+}, []);
+
+
   // ✅ EDIT mode only: hydrate from server draft (NO localStorage)
   useEffect(() => {
     const idNum = Number(draftId);
@@ -602,6 +692,44 @@ export default function AddDemands1() {
     }
   }, [demandTimelineLabel]);
 
+  useEffect(() => {
+  const resetIdleTimer = () => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+
+    idleTimerRef.current = setTimeout(() => {
+      autoSaveDraft();
+    }, IDLE_TIMEOUT);
+  };
+
+  const events = [
+    "mousemove",
+    "mousedown",
+    "keydown",
+    "scroll",
+    "touchstart",
+  ];
+
+  events.forEach((event) =>
+    window.addEventListener(event, resetIdleTimer, { passive: true })
+  );
+
+  // Start timer initially
+  resetIdleTimer();
+
+  return () => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+
+    events.forEach((event) =>
+      window.removeEventListener(event, resetIdleTimer)
+    );
+  };
+}, [form, draftId, cibLobId]);
+
+
 
 
 
@@ -662,12 +790,25 @@ export default function AddDemands1() {
   //clear form
   const handleClearForm = () => {
     setForm(INITIAL_FORM());
-    
+
 
     // Optional: clear draftId ONLY for new creation
     // If you want to keep editing the same draft, comment this
     setDraftId(null);
   };
+
+
+  const handleClearAndExit = () => {
+    // ✅ Clear the form (existing logic)
+    setForm(INITIAL_FORM());
+
+    // ✅ Reset draftId so next open is clean
+    setDraftId(null);
+
+    // ✅ Navigate back to Demand Sheet
+    navigate("/demandsheet1"); // 🔁 change route if needed
+  };
+
 
 
 
@@ -767,6 +908,45 @@ export default function AddDemands1() {
       setLoading(false);
     }
   };
+
+
+  const autoSaveDraft = async () => {
+  try {
+    if (loading) return;
+
+    // Avoid saving completely empty form
+    if (!form.lob && !form.skillCluster && !form.remark) return;
+
+    // Anti-spam: avoid saving too frequently
+    const now = Date.now();
+    if (now - lastAutoSaveRef.current < 10_000) return; // 10s cooldown
+    lastAutoSaveRef.current = now;
+
+    const payload = buildDraftCreateRequest(form, cibLobId);
+
+    let effDraftId = Number(draftId) || null;
+
+    if (effDraftId) {
+      const { rrDrafts, ...req } = payload;
+      await updateDraft({
+        draftId: effDraftId,
+        request: req,
+        files: [],
+      });
+      console.log("Auto‑saved draft (update)", effDraftId);
+    } else {
+      const res = await submitStep1(payload);
+      const newId = Number(res?.data?.draftId ?? res?.draftId);
+      if (Number.isFinite(newId)) {
+        setDraftId(newId);
+        console.log("Auto‑saved draft (created)", newId);
+      }
+    }
+  } catch (err) {
+    console.error("Auto‑save failed:", err);
+  }
+};
+
 
   if (!dropdowns || !dropdownsLoaded || loading) {
     return (
@@ -1168,6 +1348,29 @@ export default function AddDemands1() {
                 labelCls={labelCls}
               />
 
+
+
+              {/* POD Dropdown */}
+              {/* <div>
+                <label className={labelCls}>POD</label>
+                <select
+                  className={`${inputCls} mt-1`}
+                  value={form.pod}
+                  onChange={(e) =>
+                    setForm({ ...form, pod: e.target.value })
+                  }
+                >
+
+                  <option value="">Select POD</option>
+                  {safe(options?.pod).map((o) => (
+                    <option key={String(o.value)} value={String(o.value)}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div> */}
+
+
               <div className="hidden md:block" />
               <div className="hidden md:block" />
             </div>
@@ -1244,7 +1447,7 @@ export default function AddDemands1() {
                       {o.label}
                     </option>
                   ))}
-                  <option value="__other__">Other</option>
+                  {/* <option value="__other__">Other</option> */}
                 </select>
                 {String(form.band) === "__other__" && (
                   <div className="mt-1 flex items-center gap-2">
@@ -1398,11 +1601,11 @@ export default function AddDemands1() {
           {/* ✅ Clear Button */}
           <button
             type="button"
-            onClick={handleClearForm}
+            onClick={handleClearAndExit}
             disabled={loading}
             className="rounded-md border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-70"
           >
-            Clear
+            Clear & Exit
           </button>
 
 

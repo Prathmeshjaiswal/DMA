@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo,useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Spin, Alert, Button, Pagination, message } from "antd";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
@@ -12,6 +12,7 @@ import { exportDemandSheet } from "../../api/Export/demandsheet.js";
 import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
 import { usePermissions } from "../../Auth/PermissionProvider.jsx";
+
 
 /* ================= HELPERS ================= */
 const nameOf = (obj) =>
@@ -100,11 +101,22 @@ const normalizeDemandDto = (d) => {
     karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
     id: d.id,
     jdFileName: d.jdFileName ?? d.fileName ?? null,
+
+    pod: nameOf(d.pod),
+    externalInternal: nameOf(d.externalInternal),
+
   };
 };
 
+
+
+
+
+
 export default function DemandSheet1() {
   const navigate = useNavigate();
+  const isFirstLoad = useRef(true);
+  const hasLoadedOnce = useRef(false);
 
 
   //permission check
@@ -149,10 +161,11 @@ export default function DemandSheet1() {
     { key: "pmo", label: "PMO" },
     { key: "band", label: "Band" },
     { key: "experience", label: "Experience" },
+    { key: "pod", label: "Pod / Programme Name" },
 
     // ✅ EXTRA COLUMNS (selectable from column panel)
     // { key: "statusNote", label: "Status Note" },
-    { key: "prodProgramName", label: "Pod / Programme Name" },
+    // { key: "pod", label: "Pod / Programme Name" },
     { key: "demandReceivedDate", label: "Demand Received Date" },
     // { key: "priorityComment", label: "Priority Comment" },
     // { key: "currentProfileShared", label: "Current Profile Shared" },
@@ -181,6 +194,10 @@ export default function DemandSheet1() {
     "pmo",
     "band",
     "experience",
+
+    // "pod",
+    // "externalInternal",
+
   ];
 
   /* ================= STATE ================= */
@@ -252,7 +269,15 @@ export default function DemandSheet1() {
 
       priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
       status: text,
-      karat: { type: "select", options: [{ name: "Yes" }, { name: "No" }] },
+
+      karat: {
+        type: "select",
+        options: [
+          { name: "Yes", value: "true" },
+          { name: "No", value: "false" },
+        ],
+      },
+
       hbu: text,
       demandTimeline: mkSel(dropdowns?.demandTimeline),
       demandType: mkSel(dropdowns?.demandType),
@@ -291,38 +316,44 @@ export default function DemandSheet1() {
     if (f.demandType) payload.demandTypeName = f.demandType;
     if (f.hbu) payload.hbuName = f.hbu;
 
-    
-if (f.demandType) {
-    payload.demandTypeName = f.demandType;
-  }
-
-  if (f.band) {
-    payload.bandName = String(f.band);
-  }
 
 
-  // ✅ EXPERIENCE RANGE FILTER (minExperience, maxExperience, experienceRange)
-if (f.experience) {
-  const raw = String(f.experience).trim();
-
-  // Save original string for backend (if it uses experienceRange)
-  payload.experienceRange = raw;
-
-  // Case 1: Range like "3-5"
-  if (raw.includes("-")) {
-    const [min, max] = raw.split("-").map(v => Number(v.trim()));
-    if (!isNaN(min)) payload.minExperience = min;
-    if (!isNaN(max)) payload.maxExperience = max;
-  }
-  // Case 2: Single value like "5"
-  else {
-    const val = Number(raw);
-    if (!isNaN(val)) {
-      payload.minExperience = val;
-      payload.maxExperience = val;
+    if (f.demandTimeline) {
+      payload.demandTimelineName = f.demandTimeline;
     }
-  }
-}
+
+
+    if (f.demandType) {
+      payload.demandTypeName = f.demandType;
+    }
+
+    if (f.band) {
+      payload.bandName = String(f.band);
+    }
+
+
+    // ✅ EXPERIENCE RANGE FILTER (minExperience, maxExperience, experienceRange)
+    if (f.experience) {
+      const raw = String(f.experience).trim();
+
+      // Save original string for backend (if it uses experienceRange)
+      payload.experienceRange = raw;
+
+      // Case 1: Range like "3-5"
+      if (raw.includes("-")) {
+        const [min, max] = raw.split("-").map(v => Number(v.trim()));
+        if (!isNaN(min)) payload.minExperience = min;
+        if (!isNaN(max)) payload.maxExperience = max;
+      }
+      // Case 2: Single value like "5"
+      else {
+        const val = Number(raw);
+        if (!isNaN(val)) {
+          payload.minExperience = val;
+          payload.maxExperience = val;
+        }
+      }
+    }
 
 
 
@@ -346,6 +377,13 @@ if (f.experience) {
   /* ================= API ================= */
   const loadDemands = useCallback(
     async (page = 1, size = 10) => {
+      
+ // Prevent StrictMode double hit
+    if (hasLoadedOnce.current && !hasAnyFilter) {
+      return;
+    }
+    hasLoadedOnce.current = true;
+
       setTableLoading(true);
       const apiPage = page - 1;
       const sort = "displayDemandId,desc";
@@ -365,20 +403,34 @@ if (f.experience) {
   );
 
 
+
   useEffect(() => {
-    (async () => {
-      setPageLoading(true);
+  (async () => {
+    setPageLoading(true);
+    try {
       await loadDropdowns();
       await loadDemands(1, pageSize);
+    } finally {
       setPageLoading(false);
-    })();
-  }, []);
+    }
+  })();
+}, []);
 
 
   useEffect(() => {
-    const t = setTimeout(() => loadDemands(1, pageSize), 400);
-    return () => clearTimeout(t);
-  }, [filters]);
+  if (isFirstLoad.current) {
+    isFirstLoad.current = false;
+    return;
+  }
+
+  const t = setTimeout(() => {
+    loadDemands(1, pageSize);
+  }, 400);
+
+  return () => clearTimeout(t);
+}, [filters]);
+
+
 
   const loadDropdowns = async () => {
     setDdLoading(true);

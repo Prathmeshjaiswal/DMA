@@ -4,6 +4,9 @@ import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { Button, message, Tooltip } from "antd";
 import { EyeOutlined, UnlockOutlined, DownloadOutlined, LockOutlined } from "@ant-design/icons";
 import { downloadDemandJDByFileName } from "../../api/Demands/getDemands";
+import { CopyOutlined } from "@ant-design/icons";
+import { copyDemand } from "../../api/Demands/addDemands";
+import { useNavigate } from "react-router-dom";
 
 export default function RowView({
   row,
@@ -19,6 +22,30 @@ export default function RowView({
 }) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleCopyDemand = async (e) => {
+    e.stopPropagation();
+
+    try {
+      const data = await copyDemand(row.id);
+
+      // ✅ store preview DTO temporarily
+      sessionStorage.setItem(
+        "COPIED_DEMAND_DATA",
+        JSON.stringify(data)
+      );
+
+      message.success("Demand copied. Please review and submit.");
+
+      // ✅ redirect to Add Demand (Step 1)
+      navigate("/addDemands1");
+    } catch (err) {
+      console.error("Copy demand failed:", err);
+      message.error("Failed to copy demand.");
+    }
+  };
+
 
   const copyToClipboard = async (e) => {
     e.preventDefault();
@@ -158,7 +185,7 @@ export default function RowView({
                       />
                     </button>
                   )}
-                  
+
 
                   {/* Demand ID chip with Eye + Lock inside */}
                   <div
@@ -206,6 +233,18 @@ export default function RowView({
                       )}
                     </div>
                   </div>
+
+                  {/* ✅ NEW: Copy Demand */}
+                  <Tooltip title="Copy Demand">
+                    <button
+                      type="button"
+                      onClick={handleCopyDemand}
+                      className="hover:opacity-90"
+                    >
+                      <CopyOutlined style={{ color: "black" }} />
+                    </button>
+                  </Tooltip>
+
 
                   {/* JD Download (kept as-is per your instruction) */}
                   <Tooltip title={fileName ? `Download JD (${fileName})` : "No JD file available"}>

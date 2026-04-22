@@ -78,6 +78,7 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
       band: toOptions(dd.bandList),
       pmo: toOptions(dd.pmoList),
       lob: toOptions(dd.lobList),
+      externalInternal: toOptions(dd.externalInternalList),
     }),
     [dropdowns]
   );
@@ -105,7 +106,9 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
     karatFlag: null, // NEW
 
     lobId: null,
-    pmoId: null
+    pmoId: null,
+
+    externalInternalId: null,
   });
 
   const [uploadFile, setUploadFile] = useState(null);
@@ -130,6 +133,7 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
       salesSpocId: ONE(opt.salesSpoc, row.salesSpoc),
       hbuId: ONE(opt.hbu, row.hbu),
       demandTimelineId: ONE(opt.demandTimeline, row.demandTimeline),
+      externalInternalId: ONE(opt.externalInternal, row.externalInternal),
       demandTypeId: ONE(opt.demandType, row.demandType),
       // demandLocationId: namesToIds(opt.demandLocation, row.demandLocation),
       demandLocationId: namesToIds(
@@ -279,6 +283,7 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
       podId: sel.podId,
       bandId: sel.bandId,
        lobId: sel.lobId, 
+       externalInternalId: sel.externalInternalId,
 
       // NEW: Karat boolean flag
       karatFlag: sel.karatFlag, // NEW
@@ -381,6 +386,13 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
         value = sel.pmoId;
         onChange = v => setSel(s => ({ ...s, pmoId: v ?? null }));
         break;
+
+        case "externalInternal":
+  options = opt.externalInternal;
+  value = sel.externalInternalId ?? null;
+  onChange = (v) =>
+    setSel((s) => ({ ...s, externalInternalId: v ?? null }));
+  break;
 
 
 
@@ -547,6 +559,7 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
             "priority",
             "status",
             "pod",
+            "externalInternal",
           ]);
 
           if (dropdownKeys.has(colKey)) {
