@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback, useMemo,useRef } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Spin, Alert, Button, Pagination, message } from "antd";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
@@ -316,6 +316,13 @@ export default function DemandSheet1() {
     if (f.demandType) payload.demandTypeName = f.demandType;
     if (f.hbu) payload.hbuName = f.hbu;
 
+    //  KARAT FILTER
+    if (f.karat === "Yes") {
+      payload.karatFlag = true;
+    }
+    if (f.karat === "No") {
+      payload.karatFlag = false;
+    }
 
 
     if (f.demandTimeline) {
@@ -377,12 +384,12 @@ export default function DemandSheet1() {
   /* ================= API ================= */
   const loadDemands = useCallback(
     async (page = 1, size = 10) => {
-      
- // Prevent StrictMode double hit
-    if (hasLoadedOnce.current && !hasAnyFilter) {
-      return;
-    }
-    hasLoadedOnce.current = true;
+
+      // Prevent StrictMode double hit
+      if (hasLoadedOnce.current && !hasAnyFilter) {
+        return;
+      }
+      hasLoadedOnce.current = true;
 
       setTableLoading(true);
       const apiPage = page - 1;
@@ -405,30 +412,30 @@ export default function DemandSheet1() {
 
 
   useEffect(() => {
-  (async () => {
-    setPageLoading(true);
-    try {
-      await loadDropdowns();
-      await loadDemands(1, pageSize);
-    } finally {
-      setPageLoading(false);
-    }
-  })();
-}, []);
+    (async () => {
+      setPageLoading(true);
+      try {
+        await loadDropdowns();
+        await loadDemands(1, pageSize);
+      } finally {
+        setPageLoading(false);
+      }
+    })();
+  }, []);
 
 
   useEffect(() => {
-  if (isFirstLoad.current) {
-    isFirstLoad.current = false;
-    return;
-  }
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
 
-  const t = setTimeout(() => {
-    loadDemands(1, pageSize);
-  }, 400);
+    const t = setTimeout(() => {
+      loadDemands(1, pageSize);
+    }, 400);
 
-  return () => clearTimeout(t);
-}, [filters]);
+    return () => clearTimeout(t);
+  }, [filters]);
 
 
 
