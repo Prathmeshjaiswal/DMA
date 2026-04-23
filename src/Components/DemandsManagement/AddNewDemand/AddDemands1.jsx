@@ -168,7 +168,13 @@ const buildDraftCreateRequest = (form, cibLobId) => ({
   projectManagerId: toNum(form.pm),
 
   // 🔹 Experience as float rounded to 2 decimals (or null if empty)
-  experience: round2(form.experience),
+  // experience: round2(form.experience),
+
+  experience:
+    typeof form.experience === "string" && form.experience.trim() !== ""
+      ? form.experience.trim()
+      : null,
+
 
   remark: form.remark ?? "Saving as draft from Step-1 (mix file + text)",
 
@@ -256,7 +262,7 @@ export default function AddDemands1() {
   const prevLobRef = useRef(null);
 
   const idleTimerRef = useRef(null);
-const lastAutoSaveRef = useRef(0);
+  const lastAutoSaveRef = useRef(0);
   const [searchParams] = useSearchParams();
   const draftIdFromQuery = Number(searchParams.get("draftId"));
 
@@ -461,86 +467,86 @@ const lastAutoSaveRef = useRef(0);
 
 
   // ✅ COPY MODE: hydrate form from copied demand (preview DTO)
-useEffect(() => {
-  const raw = sessionStorage.getItem("COPIED_DEMAND_DATA");
-  if (!raw) return;
+  useEffect(() => {
+    const raw = sessionStorage.getItem("COPIED_DEMAND_DATA");
+    if (!raw) return;
 
-  try {
-    const copied = JSON.parse(raw);
+    try {
+      const copied = JSON.parse(raw);
 
-    // ✅ IMPORTANT: ensure clean new creation
-    setDraftId(null);
+      // ✅ IMPORTANT: ensure clean new creation
+      setDraftId(null);
 
-    setForm((prev) => ({
-      ...prev,
+      setForm((prev) => ({
+        ...prev,
 
-      // ----- BASIC -----
-      lob: String(copied?.lob?.id ?? ""),
-      subLob: String(copied?.subLob?.id ?? ""),
-      noOfPositions: "1", // ✅ always reset to 1
-      demandReceivedDate: todayStr(),
+        // ----- BASIC -----
+        lob: String(copied?.lob?.id ?? ""),
+        subLob: String(copied?.subLob?.id ?? ""),
+        noOfPositions: "1", // ✅ always reset to 1
+        demandReceivedDate: todayStr(),
 
-      // ----- BUSINESS -----
-      hbu: String(copied?.hbu?.id ?? ""),
-      hbuSpoc: String(copied?.hbuSpoc?.id ?? ""),
-      band: String(copied?.band?.id ?? ""),
-      priority: String(copied?.priority?.id ?? ""),
-      demandType: String(copied?.demandType?.id ?? ""),
-      demandTimeline: String(copied?.demandTimeline?.id ?? ""),
-      externalInternal: String(copied?.externalInternal?.id ?? ""),
-      status: "", // ✅ reset (status comes from backend later)
-      pod: String(copied?.pod?.id ?? ""),
-      pmo: String(copied?.pmo?.id ?? ""),
-      pmoSpoc: String(copied?.pmoSpoc?.id ?? ""),
-      salesSpoc: String(copied?.salesSpoc?.id ?? ""),
-      hiringManager: String(copied?.hiringManager?.id ?? ""),
-      deliveryManager: String(copied?.deliveryManager?.id ?? ""),
-      pm: String(copied?.projectManager?.id ?? ""),
-      skillCluster: copied?.skillCluster
-        ? {
+        // ----- BUSINESS -----
+        hbu: String(copied?.hbu?.id ?? ""),
+        hbuSpoc: String(copied?.hbuSpoc?.id ?? ""),
+        band: String(copied?.band?.id ?? ""),
+        priority: String(copied?.priority?.id ?? ""),
+        demandType: String(copied?.demandType?.id ?? ""),
+        demandTimeline: String(copied?.demandTimeline?.id ?? ""),
+        externalInternal: String(copied?.externalInternal?.id ?? ""),
+        status: "", // ✅ reset (status comes from backend later)
+        pod: String(copied?.pod?.id ?? ""),
+        pmo: String(copied?.pmo?.id ?? ""),
+        pmoSpoc: String(copied?.pmoSpoc?.id ?? ""),
+        salesSpoc: String(copied?.salesSpoc?.id ?? ""),
+        hiringManager: String(copied?.hiringManager?.id ?? ""),
+        deliveryManager: String(copied?.deliveryManager?.id ?? ""),
+        pm: String(copied?.projectManager?.id ?? ""),
+        skillCluster: copied?.skillCluster
+          ? {
             value: Number(copied.skillCluster.id),
             label: copied.skillCluster.name,
           }
-        : null,
+          : null,
 
-      // ----- SKILLS -----
-      primarySkills: Array.isArray(copied?.primarySkills)
-        ? copied.primarySkills.map((s) => ({
+        // ----- SKILLS -----
+        primarySkills: Array.isArray(copied?.primarySkills)
+          ? copied.primarySkills.map((s) => ({
             value: Number(s.id),
             label: s.name,
           }))
-        : [],
-      secondarySkills: Array.isArray(copied?.secondarySkills)
-        ? copied.secondarySkills.map((s) => ({
+          : [],
+        secondarySkills: Array.isArray(copied?.secondarySkills)
+          ? copied.secondarySkills.map((s) => ({
             value: Number(s.id),
             label: s.name,
           }))
-        : [],
+          : [],
 
-      // ----- LOCATIONS -----
-      demandLocation: Array.isArray(copied?.demandLocations)
-        ? copied.demandLocations.map((l) => Number(l.id))
-        : [],
+        // ----- LOCATIONS -----
+        demandLocation: Array.isArray(copied?.demandLocations)
+          ? copied.demandLocations.map((l) => Number(l.id))
+          : [],
 
-      // ----- EXPERIENCE / FLAGS -----
-      experience:
-        copied?.experience != null
-          ? Number(round2(copied.experience)).toFixed(2)
-          : "",
-      karat:
-        copied?.karatFlag === true || copied?.karatFlag === 1
-          ? "yes"
-          : "no",
-      remark: copied?.remark ?? "",
-    }));
+        // ----- EXPERIENCE / FLAGS -----
+        experience:
+          copied?.experience != null
+            ? Number(round2(copied.experience)).toFixed(2)
+            : "",
+        karat:
+          copied?.karatFlag === true || copied?.karatFlag === 1
+            ? "yes"
+            : "no",
+        remark: copied?.remark ?? "",
+      }));
 
-  } catch (e) {
-    console.error("Failed to load copied demand:", e);
-  } finally {
-    // ✅ one‑time use only
-    sessionStorage.removeItem("COPIED_DEMAND_DATA");
-  }
-}, []);
+    } catch (e) {
+      console.error("Failed to load copied demand:", e);
+    } finally {
+      // ✅ one‑time use only
+      sessionStorage.removeItem("COPIED_DEMAND_DATA");
+    }
+  }, []);
 
 
   // ✅ EDIT mode only: hydrate from server draft (NO localStorage)
@@ -693,41 +699,41 @@ useEffect(() => {
   }, [demandTimelineLabel]);
 
   useEffect(() => {
-  const resetIdleTimer = () => {
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current);
-    }
+    const resetIdleTimer = () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
 
-    idleTimerRef.current = setTimeout(() => {
-      autoSaveDraft();
-    }, IDLE_TIMEOUT);
-  };
+      idleTimerRef.current = setTimeout(() => {
+        autoSaveDraft();
+      }, IDLE_TIMEOUT);
+    };
 
-  const events = [
-    "mousemove",
-    "mousedown",
-    "keydown",
-    "scroll",
-    "touchstart",
-  ];
-
-  events.forEach((event) =>
-    window.addEventListener(event, resetIdleTimer, { passive: true })
-  );
-
-  // Start timer initially
-  resetIdleTimer();
-
-  return () => {
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current);
-    }
+    const events = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+    ];
 
     events.forEach((event) =>
-      window.removeEventListener(event, resetIdleTimer)
+      window.addEventListener(event, resetIdleTimer, { passive: true })
     );
-  };
-}, [form, draftId, cibLobId]);
+
+    // Start timer initially
+    resetIdleTimer();
+
+    return () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+
+      events.forEach((event) =>
+        window.removeEventListener(event, resetIdleTimer)
+      );
+    };
+  }, [form, draftId, cibLobId]);
 
 
 
@@ -842,7 +848,7 @@ useEffect(() => {
     }
 
     // Optional: you can enforce experience >= 0 if present
-    if (form.experience !== "" && Number(form.experience) < 0) {
+    if (form.experience !== "" && String(form.experience) < "0") {
       return message.warning("Experience cannot be negative.");
     }
 
@@ -911,41 +917,41 @@ useEffect(() => {
 
 
   const autoSaveDraft = async () => {
-  try {
-    if (loading) return;
+    try {
+      if (loading) return;
 
-    // Avoid saving completely empty form
-    if (!form.lob && !form.skillCluster && !form.remark) return;
+      // Avoid saving completely empty form
+      if (!form.lob && !form.skillCluster && !form.remark) return;
 
-    // Anti-spam: avoid saving too frequently
-    const now = Date.now();
-    if (now - lastAutoSaveRef.current < 10_000) return; // 10s cooldown
-    lastAutoSaveRef.current = now;
+      // Anti-spam: avoid saving too frequently
+      const now = Date.now();
+      if (now - lastAutoSaveRef.current < 10_000) return; // 10s cooldown
+      lastAutoSaveRef.current = now;
 
-    const payload = buildDraftCreateRequest(form, cibLobId);
+      const payload = buildDraftCreateRequest(form, cibLobId);
 
-    let effDraftId = Number(draftId) || null;
+      let effDraftId = Number(draftId) || null;
 
-    if (effDraftId) {
-      const { rrDrafts, ...req } = payload;
-      await updateDraft({
-        draftId: effDraftId,
-        request: req,
-        files: [],
-      });
-      console.log("Auto‑saved draft (update)", effDraftId);
-    } else {
-      const res = await submitStep1(payload);
-      const newId = Number(res?.data?.draftId ?? res?.draftId);
-      if (Number.isFinite(newId)) {
-        setDraftId(newId);
-        console.log("Auto‑saved draft (created)", newId);
+      if (effDraftId) {
+        const { rrDrafts, ...req } = payload;
+        await updateDraft({
+          draftId: effDraftId,
+          request: req,
+          files: [],
+        });
+        console.log("Auto‑saved draft (update)", effDraftId);
+      } else {
+        const res = await submitStep1(payload);
+        const newId = Number(res?.data?.draftId ?? res?.draftId);
+        if (Number.isFinite(newId)) {
+          setDraftId(newId);
+          console.log("Auto‑saved draft (created)", newId);
+        }
       }
+    } catch (err) {
+      console.error("Auto‑save failed:", err);
     }
-  } catch (err) {
-    console.error("Auto‑save failed:", err);
-  }
-};
+  };
 
 
   if (!dropdowns || !dropdownsLoaded || loading) {
@@ -1133,29 +1139,44 @@ useEffect(() => {
                   <label className={`${labelCls} whitespace-nowrap`}>
                     Experience (Years):
                   </label>
+
                   <input
                     className={`${inputCls} w-1/4`}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="e.g., 3.5"
+                    type="text"
+                    placeholder="e.g., 6, 3-5, 7+"
                     value={form.experience}
+
+
                     onChange={(e) => {
-                      const v = e.target.value;
+                      let v = e.target.value;
+                      console.log(v);
+
+                      // ✅ Remove all spaces immediately
+                      v = v.replace(/\s+/g, "");
+
+                      // ✅ Allow empty
                       if (v === "") {
                         setForm((p) => ({ ...p, experience: "" }));
-                      } else {
+                        return;
+                      }
+
+
+                      const partialRegex = /^\d+$|^\d+-$|^\d+-\d+$|^\d+\+$/;
+
+                      if (partialRegex.test(v)) {
                         setForm((p) => ({ ...p, experience: v }));
                       }
                     }}
+
+
                     onBlur={() => {
-                      if (form.experience === "") return;
-                      const v = Number(form.experience);
-                      if (!Number.isNaN(v)) {
-                        setForm((p) => ({
-                          ...p,
-                          experience: v.toFixed(2), // ✅ round to 2 decimals
-                        }));
+                      if (!form.experience) return;
+
+                      const finalRegex = /^(\d+|\d+-\d+|\d+\+)$/;
+
+                      if (!finalRegex.test(form.experience)) {
+                        alert("Invalid format! Use formats like 3, 2-5, or 7+");
+                        //   setForm((p) => ({ ...p, experience: "" }));
                       }
                     }}
                   />
