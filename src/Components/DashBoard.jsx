@@ -104,7 +104,7 @@ const normalizePriorityObject = (obj) => {
 export default function Dashboard() {
   // default date range: today-30 -> today
   const [selectedDate, setSelectedDate] = useState([
-    dayjs().subtract(30, 'day'),
+    dayjs().subtract(12, 'month'),
     dayjs(),
   ]);
 
@@ -153,18 +153,32 @@ export default function Dashboard() {
     }
   };
 
+  // useEffect(() => {
+  //   const [f, t] = selectedDate;
+  //   fetchAll(fmtYMD(f), fmtYMD(t));
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
+
   useEffect(() => {
-    const [f, t] = selectedDate;
+  const [f, t] = selectedDate;
+  if (f && t) {
     fetchAll(fmtYMD(f), fmtYMD(t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
+}, [selectedDate]);
+
+
+  // const handleRangeChange = (range) => {
+  //   if (!range) return;
+  //   setSelectedDate(range);
+  //   const [f, t] = range;
+  //   fetchAll(fmtYMD(f), fmtYMD(t));
+  // };
+
 
   const handleRangeChange = (range) => {
-    if (!range) return;
-    setSelectedDate(range);
-    const [f, t] = range;
-    fetchAll(fmtYMD(f), fmtYMD(t));
-  };
+  if (!range) return;
+  setSelectedDate(range);
+};
 
   // const displayFormat = (v) => v ? v.format('DD-MMM-YYYY').toUpperCase() : '';
   const displayFormat = (v) => {
