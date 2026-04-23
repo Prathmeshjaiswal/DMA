@@ -103,7 +103,7 @@ const normalizeDemandDto = (d) => {
     jdFileName: d.jdFileName ?? d.fileName ?? null,
 
     pod: nameOf(d.pod),
-    externalInternal: nameOf(d.externalInternal),
+    // externalInternal: nameOf(d.externalInternal),
 
   };
 };
@@ -169,7 +169,7 @@ export default function DemandSheet1() {
     { key: "demandReceivedDate", label: "Demand Received Date" },
     // { key: "priorityComment", label: "Priority Comment" },
     // { key: "currentProfileShared", label: "Current Profile Shared" },
-    { key: "externalInternal", label: "External / Internal" },
+    // { key: "externalInternal", label: "External / Internal" },
   ];
 
   const defaultVisible = [
