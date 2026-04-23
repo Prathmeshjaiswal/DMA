@@ -788,11 +788,11 @@ export default function OnboardingList() {
       { key: "profileSharedDate", label: "Profile Shared Date", type: "daterange" },
 
       { key: "ctoolId", label: "C-Tool ID", placeholder: "ID", type: "number" },
-
-      { key: "bgvStatus", label: "BGV Status", type: "select", optionsKey: "bgvStatus" },
-      { key: "pevUploadDate", label: "PEV Upload Date", type: "daterange" },
       { key: "vpTagging", label: "VP Tagging Date", type: "daterange" },
       { key: "techSelectDate", label: "Tech Select Date", type: "daterange" },
+      { key: "bgvStatus", label: "BGV Status", type: "select", optionsKey: "bgvStatus" },
+      { key: "pevUploadDate", label: "PEV Upload Date", type: "daterange" },
+
       { key: "hsbcOnboardingDate", label: "HSBC Onboard Date", type: "daterange" },
 
       { key: "onboardingStatus", label: "Onboarding Status", type: "select", optionsKey: "onboardingStatus" },
@@ -819,20 +819,20 @@ export default function OnboardingList() {
             const hasId = !!ensureId(row);
             return (
               <div className="flex items-center gap-2">
-                {canUpdateOnboardingTracker &&(
-                <Tooltip title={hasId ? "Edit" : "Edit (ID missing)"}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    disabled={!hasId}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (hasId) openEdit(row);
-                    }}
-                  />
-                </Tooltip>
-            )}
+                {canUpdateOnboardingTracker && (
+                  <Tooltip title={hasId ? "Edit" : "Edit (ID missing)"}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      disabled={!hasId}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasId) openEdit(row);
+                      }}
+                    />
+                  </Tooltip>
+                )}
 
                 <div
                   className="inline-flex items-center gap-3 text-white font-semibold text-md"
