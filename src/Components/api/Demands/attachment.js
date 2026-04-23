@@ -16,8 +16,7 @@ export const getProfiles = async (demandId) => {
 export const getAttachedProfilesByDemandId = async (demandId) => {
   if (!demandId) throw new Error('demandId is required');
   const res = await api.get(`/profile-track/${encodeURIComponent(String(demandId))}/profiles`, {
-    headers: {
-    },
+ 
   });
   return res.data;
 };
