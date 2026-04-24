@@ -19,7 +19,7 @@ const labelTitle = "block text-[15px] font-bold text-gray-800";
 const inputCls =
   "w-full h-9 rounded-md border border-gray-300 bg-white px-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900";
 const cardWrap =
-  "max-w-4xl mx-auto bg-white rounded-md shadow-md border border-gray-200 p-5 md:p-6 mt-[-30px]";
+  "max-w-4xl mx-auto bg-white rounded-md shadow-md border border-gray-200 p-5 md:p-6 mt-[-10px]";
 const grid2 = "grid grid-cols-1 gap-4 sm:grid-cols-2";
 const grid1 = "grid grid-cols-1 gap-4";
 const sectionGap = "mt-5";
@@ -207,7 +207,7 @@ function validatePhoneByCountry(rawPhone, callingCode) {
 }
 function validateEmpId(raw) {
   const digits = onlyDigits(raw);
-  if (!digits) return { ok: false, reason: "Employee ID is required." };
+  if (!digits) return { ok: true };
   if (digits.length < 6) return { ok: false, reason: "Employee ID must be at least 6 digits." };
   return { ok: true, value: digits };
 }
@@ -215,7 +215,10 @@ function validateEmpId(raw) {
 /** NEW: validatePAN - 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F). */
 function validatePAN(raw) {
   const val = (raw || "").toUpperCase().trim();
-  if (!val) return { ok: false, reason: "PAN is required." };
+
+  // PAN OPTIONAL
+  if (!val) return { ok: true };
+
   const re = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
   if (!re.test(val)) {
     return {
@@ -289,8 +292,9 @@ export default function RDGTATeam() {
 
   // UPDATED: final profile type selection order: Role > URL/state > empty
   const resolvedProfileType = roleProfileType || derivedProfileTypeFromUrl || ""; // UPDATED
-  const isInternal = (resolvedProfileType || "").toLowerCase() === "internal"; // UPDATED
-  const showEmpIdField = isInternal || isAdmin;
+  // const isInternal = (resolvedProfileType || "").toLowerCase() === "internal"; // UPDATED
+  // const showEmpIdField = isInternal || isAdmin;
+
 
   const [currentUser, setCurrentUser] = useState({ userId: "", name: "" });
 
@@ -312,6 +316,14 @@ export default function RDGTATeam() {
     panNumber: "",
     profileStatus: null,
   });
+
+
+
+
+  // ✅ FINAL SOURCE OF TRUTH
+  const isInternal = !!form.empId;
+  const showEmpIdField = true;
+
 
   useEffect(() => {
     const u = getCurrentUser();
@@ -440,20 +452,28 @@ export default function RDGTATeam() {
         : "",
     summary: form.summary && form.summary.length > 2000 ? "Max 2000 characters" : "",
   };
+  // const hasErrors =
+  //   Object.values(errors).some(Boolean) || (!!empIdError && isInternal) || !!panError;
+
+
   const hasErrors =
-    Object.values(errors).some(Boolean) || (!!empIdError && isInternal) || !!panError;
+    Object.values(errors).some(Boolean) ;
 
-  // Find externalInternalId by label ("Internal"/"External") from dropdowns
-  const externalInternalId = useMemo(() => {
-    const list = safe(options?.externalInternal);
-    // Prefer label match
-    const label = isInternal ? "internal" : "external";
-    const match = list.find((o) => String(o.label).toLowerCase() === label);
-    if (match?.value) return Number(match.value);
 
-    // Fallback to your provided IDs
-    return isInternal ? 1 : 2;
-  }, [options, isInternal]);
+  // // Find externalInternalId by label ("Internal"/"External") from dropdowns
+  // const externalInternalId = useMemo(() => {
+  //   const list = safe(options?.externalInternal);
+  //   // Prefer label match
+  //   const label = isInternal ? "internal" : "external";
+  //   const match = list.find((o) => String(o.label).toLowerCase() === label);
+  //   if (match?.value) return Number(match.value);
+
+  //   // Fallback to your provided IDs
+  //   return isInternal ? 1 : 2;
+  // }, [options, isInternal]);
+
+  // ✅ Internal if empId exists, else External
+  const externalInternalId = form.empId ? 1 : 2;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -462,27 +482,39 @@ export default function RDGTATeam() {
     if (!form.emailId) return message.warning("Email is required.");
 
     // PAN submit validation
-    const panCheck = validatePAN(form.panNumber);
-    if (!panCheck.ok) {
-      setPanTouched(true);
-      setPanError(panCheck.reason);
-      return;
-    }
-    setPanError("");
+    // const panCheck = validatePAN(form.panNumber);
+    // if (!panCheck.ok) {
+    //   setPanTouched(true);
+    //   setPanError(panCheck.reason);
+    //   return;
+    // }
+    // setPanError("");
 
-    if (isInternal) {
-      if (!form.empId) {
-        setEmpIdTouched(true);
-        setEmpIdError("Employee ID is required.");
-        return;
-      }
-      const empCheck = validateEmpId(form.empId);
-      if (!empCheck.ok) {
-        setEmpIdTouched(true);
-        setEmpIdError(empCheck.reason);
-        return;
-      }
-    }
+    // if (isInternal) {
+    //   if (!form.empId) {
+    //     setEmpIdTouched(true);
+    //     setEmpIdError("Employee ID is required.");
+    //     return;
+    //   }
+    //   const empCheck = validateEmpId(form.empId);
+    //   if (!empCheck.ok) {
+    //     setEmpIdTouched(true);
+    //     setEmpIdError(empCheck.reason);
+    //     return;
+    //   }
+    // }
+
+
+    //  Validate ONLY if empId is entered
+    // if (form.empId) {
+    //   const empCheck = validateEmpId(form.empId);
+    //   if (!empCheck.ok) {
+    //     setEmpIdTouched(true);
+    //     setEmpIdError(empCheck.reason);
+    //     return;
+    //   }
+    // }
+
 
     if (!form.countryId) {
       setPhoneTouched(true);
@@ -536,7 +568,8 @@ export default function RDGTATeam() {
       secondarySkillsIds: safe(form.secondarySkills).map((i) => Number(i.value)), // UPDATED key name
 
       // If your backend accepts PAN for profiles, uncomment and ensure the key matches:
-      panNumber: panCheck.value,
+      // panNumber: panCheck.value,
+      ...(form.panNumber ? { panNumber: form.panNumber } : {}),
     };
 
     try {
@@ -546,10 +579,10 @@ export default function RDGTATeam() {
         const res = await submitProfileUpdate(editId, payload, form.cv || null); // file optional
         message.success(res?.message || "Profile updated successfully");
       } else {
-        if (!form.cv) {
-          message.warning("Please attach CV (PDF/DOC/DOCX).");
-          return;
-        }
+        // if (!form.cv) {
+        //   message.warning("Please attach CV (PDF/DOC/DOCX).");
+        //   return;
+        // }
         const res = await submitProfileCreate(payload, form.cv); // file required
         message.success(res?.message || "Profile created successfully");
       }
@@ -635,6 +668,14 @@ export default function RDGTATeam() {
                 onChange={handleInput}
                 onBlur={() => {
                   setPanTouched(true);
+
+
+                  // If PAN is empty → do NOTHING
+                  if (!form.panNumber) {
+                    setPanError("");
+                    return;
+                  }
+
                   const r = validatePAN(form.panNumber);
                   setPanError(r.ok ? "" : r.reason);
                 }}
@@ -660,6 +701,14 @@ export default function RDGTATeam() {
                   onChange={handleInput}
                   onBlur={() => {
                     setEmpIdTouched(true);
+
+                    // Empty Emp ID → no error
+                    if (!form.empId) {
+                      setEmpIdError("");
+                      return;
+                    }
+
+
                     const r = validateEmpId(form.empId);
                     // if not Internal, do not block submit—just clear/show helper
                     setEmpIdError(r.ok ? "" : r.reason);

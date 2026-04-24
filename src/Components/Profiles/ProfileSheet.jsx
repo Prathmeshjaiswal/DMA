@@ -2,8 +2,8 @@
 
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, message } from "antd";
-import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
+import { Button, message, Menu, Dropdown } from "antd";
+import { PlusOutlined, ExportOutlined, UploadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 import Layout from "../Layout.jsx";
@@ -17,6 +17,7 @@ import {
   downloadProfileCv,
   searchProfilesApi,
 } from "../api/Profiles/addProfile.js";
+
 
 import { usePermissions } from "../Auth/PermissionProvider.jsx";
 /* --------------------- helpers --------------------- */
@@ -239,9 +240,32 @@ export default function ProfileSheet() {
 
 
 
+  const uploadMenu = {
+    items: [
+      {
+        key: "single",
+        icon: <PlusOutlined />,
+        label: "Single Upload",
+      },
+      {
+        key: "bulk",
+        icon: <UploadOutlined />,
+        label: "Bulk Upload",
+      },
+    ],
+    onClick: ({ key }) => {
+      if (key === "single") {
+        navigate("/RDGTATeam");
+      }
+      if (key === "bulk") {
+        navigate("/BulkUploadProfile");
+      }
+    },
+  };
+
   //permission check
 
-  const { can ,list} = usePermissions();
+  const { can, list } = usePermissions();
   const canAttachDemand = can("DashBoard", "Profiles", "Attach Demand");
   const canCreateProfile = can("DashBoard", "Profiles", "Create Profile");
   const canViewDemandData = can("DashBoard", "Profiles", "Demand Detail");
@@ -253,12 +277,12 @@ export default function ProfileSheet() {
   const canViewProfile = can("DashBoard", "Profiles", "View Profile");
 
 
- 
-// console.log("canExcelExport:", canExcelExport);
-// console.log(
-//   "RDG/TA PERMS:",
-//   list?.modulesByName?.DashBoard?.["RDG/TA"]
-// );
+
+  // console.log("canExcelExport:", canExcelExport);
+  // console.log(
+  //   "RDG/TA PERMS:",
+  //   list?.modulesByName?.DashBoard?.["RDG/TA"]
+  // );
 
 
 
@@ -272,14 +296,14 @@ export default function ProfileSheet() {
 
   // role
   const roleName = getCurrentRoleName();
-  
+
   const adminView = isAdminRole(roleName);
   const showEmpId = isRDGRole(roleName) || isAdminRole(roleName);
 
-  
-// const isPmoRole = String(roleName || "")
-//   .toLowerCase()
-//   .includes("pmo");
+
+  // const isPmoRole = String(roleName || "")
+  //   .toLowerCase()
+  //   .includes("pmo");
 
   const currentUserId = useMemo(() => getCurrentUserId(), []);
 
@@ -288,7 +312,7 @@ export default function ProfileSheet() {
     () => [
       { key: "candidateName", label: "Candidate Name" },
       { key: "emailId", label: "Email ID" },
-      { key: "panNumber", label: "PAN Number" }, 
+      { key: "panNumber", label: "PAN Number" },
       { key: "empId", label: "Employee ID" },
       { key: "profileStatus", label: "Status" },
       { key: "phoneNumber", label: "Phone" },
@@ -309,26 +333,26 @@ export default function ProfileSheet() {
   //   [SHOW_PAN, ALL_COLUMNS_BASE]
   // );
 
-//   const ALL_COLUMNS = useMemo(() => {
-//   return isPmoRole
-//     ? ALL_COLUMNS_BASE
-//     : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
-// }, [isPmoRole, ALL_COLUMNS_BASE]);
+  //   const ALL_COLUMNS = useMemo(() => {
+  //   return isPmoRole
+  //     ? ALL_COLUMNS_BASE
+  //     : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
+  // }, [isPmoRole, ALL_COLUMNS_BASE]);
 
-const ALL_COLUMNS = useMemo(() => {
-  return canPanVisibility
-    ? ALL_COLUMNS_BASE
-    : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
-}, [canPanVisibility, ALL_COLUMNS_BASE]);
+  const ALL_COLUMNS = useMemo(() => {
+    return canPanVisibility
+      ? ALL_COLUMNS_BASE
+      : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
+  }, [canPanVisibility, ALL_COLUMNS_BASE]);
 
   // Default visible (PAN present in base list but filtered by flag below)
   const defaultVisibleBase = useMemo(
     () => [
       "candidateName",
       "emailId",
-          ...(canPanVisibility ? ["panNumber"] : []),
-    // ...(isPmoRole ? ["panNumber"] : []), // ✅ CONDITIONAL
-    ...(showEmpId ? ["empId"] : []),
+      ...(canPanVisibility ? ["panNumber"] : []),
+      // ...(isPmoRole ? ["panNumber"] : []), // ✅ CONDITIONAL
+      ...(showEmpId ? ["empId"] : []),
 
       // "panNumber", // filtered out when SHOW_PAN === 0
       // ...(showEmpId ? ["empId"] : []),
@@ -346,9 +370,9 @@ const ALL_COLUMNS = useMemo(() => {
   );
 
   const defaultVisible = useMemo(
-  () => defaultVisibleBase,
-  [defaultVisibleBase]
-);
+    () => defaultVisibleBase,
+    [defaultVisibleBase]
+  );
 
   // paging + data
   const [rows, setRows] = useState([]);
@@ -582,16 +606,16 @@ const ALL_COLUMNS = useMemo(() => {
             </div>
             <div className="flex items-start justify-end gap-2">
               {canCreateProfile && (
-                <Button
-                  type="default"
-                  icon={<PlusOutlined />}
-                  onClick={() => navigate("/RDGTATeam")}
-                  className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
-                >
-                  Add New Profile
-                </Button>
+                <Dropdown menu={uploadMenu} trigger={["click"]}>
+                  <Button
+                    type="default"
+                    icon={<PlusOutlined />}
+                    className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 px-4 py-2"
+                  >
+                    Add New Profile
+                  </Button>
+                </Dropdown>
               )}
-
 
               {canExcelExport && (
                 <Button
