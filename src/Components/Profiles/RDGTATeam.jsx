@@ -767,7 +767,7 @@ export default function RDGTATeam() {
                   className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
                   name="countryId"
                   value={form.countryId}
-                  oonChange={(e) => {
+                  onChange={(e) => {
                     const val = onlyDigits(e.target.value);
 
                     setForm((p) => ({ ...p, phoneNumber: val }));

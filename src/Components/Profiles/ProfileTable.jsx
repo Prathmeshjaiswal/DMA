@@ -19,7 +19,12 @@ import {
   DownloadOutlined,
   EditOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
+import {
+  submitProfileUpdate,
+} from "../api/Profiles/addProfile.js";
+
 
 // ✅ Mask PAN – show only last 4 characters// ✅ Mask PAN – show only};
 
@@ -35,6 +40,7 @@ export default function ProfileTable({
   visibleColumns = [],
   onViewRow,
   onDownload,
+  // onUploadCv,
   onSavePatch,
   dropdownOptions = {},
   serverPage = 0,
@@ -141,8 +147,8 @@ export default function ProfileTable({
   }, [editOpen, editRow, opts.profileStatus, form]);
 
   useEffect(() => {
-  setVisiblePanRowId(null);
-}, [rows]);
+    setVisiblePanRowId(null);
+  }, [rows]);
 
 
 
@@ -424,7 +430,7 @@ export default function ProfileTable({
               </Tooltip>
             )}
 
-            <Tooltip title={hasCv ? `Download CV (${fileName} )` : "No CV"}>
+            {/* <Tooltip title={hasCv ? `Download CV (${fileName} )` : "No CV"}>
               <Button
                 type="text"
                 size="small"
@@ -432,23 +438,100 @@ export default function ProfileTable({
                 disabled={!hasCv}
                 onClick={(e) => handleDownloadClick(e, row)}
               />
-            </Tooltip>
+            </Tooltip> */}
+            {/* CV Download / Upload */}
+            {hasCv ? (
+              <Tooltip title={`Download CV (${fileName})`}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={(e) => handleDownloadClick(e, row)}
+                />
+              </Tooltip>
+            ) : (
+              <Tooltip title="Upload CV">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<UploadOutlined />}
+
+                  style={{ color: "#dc2626" }}   // ✅ Tailwind red-600
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#b91c1c")} // red-700
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#dc2626")}
+
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = ".pdf,.doc,.docx";
+
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+
+                      //  validate file
+                      if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+                        message.error("Only PDF, DOC, DOCX files are allowed");
+                        return;
+                      }
+
+                      if (file.size > 10 * 1024 * 1024) {
+                        message.error("File must be 10MB or less");
+                        return;
+                      }
+
+                      try {
+                        const profileId = ensureId(row);
+                        if (!profileId) {
+                          message.error("Profile ID not found. Cannot upload CV.");
+                          return;
+                        }
+
+                        // CALL UPDATE API WITH FILE ONLY
+                        await submitProfileUpdate(profileId, {}, file);
+
+                        message.success("CV uploaded successfully");
+
+                        // FORCE REFRESH (pick ONE)
+                        // Option A: refetch list from parent (BEST)
+                        onPageChange?.(serverPage);
+
+                        // Option B (if above not available):
+                        // window.location.reload();
+
+                      } catch (err) {
+                        console.error("Upload CV error:", err);
+                        message.error(
+                          err?.response?.data?.message || "Failed to upload CV"
+                        );
+                      }
+                    };
+
+                    input.click();
+                  }}
+                />
+              </Tooltip>
+
+            )}
+
           </div>
         );
       },
     });
 
     return base;
-  }, 
-[  columns,
-  visibleColumns,
-  onViewRow,
-  openSearch,
-  query,
-  onQueryChange,
-  canPanVisibility,
-  visiblePanRowId
-]);
+  },
+    [columns,
+      visibleColumns,
+      onViewRow,
+      openSearch,
+      query,
+      onQueryChange,
+      canPanVisibility,
+      visiblePanRowId
+    ]);
 
 
   const pagination = useMemo(
@@ -517,7 +600,7 @@ export default function ProfileTable({
         <Modal
           open={editOpen}
           onCancel={closeEdit}
-          // ✅ Mount form subtree even when modal is closed so the form instance is always connected
+          //  Mount form subtree even when modal is closed so the form instance is always connected
           forceRender
           destroyOnHidden
           title={

@@ -594,6 +594,12 @@ export default function ProfileSheet() {
     setViewOpen(true);
   };
 
+  const handleUploadCv = async (row, file) => {
+  await uploadProfileCvApi(row.id, file); // ✅ your backend API
+  refreshTable(); // ✅ reload table data
+};
+
+
   return (
     <>
       <Layout>
@@ -648,6 +654,7 @@ export default function ProfileSheet() {
             visibleColumns={visibleColumns}  /* PAN not in defaults when SHOW_PAN === 0 */
             onViewRow={onViewRow}
             onDownload={downloadProfileCv ? (row) => downloadProfileCv(row.cvFileName) : undefined}
+             onUploadCv={handleUploadCv}
             onSavePatch={handleSavePatch}
             dropdownOptions={dropdownOptions}
             serverPage={page}

@@ -145,14 +145,19 @@
 
   /** CREATE (multipart: payload + file) */
   export async function submitProfileCreate(payload, file) {
-    if (!file) throw new Error("CV file is required for create.");
+    // if (!file) throw new Error("CV file is required for create.");
 
     const formData = new FormData();
     formData.append(
       "payload",
       new Blob([JSON.stringify(payload)], { type: "application/json" })
     );
+    
+ //  append file ONLY if it exists
+  if (file instanceof File) {
     formData.append("file", file, file.name);
+  }
+
 
     const res = await api.post("/profiles/create", formData);
     return res.data;
