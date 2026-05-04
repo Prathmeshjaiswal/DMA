@@ -223,7 +223,7 @@ function ProfileCard({ p }) {
 }
 
 /** Attach button row in "Attach Profile" mode */
-function ProfileRow({ p, selected, onToggle }) {
+function ProfileRow({ p, selected, onToggle, onView }) {
   const isServerAttached = !!(p?.attachedDate || p?.profileAttachedDate || p?.dateAttached);
   const isSelected = !!selected;
 
@@ -231,35 +231,39 @@ function ProfileRow({ p, selected, onToggle }) {
   let btnType = "default";
   let disabled = false;
 
-  if (isServerAttached) {
+  if (isServerAttached || isSelected) {
     label = "Attached";
     btnType = "primary";
-    disabled = true;
-  } else if (isSelected) {
-    label = "Attached";
-    btnType = "primary";
-    disabled = false; // allow unselect
   }
-
-  const handleClick = disabled ? undefined : () => onToggle?.(p);
 
   return (
     <div className="flex items-center justify-between border-b border-gray-200 py-2">
+      {/* LEFT */}
       <div className="min-w-0">
         <div className="font-medium text-gray-800 truncate">
           {toTitleCase(p?.candidateName ?? "-")}
         </div>
         <div className="text-xs text-gray-500">
-          Exp: {p?.experience ?? "-"}&nbsp;Yrs
+          Exp: {p?.experience ?? "-"} Yrs
         </div>
       </div>
+
+      {/* RIGHT */}
       <div className="flex items-center gap-2">
+        {/* 👁 EYE ICON */}
+        <Button
+          type="text"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => onView?.(p)}
+        />
+
+        {/* ATTACH BUTTON */}
         <Button
           size="small"
           type={btnType}
           disabled={disabled}
-          onClick={handleClick}
-          htmlType="button"
+          onClick={() => onToggle?.(p)}
         >
           {label}
         </Button>
@@ -337,6 +341,14 @@ export default function DemandDetailModal({
   const currentDemandComparable = useMemo(() => getComparableDemandIdFromRow(row), [row]);
 
 
+
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewProfile, setViewProfile] = useState(null);
+  const [viewList, setViewList] = useState([]);
+  const [viewLoading, setViewLoading] = useState(false);
+
+
+
   //permission check
 
   const { can } = usePermissions();
@@ -394,6 +406,37 @@ export default function DemandDetailModal({
       setLoadingProfiles(false);
     }
   };
+
+
+  const openProfileUsage = async (profile) => {
+    const pid = profileKey(profile);
+    if (!pid || !row?.id) {
+      message.error("Profile or Demand ID missing");
+      return;
+    }
+
+    setViewProfile(profile);
+    setViewOpen(true);
+    setViewLoading(true);
+
+    try {
+      // SAME API you already use for small cards
+      const res = await getAttachedProfilesByDemandId(row.id);
+      const list = extractList(res);
+
+      //  Filter SAME response for THIS profile only
+      const filtered = list.filter(
+        (p) => String(profileKey(p)) === String(pid)
+      );
+
+      setViewList(filtered);
+    } catch (e) {
+      message.error("Failed to load profile usage");
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
 
   const loadAttached = async () => {
     if (!demandPkId) return;
@@ -666,6 +709,46 @@ export default function DemandDetailModal({
                       ]}
                     />
 
+
+                    <Modal
+                      open={viewOpen}
+                      onCancel={() => setViewOpen(false)}
+                      footer={null}
+                      width={600}
+                      title={`Profile Usage — ${viewProfile?.candidateName ?? ""}`}
+                    >
+                      {viewLoading ? (
+                        <Spin />
+                      ) : viewList.length ? (
+                        <div className="divide-y">
+                          {viewList.map((p, i) => (
+                            <div key={i} className="py-2 grid grid-cols-3 text-sm">
+                              <div className="font-medium">
+                                {p?.displayDemandId ??
+                                  p?.demandId ??
+                                  p?.demand?.demandId ??
+                                  "-"}
+                              </div>
+
+                              <div>
+                                {p?.profileTrackerStatus?.name ?? "-"}
+                              </div>
+
+                              <div>
+                                {p?.profileStatus?.name ?? "-"}
+                              </div>
+                              
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 text-sm">
+                          Profile not attached to any demand.
+                        </div>
+                      )}
+                    </Modal>
+
+
                     {/* Header actions - only in Open tab */}
                     <div className="mb-3 flex items-center justify-between">
                       <div className="text-gray-700 font-medium">
@@ -756,9 +839,11 @@ export default function DemandDetailModal({
                                     p={p}
                                     selected={!!selectedMap[key]}
                                     onToggle={toggleSelect}
+                                    onView={openProfileUsage}
                                   />
                                 );
                               })}
+
                             </div>
                           ) : (
                             <div className="text-gray-500 text-sm px-2 py-6">

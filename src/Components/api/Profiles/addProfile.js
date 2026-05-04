@@ -164,16 +164,41 @@
   }
 
   /** UPDATE (ALWAYS multipart; payload as PLAIN STRING) */
-  export async function submitProfileUpdate(id, payload, file = null) {
-    if (!id) throw new Error("Missing profile id");
+  /** UPDATE profile OR upload/update CV (multipart) */
+export async function submitProfileUpdate(id, payload = {}, file = null) {
+  if (!id) throw new Error("Missing profile id");
 
-    const formData = new FormData();
-    formData.append("payload", JSON.stringify(payload)); // plain string expected
-    if (file) formData.append("file", file, file.name);
+  const formData = new FormData();
 
-    const res = await api.put(`/profiles/update/${id}`, formData, {
-      transformRequest: [(data) => data], // keep FormData intact
-    });
+  // ✅ send JSON as Blob (same style as CREATE)
+  formData.append(
+    "payload",
+    new Blob([JSON.stringify(payload)], { type: "application/json" })
+  );
 
-    return res.data;
+  // ✅ file OPTIONAL (works for CV upload / replace)
+  if (file instanceof File) {
+    formData.append("file", file, file.name);
   }
+
+  const res = await api.put(`/profiles/update/${id}`, formData, {
+
+  });
+
+  return res.data;
+}
+
+  export async function bulkUploadProfiles(excelFile) {
+  if (!(excelFile instanceof File)) {
+    throw new Error("Excel file is required");
+  }
+
+  const formData = new FormData();
+  formData.append("file", excelFile);
+
+  const res = await api.post("/profiles/bulk-upload", formData, {
+    
+  });
+
+  return res.data;
+}

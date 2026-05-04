@@ -2,7 +2,7 @@
 
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, message, Menu, Dropdown } from "antd";
+import { Button, message, Menu, Dropdown ,Modal} from "antd";
 import { PlusOutlined, ExportOutlined, UploadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +18,7 @@ import {
   searchProfilesApi,
 } from "../api/Profiles/addProfile.js";
 
+import { bulkUploadProfiles } from "../api/Profiles/addProfile.js";
 
 import { usePermissions } from "../Auth/PermissionProvider.jsx";
 /* --------------------- helpers --------------------- */
@@ -144,6 +145,9 @@ function adaptRow(item) {
   const phoneNumber = asText(pick("phoneNumber", "phone"));
   const experience = pick("experience", "experienceYears", "expYears");
 
+  const sapId = asText(pick("sapId", "sapID", "sap_id"));
+
+
   const location = asText(pick("locationName", "location", "locationLabel"));
   const hbu = asText(pick("hbuName", "hbu", "hbuLabel"));
   const skillCluster = asText(pick("skillClusterName", "skillCluster", "skillClusterLabel"));
@@ -219,6 +223,7 @@ function adaptRow(item) {
     externalInternal,
     locationId,
     hbuId,
+    sapId,
     skillClusterId,
     externalInternalId,
     primarySkills,
@@ -234,9 +239,77 @@ function adaptRow(item) {
   };
 }
 
+
 /* --------------------- component --------------------- */
 export default function ProfileSheet() {
   const navigate = useNavigate();
+
+
+  const [bulkErrors, setBulkErrors] = useState([]);
+  const [showBulkErrorModal, setShowBulkErrorModal] = useState(false);
+
+
+  const handleBulkUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept =
+      ".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    // ✅ VERY IMPORTANT: hide it
+    input.style.display = "none";
+
+    // ✅ attach to DOM (required by some browsers)
+    document.body.appendChild(input);
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+
+      // ✅ cleanup immediately (THIS REMOVES “Choose file” text)
+      document.body.removeChild(input);
+
+      if (!file) return;
+
+      try {
+        message.loading({ content: "Uploading profiles…", key: "bulkUpload" });
+
+        const result = await bulkUploadProfiles(file);
+
+        message.success({
+          content: `Upload successful ✅ (${result.successCount} profiles added)`,
+          key: "bulkUpload",
+        });
+
+
+        if (result.failureCount > 0 && Array.isArray(result.errors)) {
+          setBulkErrors(result.errors);
+          setShowBulkErrorModal(true);
+
+
+          message.warning(
+            `⚠️ ${result.failureCount} profiles failed. Click to view details.`
+          );
+
+          // ✅ refresh table
+          fetchServer(0, size);
+        }
+
+      } catch (err) {
+        setBulkErrors(err?.response?.data?.errors || []);
+        setShowBulkErrorModal(true);
+
+        message.error({
+          content: "Bulk upload failed. Please review errors.",
+          key: "bulkUpload",
+        });
+      }
+
+    };
+
+    // ✅ open file chooser
+    input.click();
+  };
+
+
 
 
 
@@ -258,7 +331,7 @@ export default function ProfileSheet() {
         navigate("/RDGTATeam");
       }
       if (key === "bulk") {
-        navigate("/BulkUploadProfile");
+        handleBulkUpload();
       }
     },
   };
@@ -300,6 +373,8 @@ export default function ProfileSheet() {
   const adminView = isAdminRole(roleName);
   const showEmpId = isRDGRole(roleName) || isAdminRole(roleName);
 
+  const showSapId = isRDGRole(roleName) || isAdminRole(roleName);
+
 
   // const isPmoRole = String(roleName || "")
   //   .toLowerCase()
@@ -315,6 +390,7 @@ export default function ProfileSheet() {
       { key: "panNumber", label: "PAN Number" },
       { key: "empId", label: "Employee ID" },
       { key: "profileStatus", label: "Status" },
+      { key: "sapId", label: "SAP ID" },
       { key: "phoneNumber", label: "Phone" },
       { key: "experienceYears", label: "Exp (yrs)" },
       { key: "skillCluster", label: "Skill Cluster" },
@@ -340,10 +416,12 @@ export default function ProfileSheet() {
   // }, [isPmoRole, ALL_COLUMNS_BASE]);
 
   const ALL_COLUMNS = useMemo(() => {
-    return canPanVisibility
-      ? ALL_COLUMNS_BASE
-      : ALL_COLUMNS_BASE.filter((c) => c.key !== "panNumber");
-  }, [canPanVisibility, ALL_COLUMNS_BASE]);
+    return ALL_COLUMNS_BASE.filter((col) => {
+      if (col.key === "panNumber" && !canPanVisibility) return false;
+      if (col.key === "sapId" && !showSapId) return false;
+      return true;
+    });
+  }, [canPanVisibility, showSapId, ALL_COLUMNS_BASE]);
 
   // Default visible (PAN present in base list but filtered by flag below)
   const defaultVisibleBase = useMemo(
@@ -353,6 +431,8 @@ export default function ProfileSheet() {
       ...(canPanVisibility ? ["panNumber"] : []),
       // ...(isPmoRole ? ["panNumber"] : []), // ✅ CONDITIONAL
       ...(showEmpId ? ["empId"] : []),
+
+      ...(showSapId ? ["sapId"] : []),
 
       // "panNumber", // filtered out when SHOW_PAN === 0
       // ...(showEmpId ? ["empId"] : []),
@@ -365,7 +445,7 @@ export default function ProfileSheet() {
       "location",
       "hbu",
     ],
-    [showEmpId]
+    [showEmpId, showSapId, canPanVisibility]
     // [showEmpId,isPmoRole]
   );
 
@@ -470,6 +550,9 @@ export default function ProfileSheet() {
           hasAnyFilter || forceSearch
             ? await searchProfilesApi(filter, nextPage, nextSize)
             : await getProfiles(nextPage, nextSize);
+
+
+        console.log("🔴 RAW API RESPONSE:", resp);
 
         const adapted = Array.isArray(resp.items)
           ? resp.items.map((it) => adaptRow(it))
@@ -595,12 +678,14 @@ export default function ProfileSheet() {
   };
 
   const handleUploadCv = async (row, file) => {
-  await uploadProfileCvApi(row.id, file); // ✅ your backend API
-  refreshTable(); // ✅ reload table data
-};
+    await uploadProfileCvApi(row.id, file); // ✅ your backend API
+    refreshTable(); // ✅ reload table data
+  };
 
 
   return (
+
+
     <>
       <Layout>
         <div>
@@ -654,7 +739,7 @@ export default function ProfileSheet() {
             visibleColumns={visibleColumns}  /* PAN not in defaults when SHOW_PAN === 0 */
             onViewRow={onViewRow}
             onDownload={downloadProfileCv ? (row) => downloadProfileCv(row.cvFileName) : undefined}
-             onUploadCv={handleUploadCv}
+            onUploadCv={handleUploadCv}
             onSavePatch={handleSavePatch}
             dropdownOptions={dropdownOptions}
             serverPage={page}
@@ -690,6 +775,51 @@ export default function ProfileSheet() {
         canViewOnboardingdata={canViewOnboardingdata}
         canAttachDemand={canAttachDemand}
       />
+
+
+
+
+      <Modal
+        open={showBulkErrorModal}
+        onCancel={() => setShowBulkErrorModal(false)}
+        footer={null}
+        title="Bulk Upload Errors"
+        width={700}
+      >
+        <div className="max-h-[400px] overflow-auto">
+          <table className="w-full text-sm border border-gray-200">
+            <thead className="bg-gray-100 sticky top-0">
+              <tr>
+                <th className="border px-3 py-2">Row</th>
+                <th className="border px-3 py-2">Email</th>
+                <th className="border px-3 py-2">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulkErrors.map((err, idx) => (
+                <tr key={idx} className="hover:bg-red-50">
+                  <td className="border px-3 py-2 text-center">
+                    {err.row}
+                  </td>
+                  <td className="border px-3 py-2">
+                    {err.email || "-"}
+                  </td>
+                  <td className="border px-3 py-2 text-red-600 font-medium">
+                    {err.reason}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {bulkErrors.length === 0 && (
+            <div className="text-center text-gray-500 py-4">
+              No detailed error information available.
+            </div>
+          )}
+        </div>
+      </Modal>
+
     </>
   );
 }

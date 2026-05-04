@@ -5,6 +5,7 @@ import Login from './Components/Auth/Login.jsx'
 // import OnBoardingTracker from "./Components/DemandsManagement/Tracking/OnBoardingTracker.jsx"
 import ProfileTracker from "./Components/DemandsManagement/Tracking/ProfileTracker.jsx"
 import RDGTATeam from "./Components/Profiles/RDGTATeam.jsx"
+// import BulkUploadProfile from "./Components/Profiles/BulkUploadProfile.jsx"
 import Report from "./Components/DemandsManagement/Report.jsx"
 import HBU from "./Components/DemandsManagement/HBU.jsx"
 import EditDemand from "./Components/DemandsManagement/EditDemand.jsx"
@@ -27,7 +28,13 @@ import ProfileSheet from "./Components/Profiles/ProfileSheet.jsx";
 import Draft1 from './Components/DemandsManagement/AddNewDemand/Draft1.jsx'
 import OnboardingList from "./Components/OnBoarding/OnboardingList.jsx"
 
+import { logout } from './Components/api/logout.js'
 
+import useIdleTimer from './hooks/useIdleTimer.js'
+
+import IdleWarningModal from './Components/IdleWarningModal.jsx'
+// import SessionIdleProvider from "../src/context/SessionIdleProvider.jsx"
+// import AuthProvider from './Components/Auth/AuthProvider.jsx'
 
 
 
@@ -44,9 +51,20 @@ const Unauthorized = () => (
 );
 
 function App() {
+
+  const { showWarning, continueSession } = useIdleTimer();
+
   return (
     <>
+
+
+      <IdleWarningModal
+        open={showWarning}
+        onContinue={continueSession}
+      />
+
       <Router>
+
         <Routes>
           <Route path="/" element={<Navigate to="/Login" />} />
           <Route path="/Login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -246,6 +264,7 @@ function App() {
 
           <Route path="*" element={<h2>Page Not Found</h2>} />
         </Routes>
+
       </Router>
       <div></div>
     </>

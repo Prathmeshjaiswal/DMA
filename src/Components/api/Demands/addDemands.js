@@ -219,10 +219,25 @@ export const submitStep2 = async (payload) => {
 };
 
 // === Dropdowns (no change) ===
+// export const getDropDownData = async () => {
+//   const res = await api.get('/addNewDemand/home',);
+//   return res.data?.data ?? res.data;
+// };
+
+
 export const getDropDownData = async () => {
-  const res = await api.get('/addNewDemand/home',);
-  return res.data?.data ?? res.data;
+  try {
+    const res = await api.get('/addNewDemand/home');
+    return res.data?.data ?? res.data;
+  } catch (err) {
+    if (err?.response?.status === 401) {
+      // token refresh in progress — ignore silently
+      return null;
+    }
+    throw err;
+  }
 };
+
 
 
 

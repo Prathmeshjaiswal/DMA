@@ -301,6 +301,7 @@ export default function RDGTATeam() {
   const [form, setForm] = useState({
     profileType: "",
     empId: "", // — maps to backend
+    sapId: "",
     candidateName: "",
     emailId: "",
     countryId: "",
@@ -318,11 +319,19 @@ export default function RDGTATeam() {
   });
 
 
+  // ✅ ENSURE empId & sapId ARE NEVER SET TOGETHER
+  useEffect(() => {
+    // If empId is entered, CLEAR sapId (Internal profile)
+    if (form.empId && form.sapId) {
+      setForm((p) => ({ ...p, sapId: "" }));
+    }
+  }, [form.empId]);
+
 
 
   // ✅ FINAL SOURCE OF TRUTH
   const isInternal = !!form.empId;
-  const showEmpIdField = true;
+  // const showEmpIdField = true;
 
 
   useEffect(() => {
@@ -457,7 +466,7 @@ export default function RDGTATeam() {
 
 
   const hasErrors =
-    Object.values(errors).some(Boolean) ;
+    Object.values(errors).some(Boolean);
 
 
   // // Find externalInternalId by label ("Internal"/"External") from dropdowns
@@ -554,6 +563,7 @@ export default function RDGTATeam() {
       candidateName: form.candidateName,
       emailId: form.emailId,
       ...(form.empId ? { empId: String(form.empId) } : {}), // UPDATED
+      ...(form.sapId ? { sapId: String(form.sapId) } : {}),
       phoneNumber: onlyDigits(form.phoneNumber), // UPDATED
       isActive: true,
       experience: Number(form.experience), // UPDATED: backend uses 'experience'
@@ -657,6 +667,42 @@ export default function RDGTATeam() {
               )}
             </div>
 
+            {/* ✅ SAP ID: show only when EMP ID is empty */}
+            {!form.empId && (
+              <div>
+                <label className={labelCls}>SAP ID</label>
+                <input
+                  className={inputCls}
+                  name="sapId"
+                  value={form.sapId}
+                  onChange={handleInput}
+                  placeholder="e.g. 128754"
+                  autoComplete="off"
+                  inputMode="numeric"
+                />
+              </div>
+            )}
+
+            {/* ✅ EMP ID: show only when SAP ID is empty */}
+            {!form.sapId && (
+              <div>
+                <label className={labelCls}>Employee ID</label>
+                <input
+                  className={inputCls}
+                  name="empId"
+                  value={form.empId}
+                  onChange={handleInput}
+                  placeholder="e.g. 128713"
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                {empIdTouched && empIdError && (
+                  <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
+                )}
+              </div>
+            )}
+
+
             {/* NEW: PAN Number */}
             <div>
               <label className={labelCls}>PAN Number</label>
@@ -690,7 +736,7 @@ export default function RDGTATeam() {
             </div>
 
             {/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
-            {showEmpIdField && (
+            {/* {showEmpIdField && (
               <div>
                 <label className={labelCls}>Employee ID</label>
                 <input
@@ -721,7 +767,7 @@ export default function RDGTATeam() {
                   <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
                 )}
               </div>
-            )}
+            )} */}
 
             <div>
               <label className={labelCls}>Experience (years)</label>

@@ -29,48 +29,90 @@ export default function Login() {
   };
 
   /** submitHandler: Calls login, stores auth + role, normalizes permissions, updates context, navigates. */
+  // const submitHandler = async (e) => {
+  //   e.preventDefault();
+  //   console.log("Submitted form:", form);
+  //   try {
+  //     const resp = await login(form);
+  //     setServerMsg(resp?.message || "");
+
+  //     if (resp?.status === "SUCCESS") {
+
+  //       localStorage.setItem("token", resp.data.token);
+  //       localStorage.setItem("userId", resp.data.userId);
+
+  //       // Prefer real name if present, avoid hardcoding
+  //       const displayName = resp?.data?.name || resp?.data?.username || "User";
+  //       localStorage.setItem("username", displayName);
+
+  //       // Keep original role object
+  //       const roleObj = resp?.data?.role;
+  //       localStorage.setItem("roles", JSON.stringify(roleObj));
+
+  //       // Build & persist a simple permission map for fast UI checks
+  //       const perm = buildPermFromRole(roleObj);
+  //       savePerm(perm);
+  //       setPerm(perm);
+
+  //       // by simran
+  //       setIsAuthenticated(true);
+  //       navigate("/DashBoard");
+  //     }
   const submitHandler = async (e) => {
-    e.preventDefault();
-    console.log("Submitted form:", form);
-    try {
-      const resp = await login(form);
-      setServerMsg(resp?.message || "");
+  e.preventDefault();
+  setLoading(true);
 
-      if (resp?.success) {
-        localStorage.setItem("token", resp.data.token);
-        localStorage.setItem("userId", resp.data.userId);
+  try {
+    const resp = await login(form); // ✅ resp is AuthResponseDTO
 
-        // Prefer real name if present, avoid hardcoding
-        const displayName = resp?.data?.name || resp?.data?.username || "User";
-        localStorage.setItem("username", displayName);
+    if (resp?.status === "SUCCESS") {
+      // ✅ name
+      const displayName = resp?.name || "User";
+      localStorage.setItem("username", displayName);
 
-        // Keep original role object
-        const roleObj = resp?.data?.role;
-        localStorage.setItem("roles", JSON.stringify(roleObj));
+      // ✅ role
+      const roleObj = resp?.role;
+      localStorage.setItem("roles", JSON.stringify(roleObj));
 
-        // Build & persist a simple permission map for fast UI checks
-        const perm = buildPermFromRole(roleObj);
-        savePerm(perm);
-        setPerm(perm);
+      // ✅ permissions
+      const perm = buildPermFromRole(roleObj);
+      savePerm(perm);
+      setPerm(perm);
 
-        // by simran
-        setIsAuthenticated(true);
-        navigate("/DashBoard");
-      } else {
-        // setServerMsg(resp?.message || "Login failed.");
-      }
-    } catch (err) {
-      const errormessage =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Unable to login. Please try again.";
-      setServerMsg(errormessage);
-      message.error(errormessage);
-    } finally {
-      setLoading(false);
-      setForm({ userId: "", password: "" });
+      // ✅ auth state
+      setIsAuthenticated(true);
+
+      // ✅ redirect
+      navigate("/DashBoard", { replace: true });
+    } else {
+      message.error(resp?.message || "Login failed");
     }
+  } catch (err) {
+    const errormessage =
+      err?.response?.data?.message ||
+      err?.message ||
+      "Unable to login. Please try again.";
+
+    message.error(errormessage);
+  } finally {
+    setLoading(false);
+  }
   };
+  //  else {
+  //       setServerMsg(resp?.message || "Login failed.");
+  //     }
+  //   } catch (err) {
+  //     const errormessage =
+  //       err?.response?.data?.message ||
+  //       err?.message ||
+  //       "Unable to login. Please try again.";
+  //     setServerMsg(errormessage);
+  //     message.error(errormessage);
+  //   } finally {
+  //     setLoading(false);
+  //     setForm({ userId: "", password: "" });
+  //   }
+  // };
 
   return (
     <>

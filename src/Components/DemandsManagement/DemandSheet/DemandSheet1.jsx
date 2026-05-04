@@ -12,6 +12,8 @@ import { exportDemandSheet } from "../../api/Export/demandsheet.js";
 import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
 import { usePermissions } from "../../Auth/PermissionProvider.jsx";
+import { useAuth } from "../../Auth/AuthProvider.jsx";
+
 
 
 /* ================= HELPERS ================= */
@@ -103,12 +105,17 @@ const normalizeDemandDto = (d) => {
     jdFileName: d.jdFileName ?? d.fileName ?? null,
 
     pod: nameOf(d.pod),
-    // externalInternal: nameOf(d.externalInternal),
+    //     externalInternal: nameOf(d.externalInternal),
 
   };
 };
 
 
+
+const hasAccessToken = () => {
+  const t = localStorage.getItem("token");
+  return Boolean(t);
+};
 
 
 
@@ -117,6 +124,8 @@ export default function DemandSheet1() {
   const navigate = useNavigate();
   const isFirstLoad = useRef(true);
   const hasLoadedOnce = useRef(false);
+  const { isAuthenticated } = useAuth();
+
 
 
   //permission check
@@ -169,7 +178,7 @@ export default function DemandSheet1() {
     { key: "demandReceivedDate", label: "Demand Received Date" },
     // { key: "priorityComment", label: "Priority Comment" },
     // { key: "currentProfileShared", label: "Current Profile Shared" },
-    // { key: "externalInternal", label: "External / Internal" },
+    //     { key: "externalInternal", label: "External / Internal" },
   ];
 
   const defaultVisible = [
@@ -316,6 +325,7 @@ export default function DemandSheet1() {
     if (f.demandType) payload.demandTypeName = f.demandType;
     if (f.hbu) payload.hbuName = f.hbu;
 
+
     //  KARAT FILTER
     if (f.karat === "Yes") {
       payload.karatFlag = true;
@@ -386,10 +396,10 @@ export default function DemandSheet1() {
     async (page = 1, size = 10) => {
 
       // Prevent StrictMode double hit
-      if (hasLoadedOnce.current && !hasAnyFilter) {
-        return;
-      }
-      hasLoadedOnce.current = true;
+      // if (hasLoadedOnce.current && !hasAnyFilter) {
+      //   return;
+      // }
+      // hasLoadedOnce.current = true;
 
       setTableLoading(true);
       const apiPage = page - 1;
@@ -411,7 +421,23 @@ export default function DemandSheet1() {
 
 
 
+  //   useEffect(() => {
+  //   (async () => {
+  //     setPageLoading(true);
+  //     try {
+  //       await loadDropdowns();
+  //       await loadDemands(1, pageSize);
+  //     } finally {
+  //       setPageLoading(false);
+  //     }
+  //   })();
+  // }, []);
+
   useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!canCreateDemand) return;
+    if (!hasAccessToken()) return; // ✅ CRITICAL
+
     (async () => {
       setPageLoading(true);
       try {
@@ -421,7 +447,8 @@ export default function DemandSheet1() {
         setPageLoading(false);
       }
     })();
-  }, []);
+  }, [isAuthenticated, canCreateDemand]);
+
 
 
   useEffect(() => {
@@ -583,7 +610,8 @@ export default function DemandSheet1() {
                 pageSize={pageSize}
                 total={totalItems}
                 showSizeChanger
-                onChange={(page, size) => loadDemands(page, size)}
+                onChange={onPageChange}
+                onShowSizeChange={onPageSizeChange}
               />
             </div>
           </div>

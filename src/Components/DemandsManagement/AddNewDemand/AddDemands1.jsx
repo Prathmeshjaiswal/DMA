@@ -25,6 +25,8 @@ import { format } from "date-fns";
 
 import { getDropDownData, submitStep1 } from "../../api/Demands/addDemands.js";
 import { getStep1Draft, updateDraft } from "../../api/Demands/draft.js";
+import { useAuth } from "../../Auth/AuthProvider.jsx";
+import { usePermissions } from "../../Auth/PermissionProvider.jsx";
 
 // ------------------------ helpers ------------------------
 
@@ -277,6 +279,10 @@ export default function AddDemands1() {
   const [loading, setLoading] = useState(false);
   const [dropdowns, setDropdowns] = useState(null);
   const [dropdownsLoaded, setDropdownsLoaded] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const { can } = usePermissions();
+  const canCreateDemand = can("DashBoard", "Demands", "Create Demands");
+
 
   // ✅ ONLY take draftId from navigation state (not from localStorage)
   // const [draftId, setDraftId] = useState(() => {
@@ -339,28 +345,54 @@ export default function AddDemands1() {
 
 
   // dropdowns
+  // useEffect(() => {
+  //   let mounted = true;
+  //   (async () => {
+  //     try {
+  //       const dd = await getDropDownData();
+  //       // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
+  //       if (!mounted) return;
+  //       setDropdowns(dd?.data || dd);
+  //       // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
+  //       ``
+  //     } catch (e) {
+  //       console.error("Failed to load dropdowns:", e);
+  //       message.error("Failed to load form data. Please refresh.");
+  //     } finally {
+  //       if (mounted) setDropdownsLoaded(true);
+  //     }
+  //   })();
+  //   return () => {
+  //     setDropdownsLoaded(false);
+  //   };
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
+
+
   useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!canCreateDemand) return;
+
     let mounted = true;
+
     (async () => {
       try {
         const dd = await getDropDownData();
-        // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
         if (!mounted) return;
         setDropdowns(dd?.data || dd);
-        // console.log("RAW DROPDOWN RESPONSE >>>", dd?.data || dd);
-        ``
       } catch (e) {
         console.error("Failed to load dropdowns:", e);
-        message.error("Failed to load form data. Please refresh.");
+        message.error("Failed to load form data.");
       } finally {
         if (mounted) setDropdownsLoaded(true);
       }
     })();
+
     return () => {
+      mounted = false;
       setDropdownsLoaded(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated, canCreateDemand]);
 
 
 
@@ -529,9 +561,14 @@ export default function AddDemands1() {
           : [],
 
         // ----- EXPERIENCE / FLAGS -----
+        // experience:
+        //   copied?.experience != null
+        //     ? Number(round2(copied.experience)).toFixed(2)
+        //     : "",
+
         experience:
           copied?.experience != null
-            ? Number(round2(copied.experience)).toFixed(2)
+            ? String(copied.experience)
             : "",
         karat:
           copied?.karatFlag === true || copied?.karatFlag === 1
@@ -1161,7 +1198,9 @@ export default function AddDemands1() {
                       }
 
 
-                      const partialRegex = /^\d+$|^\d+-$|^\d+-\d+$|^\d+\+$/;
+                      // const partialRegex = /^\d+$|^\d+-$|^\d+-\d+$|^\d+\+$/;
+                      const partialRegex = /^(\d+(\.\d{0,2})?|\d+-|\d+-\d+|\d+\+)$/;
+
 
                       if (partialRegex.test(v)) {
                         setForm((p) => ({ ...p, experience: v }));

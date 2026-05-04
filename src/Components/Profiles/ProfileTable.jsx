@@ -60,6 +60,11 @@ export default function ProfileTable({
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm(); // <-- the instance we must connect BEFORE using
 
+  const [cvUploading, setCvUploading] = useState(false);
+
+  const [pendingCvFile, setPendingCvFile] = useState(null);
+
+
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
 
@@ -78,6 +83,45 @@ export default function ProfileTable({
   };
   const ensureId = (row) => row?.id ?? row?.profileId;
 
+  const uploadCvFromEditModal = async (file) => {
+    if (!file) return;
+
+    if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+      message.error("Only PDF, DOC, DOCX files are allowed");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      message.error("File must be 10MB or less");
+      return;
+    }
+
+    const profileId = ensureId(editRow);
+    if (!profileId) {
+      message.error("Profile ID not found");
+      return;
+    }
+
+    try {
+      setCvUploading(true);
+
+      // ✅ CV UPDATE ONLY
+      await submitProfileUpdate(profileId, {}, file);
+
+      message.success("CV uploaded successfully");
+
+      // refresh table
+      onPageChange?.(serverPage);
+    } catch (err) {
+      console.error("CV upload error:", err);
+      message.error(
+        err?.response?.data?.message || "Failed to upload CV"
+      );
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
   // --- compute initial values for the edit form from the selected row
   const buildInitialValues = (row) => ({
     candidateName: row?.candidateName ?? "",
@@ -87,6 +131,12 @@ export default function ProfileTable({
     // show only if row had empId (internal)
     empId:
       row?.empId != null && String(row.empId).trim() !== "" ? String(row.empId) : undefined,
+
+    sapId:
+      row?.sapId && String(row.sapId).trim() !== ""
+        ? String(row.sapId)
+        : undefined,
+
     experienceYears:
       row?.experienceYears != null && row?.experienceYears !== ""
         ? Number(row.experienceYears)
@@ -155,6 +205,7 @@ export default function ProfileTable({
   const closeEdit = () => {
     setEditOpen(false);
     setEditRow(null);
+    setPendingCvFile(null);
     form.resetFields();
   };
 
@@ -171,7 +222,6 @@ export default function ProfileTable({
     try {
       const values = await form.validateFields();
 
-      // ✅ MUST BE FIRST
       const patch = {};
 
       const toNum = (v) =>
@@ -182,38 +232,28 @@ export default function ProfileTable({
           ? arr.map((v) => Number(v)).filter((n) => !Number.isNaN(n))
           : [];
 
-      // -------- BASIC FIELDS --------
+      // ---------- BUILD PATCH ----------
       if (values.candidateName != null)
         patch.candidateName = values.candidateName.trim();
 
       if (values.emailId != null)
         patch.emailId = values.emailId.trim();
 
-      if (values.phoneNumber) {
+      if (values.phoneNumber)
         patch.phoneNumber = String(values.phoneNumber).replace(/\D+/g, "");
-      }
 
-      if (values.empId) {
+      if (values.sapId)
+        patch.sapId = String(values.sapId).replace(/\D+/g, "");
+
+      if (values.empId)
         patch.empId = String(values.empId).replace(/\D+/g, "");
-      }
 
-      // -------- EXPERIENCE --------
-      if (values.experienceYears != null) {
+      if (values.experienceYears != null)
         patch.experience = Number(values.experienceYears);
-      }
 
-      // -------- STATUS ✅ FIXED --------
-      const profileStatusId =
-        values.profileStatusId != null
-          ? Number(values.profileStatusId)
-          : undefined;
+      if (values.profileStatusId != null)
+        patch.profileStatusId = Number(values.profileStatusId);
 
-      if (profileStatusId != null) {
-        patch.profileStatusId = profileStatusId;
-      }
-
-
-      // -------- LOCATION / HBU / SKILLS --------
       const locationId = toNum(values.locationId);
       if (locationId != null) patch.locationId = locationId;
 
@@ -226,22 +266,30 @@ export default function ProfileTable({
       patch.primarySkillsIds = toNumArr(values.primarySkillsIds);
       patch.secondarySkillsIds = toNumArr(values.secondarySkillsIds);
 
-      // -------- SUMMARY --------
-      if (values.summary != null) {
+      if (values.summary != null)
         patch.summary = values.summary.trim();
-      }
 
-      // -------- PAN --------
-      if (values.panNumber) {
-        patch.panNumber = String(values.panNumber)
-          .toUpperCase()
-          .replace(/\s+/g, "");
-      }
+      if (values.panNumber)
+        patch.panNumber = values.panNumber.toUpperCase().replace(/\s+/g, "");
 
+      // ---------- SAVE ----------
       setSaving(true);
-      await onSavePatch(id, patch);
+
+      if (pendingCvFile) {
+        await submitProfileUpdate(id, patch, pendingCvFile);
+        setPendingCvFile(null);
+      } else {
+        await onSavePatch(id, patch);
+      }
+
       message.success("Profile updated successfully");
+
+
+      // FORCE REFRESH SO CV APPEARS
+      onPageChange?.(serverPage);
+
       closeEdit();
+
     } catch (err) {
       if (!err?.errorFields) {
         Modal.error({
@@ -467,6 +515,10 @@ export default function ProfileTable({
                     input.type = "file";
                     input.accept = ".pdf,.doc,.docx";
 
+                    input.style.display = "none";           // ✅ HIDE
+                    document.body.appendChild(input);
+
+
                     input.onchange = async () => {
                       const file = input.files?.[0];
                       if (!file) return;
@@ -650,7 +702,7 @@ export default function ProfileTable({
             </Form.Item>
 
             {/* NEW: PAN Number (match backend key: panNumber) */}
-            <Form.Item
+            {/* <Form.Item
               name="panNumber"
               label="PAN Number"
               getValueFromEvent={(e) =>
@@ -666,6 +718,33 @@ export default function ProfileTable({
               ]}
             >
               <Input placeholder="e.g., ABCDE1234F" maxLength={10} />
+            </Form.Item> */}
+
+            <Form.Item
+              name="panNumber"
+              label="PAN Number"
+              getValueFromEvent={(e) =>
+                (e?.target?.value || "").toUpperCase().replace(/\s+/g, "")
+              }
+              rules={[
+                {
+                  validator: (_, v) => {
+                    if (!v || String(v).trim() === "") {
+                      return Promise.resolve(); // ✅ optional
+                    }
+                    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v)) {
+                      return Promise.reject(
+                        new Error(
+                          "Invalid PAN format. Example: ABCDE1234F"
+                        )
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="e.g., ABCDE1234F (optional)" maxLength={10} />
             </Form.Item>
 
             {editRow?.empId != null && String(editRow.empId).trim() !== "" && (
@@ -687,6 +766,27 @@ export default function ProfileTable({
                 ]}
               >
                 <Input placeholder="e.g., 128713" inputMode="numeric" />
+              </Form.Item>
+            )}
+
+
+            {(!editRow?.empId || String(editRow.empId).trim() === "") && (
+              <Form.Item
+                name="sapId"
+                label="SAP ID"
+                rules={[
+                  {
+                    validator: async (_, v) => {
+                      if (!v) return Promise.resolve();
+                      if (!/^\d+$/.test(String(v))) {
+                        return Promise.reject(new Error("SAP ID must be numeric"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                <Input placeholder="e.g., 128754" inputMode="numeric" />
               </Form.Item>
             )}
 
@@ -789,6 +889,95 @@ export default function ProfileTable({
                 maxTagCount="responsive"
               />
             </Form.Item>
+
+            {/* ================= CV UPLOAD / REPLACE ================= */}
+            <Form.Item
+              label="Resume / CV"
+              className="md:col-span-2"
+            >
+              <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 px-4 py-2">
+                {/* <div className="text-sm text-gray-700">
+                  {editRow?.fileName ? (
+                    <>
+                      <span className="font-medium">Current CV:</span>{" "}
+                      <span className="text-gray-600 break-all">
+                        {String(editRow.fileName).split(/[\\/]/).pop()}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-red-600 font-medium">
+                      No CV uploaded
+                    </span>
+                  )}
+                </div> */}
+                <div className="text-sm text-gray-700">
+                  {pendingCvFile ? (
+                    <>
+                      <span className="font-medium text-green-700">
+                        Selected CV:
+                      </span>{" "}
+                      <span className="text-gray-600 break-all">
+                        {pendingCvFile.name}
+                      </span>
+                    </>
+                  ) : editRow?.fileName ? (
+                    <>
+                      <span className="font-medium">
+                        Current CV:
+                      </span>{" "}
+                      <span className="text-gray-600 break-all">
+                        {String(editRow.fileName).split(/[\\/]/).pop()}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-red-600 font-medium">
+                      No CV uploaded
+                    </span>
+                  )}
+                </div>
+
+                <Button
+                  type="default"
+                  icon={<UploadOutlined />}
+                  loading={cvUploading}
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = ".pdf,.doc,.docx";
+                    input.style.display = "none";
+                    document.body.appendChild(input);
+
+                    input.onchange = () => {
+                      const file = input.files?.[0];
+                      if (!file) return;
+
+                      if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+                        message.error("Only PDF, DOC, DOCX files are allowed");
+                        document.body.removeChild(input);
+                        return;
+                      }
+
+                      if (file.size > 10 * 1024 * 1024) {
+                        message.error("File must be 10MB or less");
+                        document.body.removeChild(input);
+                        return;
+                      }
+
+                      // ✅ STORE ONLY
+                      setPendingCvFile(file);
+
+                      document.body.removeChild(input); // ✅ cleanup
+                    };
+
+                    input.click();
+                  }}
+
+                >
+                  {editRow?.fileName ? "Replace CV" : "Upload CV"}
+                </Button>
+              </div>
+            </Form.Item>
+
 
             <Form.Item
               name="summary"

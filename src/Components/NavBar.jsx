@@ -13,6 +13,10 @@ import { Badge } from "antd";
 import { BellOutlined } from "@ant-design/icons";
 import NotificationDrawer from "../Components/Notifications/NotificationDrawer";
 import NotificationBell from "../Components/Notifications/NotificationBell";
+import { getUnreadCount } from "../Components/api/notification/notification";
+
+
+
 
 
 /** NavBar: Top bar with sidebar toggle, logo, title, and profile menu; builds permission-gated links (not rendered here). */
@@ -26,6 +30,11 @@ export default function NavBar({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const handleLogout = Logout();
+
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0)
+
 
   const { hasChild } = usePermissions();
 
@@ -89,6 +98,34 @@ export default function NavBar({
     setDisplayName(name || "User");
     setDisplayId(uid);
   }, []);
+
+
+
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadUnreadCount = async () => {
+      try {
+        const count = await getUnreadCount();
+        setUnreadCount(count || 0);
+      } catch (e) {
+        if (e?.response?.status === 403) {
+          handleLogout(); // ✅ force logout
+        } else {
+          console.error("Unread count error", e);
+        }
+      }
+    };
+
+    loadUnreadCount(); // initial load
+
+    const interval = setInterval(loadUnreadCount, 30000); // ✅ 30 sec polling
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+
   // ====== /NEW ======
 
   return (
@@ -138,8 +175,13 @@ export default function NavBar({
                 {/* Notification Bell (BEFORE profile) */}
 
                 <NotificationBell
-                  count={5}                // UI-only for now
-                  onClick={() => setShowNotifications(true)}
+                  count={unreadCount}
+                  onClick={() => setDrawerOpen(true)}
+                />
+
+                <NotificationDrawer
+                  open={drawerOpen}
+                  onClose={() => setDrawerOpen(false)}
                 />
 
 

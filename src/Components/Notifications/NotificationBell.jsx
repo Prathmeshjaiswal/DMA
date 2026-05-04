@@ -1,19 +1,23 @@
 import React from "react";
 import { BellFilled } from "@ant-design/icons";
+import "./notificationBell.css";
 
 export default function NotificationBell({ count = 0, onClick }) {
+
   return (
     <div
       className="relative cursor-pointer select-none"
       onClick={onClick}
     >
-      {/*  Bell icon */}
+
+      {/* Bell Icon */}
       <BellFilled
-        className="text-[24px]"
-        style={{ color: "#F5B301" } } // ✅ premium yellow
+        className={`text-[24px] ${count > 0 ? "bell-ring" : ""}`}
+        style={{ color: "#F5B301" }}
       />
 
-      {/*  Notification Badge */}
+
+      {/* Notification Badge */}
       {count > 0 && (
         <span
           className="

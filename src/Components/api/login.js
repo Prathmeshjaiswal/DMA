@@ -9,6 +9,15 @@ import api from './client.js'
 export const login = async (payload) => {
   console.log('[login] payload:', payload);
   const res = await api.post('/auth_user/login', payload);
-  console.log('[login] response status:', res.status);
-  return res.data;
+
+  
+ const data = res.data.data; // because BaseController wraps response
+
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('refreshToken', data.refreshToken);
+
+  
+
+  // console.log('[login] response status:', res.status);
+  return data;
 };
