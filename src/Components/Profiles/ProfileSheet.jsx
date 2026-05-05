@@ -1,6 +1,6 @@
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, message, Menu, Dropdown ,Modal} from "antd";
+import { Button, message, Menu, Dropdown, Modal } from "antd";
 import { PlusOutlined, ExportOutlined, UploadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -144,12 +144,23 @@ function adaptRow(item) {
   const experience = pick("experience", "experienceYears", "expYears");
 
   const sapId = asText(pick("sapId", "sapID", "sap_id"));
+  const isActive = item?.isActive;
+  const activeStatus =
+    isActive === true || isActive === 1 ? "Active" : "Inactive";
+
 
 
   const location = asText(pick("locationName", "location", "locationLabel"));
   const hbu = asText(pick("hbuName", "hbu", "hbuLabel"));
   const skillCluster = asText(pick("skillClusterName", "skillCluster", "skillClusterLabel"));
   const externalInternal = asText(pick("externalInternalName", "externalInternal"));
+
+
+  const l1InterviewDate = pick("l1InterviewDate", "l1_interview_date");
+  const currentLocation = asText(pick("currentLocation", "current_location"));
+  const officialNP = asText(pick("officialNP", "official_np"));
+  const negotiableNpLwd = pick("negotiableNpLwd", "negotiable_np_lwd");
+  const recruiter = asText(pick("recruiter"));
 
   const locationId = pick("locationId") ?? (item?.location && Number(item.location.id)) ?? undefined;
   const hbuId = pick("hbuId") ?? (item?.hbu && Number(item.hbu.id)) ?? undefined;
@@ -213,6 +224,16 @@ function adaptRow(item) {
     experienceYears: experience ?? "",
     empId,
     panNumber, // kept
+
+    activeStatus,
+
+    l1InterviewDate,
+    currentLocation,
+    officialNP,
+    negotiableNpLwd,
+    recruiter,
+
+
     profileStatus,
     profileStatusId,
     location,
@@ -385,16 +406,24 @@ export default function ProfileSheet() {
     () => [
       { key: "candidateName", label: "Candidate Name" },
       { key: "emailId", label: "Email ID" },
+
+      { key: "l1InterviewDate", label: "L1 Interview Date" },
+      { key: "currentLocation", label: "Current Location" },
+      { key: "location", label: "Coforge Location" },
+      { key: "officialNP", label: "Official NP" },
+      { key: "negotiableNpLwd", label: "Negotiable NP / LWD" },
+      { key: "recruiter", label: "Recruiter" },
+
       { key: "panNumber", label: "PAN Number" },
       { key: "empId", label: "Employee ID" },
-      { key: "profileStatus", label: "Status" },
+      { key: "activeStatus", label: "Status" },
+      { key: "profileStatus", label: "Current Status" },
       { key: "sapId", label: "SAP ID" },
       { key: "phoneNumber", label: "Phone" },
       { key: "experienceYears", label: "Exp (yrs)" },
       { key: "skillCluster", label: "Skill Cluster" },
       { key: "primarySkills", label: "Primary Skills" },
       { key: "secondarySkills", label: "Secondary Skills" },
-      { key: "location", label: "Location" },
       { key: "hbu", label: "HBU" },
       { key: "summary", label: "Summary" },
     ],
@@ -426,6 +455,15 @@ export default function ProfileSheet() {
     () => [
       "candidateName",
       "emailId",
+
+      "activeStatus",
+      "l1InterviewDate",
+      "currentLocation",
+      "officialNP",
+      "negotiableNpLwd",
+      "recruiter",
+      "profileStatus",
+
       ...(canPanVisibility ? ["panNumber"] : []),
       // ...(isPmoRole ? ["panNumber"] : []), //  CONDITIONAL
       ...(showEmpId ? ["empId"] : []),
@@ -558,7 +596,7 @@ export default function ProfileSheet() {
 
         setRows(adapted);
         setTotal(resp.totalElements ?? adapted.length);
-    setPage(nextPage);
+        setPage(nextPage);
         setSize(nextSize);
       } catch (e) {
         // HANDLE NO-DATA CASE
@@ -576,7 +614,7 @@ export default function ProfileSheet() {
         setLoading(false);
       }
     },
-      [buildServerFilter, adminView]
+    [buildServerFilter, adminView]
   );
 
   // initial
@@ -604,17 +642,17 @@ export default function ProfileSheet() {
 
   const handleQueryChange = (key, value) => setQuery((prev) => ({ ...prev, [key]: value }));
   useEffect(() => {
-  const t = setTimeout(() => {
-    fetchServer(0, size);     //  reset ONLY on filter / size change
-  }, 250);
+    const t = setTimeout(() => {
+      fetchServer(0, size);     //  reset ONLY on filter / size change
+    }, 250);
 
-  return () => clearTimeout(t);
-}, [query, size]);           //  no fetchServer dependency
+    return () => clearTimeout(t);
+  }, [query, size]);           //  no fetchServer dependency
 
   // pagination
- const handlePageChange = (uiPage) => {
-  fetchServer(Math.max(uiPage - 1, 0), size); //  prevent -1
-};
+  const handlePageChange = (uiPage) => {
+    fetchServer(Math.max(uiPage - 1, 0), size); //  prevent -1
+  };
 
 
   const handlePageSizeChange = (nextSize) => {

@@ -334,10 +334,23 @@ export default function ProfileTable({
 
         const colWidth = isSkill ? 220 : undefined;
 
+
+        //  Make Candidate Name sticky
+        const isStickyCandidate = c.key === "candidateName"
+
+
         return {
           key: c.key,
           dataIndex: c.key,
-          width: colWidth,
+
+
+          // REQUIRED for fixed columns
+          width: isStickyCandidate ? 180 : colWidth,
+
+          //  THIS MAKES IT STICKY
+          fixed: isStickyCandidate ? "left" : undefined,
+
+
           title: (
             <div className="flex flex-col items-center justify-center gap-1 font-semibold">
               <div className="flex items-center gap-2">
@@ -366,6 +379,27 @@ export default function ProfileTable({
           ),
           render: (text, row) => {
             const value = text == null || text === "" ? "-" : String(text);
+            // ✅ DATE FIELDS FORMATTING
+            if (c.key === "l1InterviewDate" || c.key === "negotiableNpLwd") {
+              if (value === "-") return "-";
+              return new Date(value).toLocaleDateString();
+            }
+
+            if (c.key === "activeStatus") {
+              const isActive = value === "Active";
+
+              return (
+                <span
+                  style={{
+                    color: isActive ? "#166534" : "#991b1b",
+                    fontWeight: 600,
+                  }}
+                >
+                  {value}
+                </span>
+              );
+            }
+
 
             // ✅ PAN COLUMN LOGIC
             if (c.key === "panNumber") {
@@ -588,7 +622,7 @@ export default function ProfileTable({
 
   const pagination = useMemo(
     () => ({
-      current: serverPage ,
+      current: serverPage,
       pageSize: serverSize,
       total: serverTotal,
       showSizeChanger: true,
@@ -600,7 +634,7 @@ export default function ProfileTable({
         if (pageSize !== serverSize) {
           onPageSizeChange?.(pageSize);
         } else {
-           onPageChange?.(page);
+          onPageChange?.(page);
         }
       },
       onShowSizeChange: (_, pageSize) => {
@@ -634,21 +668,48 @@ export default function ProfileTable({
             display: block;
           }
           .profiles-table .cell-ellipsis-compact { max-width: 180px; }
-        `}</style>
+
+          /* Sticky Candidate Column */
+.profiles-table .ant-table-cell-fix-left {
+  background: #ffffff;
+  z-index: 3;
+}
+
+/* Sticky header on left */
+.profiles-table .ant-table-thead .ant-table-cell-fix-left {
+  background: #f9fafb;
+  z-index: 4;
+}
+
+/* Divider between sticky and scrollable columns */
+.profiles-table .ant-table-cell-fix-left::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: #e5e7eb;
+}
+
+
+        `}
+
+        </style>
       </div>
 
       <div className="">
-       <Table
-  rowKey={(r) =>
-    String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
-  }
-  dataSource={rows}
-  columns={antdColumns}
-  pagination={pagination}
-  size="middle"
-  className="profiles-table"
-  scroll={{ x: true }}
-/>
+        <Table
+          rowKey={(r) =>
+            String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
+          }
+          dataSource={rows}
+          columns={antdColumns}
+          pagination={pagination}
+          size="middle"
+          className="profiles-table"
+          scroll={{ x: true }}
+        />
 
 
         {/* ---- Edit Modal ---- */}

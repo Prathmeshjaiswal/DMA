@@ -196,7 +196,7 @@ export async function submitProfileUpdate(id, payload = {}, file = null) {
   const formData = new FormData();
   formData.append("file", excelFile);
 
-  const res = await api.post("/profiles/bulk-upload", formData, {
+  const res = await api.post("/profiles/bulk-upload/ta", formData, {
     
   });
 
