@@ -588,8 +588,7 @@ export default function ProfileTable({
 
   const pagination = useMemo(
     () => ({
-      // current: serverPage ,
-       current: Math.max(serverPage, 1), 
+      current: serverPage ,
       pageSize: serverSize,
       total: serverTotal,
       showSizeChanger: true,
@@ -639,24 +638,18 @@ export default function ProfileTable({
       </div>
 
       <div className="">
-        <Table
-          rowKey={(r) => String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)}
-          dataSource={rows}
-          columns={antdColumns}
-          pagination={pagination}
-          
-onChange={(pagination) => {
-    if (pagination.pageSize !== serverSize) {
-      onPageSizeChange(pagination.pageSize);
-    } else {
-      onPageChange(pagination.current);
-    }
-  }}
+       <Table
+  rowKey={(r) =>
+    String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
+  }
+  dataSource={rows}
+  columns={antdColumns}
+  pagination={pagination}
+  size="middle"
+  className="profiles-table"
+  scroll={{ x: true }}
+/>
 
-          size="middle"
-          className="profiles-table"
-          scroll={{ x: true }}
-        />
 
         {/* ---- Edit Modal ---- */}
         <Modal

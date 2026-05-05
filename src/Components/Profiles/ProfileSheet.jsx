@@ -558,8 +558,8 @@ export default function ProfileSheet() {
 
         setRows(adapted);
         setTotal(resp.totalElements ?? adapted.length);
-        setPage(resp.page ?? nextPage);
-        setSize(resp.size ?? nextSize);
+    setPage(nextPage);
+        setSize(nextSize);
       } catch (e) {
         // HANDLE NO-DATA CASE
         const msg = e?.response?.data?.message || e?.message || "";
