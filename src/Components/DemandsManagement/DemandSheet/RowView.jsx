@@ -129,7 +129,7 @@ export default function RowView({
             const fileName = row?.jdFileName || row?.fileName;
 
             return (
-              <td key={col.key} className="border-b border-gray-200 px-4 py-3">
+              <td key={col.key} className="border-b border-gray-200 px-4 py-3 sticky-demand-col">
                 <div className="flex items-center gap-3">
                   {/* Edit */}
                   {/* <button

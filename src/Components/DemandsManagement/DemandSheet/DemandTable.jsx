@@ -58,6 +58,26 @@ export default function DemandTable({
   };
 
   return (
+    <>
+    
+<style>
+      {`
+        .sticky-demand-col {
+          position: sticky;
+          left: 0;
+          z-index: 5;
+          background: white;
+          white-space: nowrap;
+          box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+        }
+
+        thead .sticky-demand-col {
+          z-index: 10;
+          background: #f9fafb;
+        }
+      `}
+    </style>
+
     <div className={`rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1000px] border-collapse">
@@ -124,5 +144,8 @@ export default function DemandTable({
         </table>
       </div>
     </div>
+    
+
+    </>
   );
 }

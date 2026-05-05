@@ -9,7 +9,7 @@ const TableHeader = ({
   // Filter props
   filters = {},
   filterConfig = {},
-  onFilterChange = () => {},
+  onFilterChange = () => { },
 }) => {
   const filteredColumns = useMemo(
     () => columns.filter((c) => visibleColumns.includes(c.key)),
@@ -111,10 +111,18 @@ const TableHeader = ({
           const iconActive = isOpen || hasValue;
 
           return (
+            // <th
+            //   key={col.key}
+            //   className="whitespace-nowrap border-b border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 align-top"
+            //   style={{ verticalAlign: "top" }}
+            // >
+
+
             <th
               key={col.key}
-              className="whitespace-nowrap border-b border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 align-top"
-              style={{ verticalAlign: "top" }}
+              className={`whitespace-nowrap border-b border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 align-top
+    ${col.key === "demandId" ? "sticky-demand-col" : ""}
+  `}
             >
               <div className="flex flex-col items-stretch gap-1">
                 <div className="flex items-center justify-center gap-2">
@@ -127,9 +135,8 @@ const TableHeader = ({
                       e.stopPropagation();
                       openFilter(col.key);
                     }}
-                    className={`p-0.5 rounded hover:bg-gray-100 ${
-                      iconActive ? "text-blue-600" : "text-gray-400"
-                    }`}
+                    className={`p-0.5 rounded hover:bg-gray-100 ${iconActive ? "text-blue-600" : "text-gray-400"
+                      }`}
                     title={isOpen ? "Filter open" : "Show filter"}
                     aria-pressed={isOpen}
                   >

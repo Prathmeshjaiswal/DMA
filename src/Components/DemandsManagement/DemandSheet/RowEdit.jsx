@@ -521,7 +521,7 @@ offshoreLocation: toOptions(dd.offshoreLocationList),
             const linkClass =
               "inline-flex justify-center rounded-md bg-olive-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-olive-700";
             return (
-              <td key={colKey} className="border-b border-gray-200 px-4 py-3">
+              <td key={colKey} className="border-b border-gray-200 px-4 py-3 sticky-demand-col">
                 <Link
                   to={`/demands/${row.demandId}`}
                   className={`${linkClass} transition-all duration-200`}

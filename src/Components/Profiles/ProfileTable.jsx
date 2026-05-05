@@ -588,7 +588,8 @@ export default function ProfileTable({
 
   const pagination = useMemo(
     () => ({
-      current: serverPage + 1,
+      // current: serverPage ,
+       current: Math.max(serverPage, 1), 
       pageSize: serverSize,
       total: serverTotal,
       showSizeChanger: true,
@@ -600,14 +601,14 @@ export default function ProfileTable({
         if (pageSize !== serverSize) {
           onPageSizeChange?.(pageSize);
         } else {
-          onPageChange?.(page - 1);
+           onPageChange?.(page);
         }
       },
       onShowSizeChange: (_, pageSize) => {
         onPageSizeChange?.(pageSize);
       },
     }),
-    [serverPage, serverSize, serverTotal, onPageChange, onPageSizeChange]
+    [serverPage, serverSize, serverTotal]
   );
 
   return (
@@ -643,6 +644,15 @@ export default function ProfileTable({
           dataSource={rows}
           columns={antdColumns}
           pagination={pagination}
+          
+onChange={(pagination) => {
+    if (pagination.pageSize !== serverSize) {
+      onPageSizeChange(pagination.pageSize);
+    } else {
+      onPageChange(pagination.current);
+    }
+  }}
+
           size="middle"
           className="profiles-table"
           scroll={{ x: true }}

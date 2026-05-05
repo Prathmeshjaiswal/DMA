@@ -1,5 +1,3 @@
-
-
 // ================== src/pages/Profiles/ProfileSheet.jsx ==================
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, message, Menu, Dropdown ,Modal} from "antd";
@@ -112,7 +110,7 @@ function adaptOptions(dto = {}) {
     secondarySkills: toOpt(dto.secondarySkills),
     skillCluster: toOpt(dto.skillClusters),
 
-    // ✅ ✅ ✅ ADD THIS
+    // ADD THIS
     profileStatus: toOpt(dto.profileStatusList),
   };
 }
@@ -255,16 +253,16 @@ export default function ProfileSheet() {
     input.accept =
       ".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    // ✅ VERY IMPORTANT: hide it
+    //  VERY IMPORTANT: hide it
     input.style.display = "none";
 
-    // ✅ attach to DOM (required by some browsers)
+    //  attach to DOM (required by some browsers)
     document.body.appendChild(input);
 
     input.onchange = async () => {
       const file = input.files?.[0];
 
-      // ✅ cleanup immediately (THIS REMOVES “Choose file” text)
+      //  cleanup immediately (THIS REMOVES “Choose file” text)
       document.body.removeChild(input);
 
       if (!file) return;
@@ -275,7 +273,7 @@ export default function ProfileSheet() {
         const result = await bulkUploadProfiles(file);
 
         message.success({
-          content: `Upload successful ✅ (${result.successCount} profiles added)`,
+          content: `Upload successful (${result.successCount} profiles added)`,
           key: "bulkUpload",
         });
 
@@ -429,7 +427,7 @@ export default function ProfileSheet() {
       "candidateName",
       "emailId",
       ...(canPanVisibility ? ["panNumber"] : []),
-      // ...(isPmoRole ? ["panNumber"] : []), // ✅ CONDITIONAL
+      // ...(isPmoRole ? ["panNumber"] : []), //  CONDITIONAL
       ...(showEmpId ? ["empId"] : []),
 
       ...(showSapId ? ["sapId"] : []),
@@ -469,12 +467,12 @@ export default function ProfileSheet() {
   const loadDropdowns = useCallback(async () => {
     try {
       const dto = await getProfileDropdowns();
-      console.log("RAW profile dropdown DTO:", dto);
+      // console.log("RAW profile dropdown DTO:", dto);
       setDropdownOptions(adaptOptions(dto));
 
 
       const adapted = adaptOptions(dto);
-      console.log("ADAPTED profileStatus options:", adapted.profileStatus);
+      // console.log("ADAPTED profileStatus options:", adapted.profileStatus);
 
     } catch { }
   }, []);
@@ -539,7 +537,7 @@ export default function ProfileSheet() {
 
   // fetch
   const fetchServer = useCallback(
-    async (nextPage = page, nextSize = size) => {
+    async (nextPage, nextSize) => {
       setLoading(true);
       try {
         const filter = buildServerFilter();
@@ -552,7 +550,7 @@ export default function ProfileSheet() {
             : await getProfiles(nextPage, nextSize);
 
 
-        console.log("🔴 RAW API RESPONSE:", resp);
+        // console.log("RAW API RESPONSE:", resp);
 
         const adapted = Array.isArray(resp.items)
           ? resp.items.map((it) => adaptRow(it))
@@ -563,11 +561,11 @@ export default function ProfileSheet() {
         setPage(resp.page ?? nextPage);
         setSize(resp.size ?? nextSize);
       } catch (e) {
-        // ✅ HANDLE NO-DATA CASE
+        // HANDLE NO-DATA CASE
         const msg = e?.response?.data?.message || e?.message || "";
 
         if (msg.includes("No profiles found")) {
-          setRows([]);           // ✅ empty table
+          setRows([]);           //  empty table
           setTotal(0);
           setPage(nextPage);
           setSize(nextSize);
@@ -578,7 +576,7 @@ export default function ProfileSheet() {
         setLoading(false);
       }
     },
-    [page, size, buildServerFilter, adminView]
+      [buildServerFilter, adminView]
   );
 
   // initial
@@ -606,14 +604,19 @@ export default function ProfileSheet() {
 
   const handleQueryChange = (key, value) => setQuery((prev) => ({ ...prev, [key]: value }));
   useEffect(() => {
-    const t = setTimeout(() => fetchServer(0, size), 250);
-    return () => clearTimeout(t);
-  }, [query, size, fetchServer]);
+  const t = setTimeout(() => {
+    fetchServer(0, size);     //  reset ONLY on filter / size change
+  }, 250);
+
+  return () => clearTimeout(t);
+}, [query, size]);           //  no fetchServer dependency
 
   // pagination
-  const handlePageChange = (nextPage) => {
-    fetchServer(nextPage, size);
-  };
+ const handlePageChange = (uiPage) => {
+  fetchServer(Math.max(uiPage - 1, 0), size); //  prevent -1
+};
+
+
   const handlePageSizeChange = (nextSize) => {
     fetchServer(0, nextSize);
   };
@@ -742,7 +745,7 @@ export default function ProfileSheet() {
             onUploadCv={handleUploadCv}
             onSavePatch={handleSavePatch}
             dropdownOptions={dropdownOptions}
-            serverPage={page}
+            serverPage={page + 1}
             serverSize={size}
             serverTotal={total}
             onPageChange={handlePageChange}
