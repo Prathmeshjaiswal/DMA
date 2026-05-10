@@ -19,7 +19,7 @@ import {
   getProfileTrackerDropdowns,
   searchProfileTracker,
 } from '../../api/Trackers/tracker';
-
+import { getDropDownData } from '../../api/Demands/addDemands';
 import { downloadDemandJDByFileName } from '../../api/Demands/getDemands';
 import { downloadProfileCv } from '../../api/Profiles/addProfile';
 
@@ -112,19 +112,20 @@ function Pill({ priority }) {
     </span>
   );
 }
-function Th({ children, w }) {
+function Th({ children, w, className = "" }) {
   return (
     <th
-      className="px-3 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200"
-      style={w ? { width: w } : undefined}
+      className={`px-3 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200 ${className}`}
+      style={w ? { width: w, minWidth: w } : undefined}
     >
       {children}
     </th>
   );
 }
-function Td({ children }) {
+
+function Td({ children, className = "" }) {
   return (
-    <td className="px-3 py-2 text-sm text-gray-800 whitespace-nowrap border-b border-gray-100 align-top">
+    <td className={`px-3 py-2 text-sm text-gray-800 whitespace-nowrap border-b border-gray-100 align-top ${className}`}>
       {children}
     </td>
   );
@@ -263,15 +264,18 @@ async function handleCvDownload(fileName, e) {
 const DEFAULT_FILTERS = {
   demandNumber: '',
   candidateName: '',
-  priorityName: '',
-  skillClusterName: '',
-  demandPrimarySkillNames: '',
-  demandSecondarySkillNames: '',
-  lobName: '',
-  hbuName: '',
-  externalInternalName: '',
-  hiringManagerName: '',
-  demandLocationNames: '',
+  // priorityName: '',
+  // skillClusterName: '',
+  // demandPrimarySkillNames: '',
+  // demandSecondarySkillNames: '',
+  // lobName: '',
+  // hbuName: '',
+  // externalInternalName: '',
+  // hiringManagerName: '',
+  // demandLocationNames: '',
+  demandPrimarySkillNames: [],
+  demandSecondarySkillNames: [],
+  demandLocationNames: [],
   attachedDateFrom: '',
   attachedDateTo: '',
   profileSharedDateFrom: '',
@@ -280,7 +284,16 @@ const DEFAULT_FILTERS = {
   interviewDateTo: '',
   decisionDateFrom: '',
   decisionDateTo: '',
-  profileTrackerStatusId: '',
+
+  priorityNames: [],
+  skillClusterNames: [],
+  lobNames: [],
+  hbuNames: [],
+  externalInternalNames: [],
+  hiringManagerNames: [],
+  // profileTrackerStatusId: '',
+  profileTrackerStatusNames: [],
+
   agingMin: '',
   agingMax: '',
 };
@@ -320,29 +333,61 @@ function buildFilterPayload(f, dd) {
     payload.demandNumber = Number(String(f.demandNumber).trim());
   }
 
-  if (f.priorityName) payload.priorityName = f.priorityName;
-  if (f.skillClusterName) payload.skillClusterName = f.skillClusterName;
-  if (f.lobName) payload.lobName = f.lobName;
-  if (f.hbuName) payload.hbuName = f.hbuName;
-  if (f.externalInternalName) payload.externalInternalName = f.externalInternalName;
-  if (f.hiringManagerName) payload.hiringManagerName = f.hiringManagerName;
+  // if (f.priorityName) payload.priorityName = f.priorityName;
+  // if (f.skillClusterName) payload.skillClusterName = f.skillClusterName;
+  // if (f.lobName) payload.lobName = f.lobName;
+  // if (f.hbuName) payload.hbuName = f.hbuName;
+  // if (f.externalInternalName) payload.externalInternalName = f.externalInternalName;
+  // if (f.hiringManagerName) payload.hiringManagerName = f.hiringManagerName;
 
-  const prim = splitNames(f.demandPrimarySkillNames);
-  if (prim.length) payload.demandPrimarySkillNames = prim;
 
-  const sec = splitNames(f.demandSecondarySkillNames);
-  if (sec.length) payload.demandSecondarySkillNames = sec;
+  if (f.priorityNames?.length)
+    payload.priorityNames = f.priorityNames;
 
-  const loc = splitNames(f.demandLocationNames);
-  if (loc.length) payload.demandLocationNames = loc;
+  if (f.skillClusterNames?.length)
+    payload.skillClusterNames = f.skillClusterNames;
+
+  if (f.lobNames?.length)
+    payload.lobNames = f.lobNames;
+
+  if (f.hbuNames?.length)
+    payload.hbuNames = f.hbuNames;
+
+  if (f.externalInternalNames?.length)
+    payload.externalInternalNames = f.externalInternalNames;
+
+  if (f.hiringManagerNames?.length)
+    payload.hiringManagerNames = f.hiringManagerNames;
+
+  // const prim = splitNames(f.demandPrimarySkillNames);
+  // if (prim.length) payload.demandPrimarySkillNames = prim;
+
+  // const sec = splitNames(f.demandSecondarySkillNames);
+  // if (sec.length) payload.demandSecondarySkillNames = sec;
+
+  // const loc = splitNames(f.demandLocationNames);
+  // if (loc.length) payload.demandLocationNames = loc;
+
+  if (f.demandPrimarySkillNames?.length)
+    payload.demandPrimarySkillNames = f.demandPrimarySkillNames;
+
+  if (f.demandSecondarySkillNames?.length)
+    payload.demandSecondarySkillNames = f.demandSecondarySkillNames;
+
+  if (f.demandLocationNames?.length)
+    payload.demandLocationNames = f.demandLocationNames;
 
   if (f.candidateName) payload.candidateName = f.candidateName;
 
-  if (f.profileTrackerStatusId) {
-    const found = dd.profileTrackerStatuses.find(
-      (x) => String(x.id) === String(f.profileTrackerStatusId)
-    );
-    if (found?.name) payload.profileTrackerStatusName = found.name;
+  // if (f.profileTrackerStatusId) {
+  //   const found = dd.profileTrackerStatuses.find(
+  //     (x) => String(x.id) === String(f.profileTrackerStatusId)
+  //   );
+  //   if (found?.name) payload.profileTrackerStatusName = found.name;
+  // }
+
+  if (Array.isArray(f.profileTrackerStatusNames) && f.profileTrackerStatusNames.length) {
+    payload.profileTrackerStatusNames = f.profileTrackerStatusNames;
   }
 
   const passDate = (k) => {
@@ -482,13 +527,14 @@ function HeaderDateRange({
     </div>
   );
 }
+import { Select } from "antd";
 
-function HeaderSelect({
+function HeaderMultiSelect({
   label,
   keyName,
   options,
   getLabel = (o) => o.name,
-  getValue = (o) => o.id,
+  getValue = (o) => o.name,
   filters,
   setFilters,
   openSearch,
@@ -499,35 +545,33 @@ function HeaderSelect({
       <div className="flex items-center gap-2">
         <span>{label}</span>
         <SearchOutlined
-          className={`text-gray-400 text-xs cursor-pointer ${openSearch[keyName] ? 'text-blue-600' : ''
+          className={`text-gray-400 text-xs cursor-pointer ${openSearch[keyName] ? "text-blue-600" : ""
             }`}
           onClick={(e) => {
             e.stopPropagation();
             toggle(keyName);
           }}
-          title="Search"
         />
       </div>
+
       {openSearch[keyName] && (
-        <select
-          className="h-7 px-2 text-xs rounded border border-gray-300 bg-white"
-          value={filters[keyName] ?? ''}
-          onChange={(e) =>
+        <Select
+          mode="multiple"
+          showSearch
+          value={filters[keyName] || []}
+          placeholder={`Select ${label}`}
+          options={(options || []).map((o) => ({
+            label: getLabel(o),
+            value: getValue(o),
+          }))}
+          onChange={(val) =>
             setFilters((f) => ({
               ...f,
-              [keyName]: e.target.value,
+              [keyName]: val,
             }))
           }
-          onClick={(e) => e.stopPropagation()}
-          style={{ width: 160 }}
-        >
-          <option value="">All</option>
-          {(options || []).map((o) => (
-            <option key={getValue(o)} value={getValue(o)}>
-              {getLabel(o)}
-            </option>
-          ))}
-        </select>
+          style={{ width: 180 }}
+        />
       )}
     </div>
   );
@@ -635,14 +679,48 @@ export default function ProfileTracker() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await getProfileTrackerDropdowns();
+        // ✅ call both APIs
+        const trackerRes = await getProfileTrackerDropdowns();
+        const demandRes = await getDropDownData();
+
+
+        const d = demandRes?.data || demandRes || {};
+
         setDd({
-          profileTrackerStatuses:
-            res?.profileTrackerStatuses ?? [],
+          // ✅ tracker (only status)
+          profileTrackerStatuses: trackerRes?.profileTrackerStatuses ?? [],
+
+          // ✅ demand API data (ALL OTHER DROPDOWNS)
+          priorities: d?.priorityList || [],
+          skillClusters: d?.skillClusterList || [],
+          lobs: d?.lobList || [],
+          hbus: d?.hbuList || [],
+          externalInternals: d?.externalInternalList || [],
+          hiringManagers: d?.hiringManagerList || [],
+
+          primarySkills: d?.primarySkillsList || [],
+          secondarySkills: d?.secondarySkillsList || [],
+
+          locations: [
+            ...(d?.onshoreLocationList || []),
+            ...(d?.offshoreLocationList || []),
+          ],
         });
-      } catch {
+
+      } catch (e) {
+        console.log("Dropdown error:", e);
+
         setDd({
           profileTrackerStatuses: [],
+          priorities: [],
+          skillClusters: [],
+          lobs: [],
+          hbus: [],
+          externalInternals: [],
+          hiringManagers: [],
+          primarySkills: [],
+          secondarySkills: [],
+          locations: [],
         });
       }
     })();
@@ -985,11 +1063,78 @@ export default function ProfileTracker() {
   };
 
   return (
+
+    <>
+
+<style>
+  {
+    `
+ /* ===== TABLE BASE ===== */
+.profile-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* ===== HEADER (ALL HEADERS ABOVE BODY) ===== */
+.profile-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 30;  /* increase */
+}
+
+/* ===== FIRST 3 HEADER (HIGHEST) ===== */
+th.sticky-col-edit,
+th.sticky-col-demand,
+th.sticky-col-candidate {
+  z-index: 40; /* MUST be highest */
+}
+
+/* ===== BODY STICKY COLUMNS ===== */
+td.sticky-col-edit,
+td.sticky-col-demand,
+td.sticky-col-candidate {
+  position: sticky;
+  background: white;
+  z-index: 20; /* BELOW HEADER */
+}
+
+/* ===== COLUMN POSITIONS ===== */
+.sticky-col-edit {
+  left: 0;
+  width: 80px;
+  min-width: 80px;
+}
+
+.sticky-col-demand {
+  left: 80px;
+  width: 180px;
+  min-width: 180px;
+}
+
+.sticky-col-candidate {
+  left: 260px;
+  width: 260px;
+  min-width: 260px;
+}
+
+/* ===== SHADOW ===== */
+.sticky-col-edit,
+.sticky-col-demand,
+.sticky-col-candidate {
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+}
+
+    `
+  }
+</style>
+
+
     <Layout>
       <div className="py-1">
         <div className=" grid grid-cols-3 w-full items-center">
           <div></div>
-          <div classname="w-2/3">
+          <div className="w-2/3">
             <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
               Profile Tracker
             </h2>
@@ -1021,12 +1166,12 @@ export default function ProfileTracker() {
           </div>
         )}
         <div className="overflow-x-auto rounded-md border border-gray-200">
-          <table className="max-w-[1600px] w-full border-collapse">
+          <table className="profile-table min-w-max border-collapse">
             <thead className="bg-gray-50">
               <tr>
-                <Th w={60}>EDIT</Th>
+               <Th w={60} className="sticky-col-edit">EDIT</Th>
 
-                <Th w={180}>
+               <Th w={180}className="sticky-col-demand">
                   <HeaderWithSearch
                     label="Demand Number"
                     keyName="demandNumber"
@@ -1037,7 +1182,7 @@ export default function ProfileTracker() {
                   />
                 </Th>
 
-                <Th>
+              <Th className="sticky-col-candidate">
                   <HeaderWithSearch
                     label="Candidate Name"
                     keyName="candidateName"
@@ -1047,11 +1192,37 @@ export default function ProfileTracker() {
                     toggle={toggleSearch}
                   />
                 </Th>
+                <Th>
+                  <HeaderMultiSelect
+                    label="LOB"
+                    keyName="lobNames"
+                    options={dd.lobs || []}
+                    filters={filters}
+                    setFilters={setFilters}
+                    openSearch={openSearch}
+                    toggle={toggleSearch}
+                  />
+                </Th>
 
                 <Th>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="Priority"
-                    keyName="priorityName"
+                    keyName="priorityNames"
+                    options={dd.priorities || []}
+                    filters={filters}
+                    setFilters={setFilters}
+                    openSearch={openSearch}
+                    toggle={toggleSearch}
+                  />
+
+                </Th>
+
+
+                <Th>
+                  <HeaderMultiSelect
+                    label="Location"
+                    keyName="demandLocationNames"
+                    options={dd.locations || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
@@ -1060,31 +1231,36 @@ export default function ProfileTracker() {
                 </Th>
 
                 <Th w={180}>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="Skill Cluster"
-                    keyName="skillClusterName"
+                    keyName="skillClusterNames"
+                    options={dd.skillClusters || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
                     toggle={toggleSearch}
                   />
+
                 </Th>
 
                 <Th w={220}>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="Primary Skill"
                     keyName="demandPrimarySkillNames"
+                    options={dd.primarySkills || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
                     toggle={toggleSearch}
                   />
+
                 </Th>
 
                 <Th w={220}>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="Secondary Skill"
                     keyName="demandSecondarySkillNames"
+                    options={dd.secondarySkills || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
@@ -1092,43 +1268,27 @@ export default function ProfileTracker() {
                   />
                 </Th>
 
-                <Th>
-                  <HeaderWithSearch
-                    label="LOB"
-                    keyName="lobName"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
+
 
                 <Th>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="HBU"
-                    keyName="hbuName"
+                    keyName="hbuNames"
+                    options={dd.hbus || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
                     toggle={toggleSearch}
                   />
+
                 </Th>
 
-                <Th>
-                  <HeaderWithSearch
-                    label="Location"
-                    keyName="demandLocationNames"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
 
                 <Th>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="External/Internal"
-                    keyName="externalInternalName"
+                    keyName="externalInternalNames"
+                    options={dd.externalInternals || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
@@ -1137,14 +1297,16 @@ export default function ProfileTracker() {
                 </Th>
 
                 <Th>
-                  <HeaderWithSearch
+                  <HeaderMultiSelect
                     label="Hiring Manager"
-                    keyName="hiringManagerName"
+                    keyName="hiringManagerNames"
+                    options={dd.hiringManagers || []}
                     filters={filters}
                     setFilters={setFilters}
                     openSearch={openSearch}
                     toggle={toggleSearch}
                   />
+
                 </Th>
 
                 <Th>
@@ -1197,9 +1359,9 @@ export default function ProfileTracker() {
 
                 {/* ONLY ONE STATUS SELECT REMAINS */}
                 <Th>
-                  <HeaderSelect
+                  <HeaderMultiSelect
                     label="Status"
-                    keyName="profileTrackerStatusId"
+                    keyName="profileTrackerStatusNames"
                     options={dd.profileTrackerStatuses}
                     filters={filters}
                     setFilters={setFilters}
@@ -1277,7 +1439,7 @@ export default function ProfileTracker() {
 
                   return (
                     <tr key={rowId} className="even:bg-gray-50/50">
-                      <Td>
+                      <Td className="sticky-col-edit">
                         {!isEdit ? (
                           canUpdateProfileTracker && (
                             <button
@@ -1308,7 +1470,7 @@ export default function ProfileTracker() {
                         )}
                       </Td>
 
-                      <Td>
+                      <Td className="sticky-col-demand">
                         <div className="flex items-center justify-between gap-2 min-h-[44px]">
                           <span className="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-600 px-2 py-0.5 text-xs font-semibold">
                             {demandCode || '-'}
@@ -1333,8 +1495,8 @@ export default function ProfileTracker() {
                                   )
                                 }
                                 className={`p-1 rounded ${jdFileName
-                                    ? 'hover:bg-blue-50 hover:text-blue-700'
-                                    : 'text-gray-300 cursor-not-allowed'
+                                  ? 'hover:bg-blue-50 hover:text-blue-700'
+                                  : 'text-gray-300 cursor-not-allowed'
                                   }`}
                                 disabled={!jdFileName}
                               >
@@ -1345,7 +1507,7 @@ export default function ProfileTracker() {
                         </div>
                       </Td>
 
-                      <Td>
+                      <Td className="sticky-col-candidate">
                         <div className="flex items-center justify-between gap-2 min-h-[44px]">
                           <div className="flex flex-col leading-tight">
                             <span className="font-medium text-gray-900 whitespace-nowrap">
@@ -1377,8 +1539,8 @@ export default function ProfileTracker() {
                                   )
                                 }
                                 className={`p-1 rounded ${cvFileName
-                                    ? 'hover:bg-blue-50 hover:text-blue-700'
-                                    : 'text-gray-300 cursor-not-allowed'
+                                  ? 'hover:bg-blue-50 hover:text-blue-700'
+                                  : 'text-gray-300 cursor-not-allowed'
                                   }`}
                                 disabled={!cvFileName}
                               >
@@ -1389,6 +1551,8 @@ export default function ProfileTracker() {
                         </div>
                       </Td>
 
+                      <Td>{p?.demand?.lob?.name || '-'}</Td>
+
                       <Td>
                         <Pill
                           priority={
@@ -1397,6 +1561,8 @@ export default function ProfileTracker() {
                           }
                         />
                       </Td>
+
+                      <Td>{demandLocationNamesText(p)}</Td>
 
                       <TdWrapWithTooltip
                         text={skillClusterText}
@@ -1411,10 +1577,10 @@ export default function ProfileTracker() {
                         w={220}
                       />
 
-                      <Td>{p?.demand?.lob?.name || '-'}</Td>
+
                       <Td>{p?.demand?.hbu?.name || '-'}</Td>
 
-                      <Td>{demandLocationNamesText(p)}</Td>
+
 
                       <Td>
                         {nameOf(p?.profile?.externalInternal) || '-'}
@@ -1602,7 +1768,7 @@ export default function ProfileTracker() {
             pageSize={size}
             total={total}
             showSizeChanger
-            pageSizeOptions={[10, 20, 50, 100]}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
             onChange={onPageChange}
             onShowSizeChange={onShowSizeChange}
             showTotal={(t, range) =>
@@ -1612,5 +1778,7 @@ export default function ProfileTracker() {
         </div>
       </div>
     </Layout>
+    </>
   );
 }
+
