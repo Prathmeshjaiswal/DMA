@@ -229,7 +229,7 @@ function App() {
             path="/demandsheet1"
             element={
               <ProtectedRoute>
-                <RequirePermission module="DashBoard" child="Demands"> {/* UPDATED */}
+                <RequirePermission module="DashBoard" child="Demands"   > {/* UPDATED */}
                   <DemandSheet1 />
                 </RequirePermission>
               </ProtectedRoute>

@@ -5,6 +5,8 @@ import { COLORS } from "./theme/colors";
 import NavBar from "../NavBar";
 import { login } from "../api/login";
 import { message } from "antd";
+import { Link } from "react-router-dom";
+
 
 import { useAuth } from "./AuthProvider.jsx";
 import { buildPermFromRole, savePerm } from "../../utils/permUtils.js";
@@ -59,44 +61,44 @@ export default function Login() {
   //       navigate("/DashBoard");
   //     }
   const submitHandler = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const resp = await login(form); // ✅ resp is AuthResponseDTO
+    try {
+      const resp = await login(form); // ✅ resp is AuthResponseDTO
 
-    if (resp?.status === "SUCCESS") {
-      // ✅ name
-      const displayName = resp?.name || "User";
-      localStorage.setItem("username", displayName);
+      if (resp?.status === "SUCCESS") {
+        // ✅ name
+        const displayName = resp?.name || "User";
+        localStorage.setItem("username", displayName);
 
-      // ✅ role
-      const roleObj = resp?.role;
-      localStorage.setItem("roles", JSON.stringify(roleObj));
+        // ✅ role
+        const roleObj = resp?.role;
+        localStorage.setItem("roles", JSON.stringify(roleObj));
 
-      // ✅ permissions
-      const perm = buildPermFromRole(roleObj);
-      savePerm(perm);
-      setPerm(perm);
+        // ✅ permissions
+        const perm = buildPermFromRole(roleObj);
+        savePerm(perm);
+        setPerm(perm);
 
-      // ✅ auth state
-      setIsAuthenticated(true);
+        // ✅ auth state
+        setIsAuthenticated(true);
 
-      // ✅ redirect
-      navigate("/DashBoard", { replace: true });
-    } else {
-      message.error(resp?.message || "Login failed");
+        // ✅ redirect
+        navigate("/DashBoard", { replace: true });
+      } else {
+        message.error(resp?.message || "Login failed");
+      }
+    } catch (err) {
+      const errormessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Unable to login. Please try again.";
+
+      message.error(errormessage);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    const errormessage =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Unable to login. Please try again.";
-
-    message.error(errormessage);
-  } finally {
-    setLoading(false);
-  }
   };
   //  else {
   //       setServerMsg(resp?.message || "Login failed.");
@@ -203,6 +205,35 @@ export default function Login() {
             >
               Login
             </button>
+
+            <div className="flex justify-between items-center mt-4 text-sm">
+
+              {/* LEFT SIDE - Forgot Password */}
+              <span
+                onClick={() => {
+                  message.info("Contact Admin: Shubham.Sutar@Coforge.com");
+                }}
+                style={{
+                  color: COLORS.white,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                }}
+              >
+                Forgot Password?
+              </span>
+
+              {/* RIGHT SIDE - New User */}
+              <Link
+                to="/change"
+                style={{
+                  color: COLORS.white,
+                  textDecoration: "underline",
+                }}
+              >
+                New user?
+              </Link>
+
+            </div>
           </form>
         </div>
 

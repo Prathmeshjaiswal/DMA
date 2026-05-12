@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+import { Select } from "antd";
+
 
 const TableHeader = ({
   columns,
@@ -16,6 +18,10 @@ const TableHeader = ({
     [columns, visibleColumns]
   );
 
+
+
+  const excludeDropdown = ["demandId", "rrNumber", "experience"];
+
   // Open state per column key: { [key]: boolean }
   const [openFilterByKey, setOpenFilterByKey] = useState({});
 
@@ -25,51 +31,36 @@ const TableHeader = ({
 
   // Close must also clear the value (your requirement)
   const closeAndClearFilter = (key) => {
-    onFilterChange(key, ""); // clear the value
+    onFilterChange(key, []); // clear the value
     setOpenFilterByKey((prev) => ({ ...prev, [key]: false })); // hide the field
   };
 
+ 
+
   const renderFilter = (col) => {
     const cfg = filterConfig[col.key];
-    if (!cfg) return null; // no filter for this column
+    if (!cfg) return null;
 
     const isOpen = !!openFilterByKey[col.key];
-    if (!isOpen) return null; // only render after icon click
+    if (!isOpen) return null;
 
-    const value = filters[col.key] ?? "";
-    const common =
-      "mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500";
-
-    if (cfg.type === "select") {
-      const opts = Array.isArray(cfg.options) ? cfg.options : [];
+    // ✅ TEXT fields (DemandId, RR, Experience)
+    if (excludeDropdown.includes(col.key)) {
       return (
         <div className="flex items-center gap-1 mt-1">
-          <select
-            className={common}
-            value={value}
+          <input
+            type="text"
+            value={filters[col.key] ?? ""}
             onChange={(e) => onFilterChange(col.key, e.target.value)}
-            // Keep open until user clicks Close (×)
-            autoFocus
-          >
-            <option value="">All</option>
-            {opts.map((o) => {
-              const val = String(o.id ?? o.value ?? o.name ?? "");
-              const label = String(o.name ?? o.label ?? val);
-              // If backend expects id instead of label, change value to `val`
-              return (
-                <option key={val} value={label}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
 
-          {/* Single Close (×): clears AND hides */}
+            className="w-full rounded border px-3 py-2 text-sm"
+            style={{ minWidth: "160px", height: "36px" }}
+
+          />
+
           <button
-            type="button"
-            title="Close"
-            className="rounded border border-gray-300 px-1 text-[12px] leading-4 text-gray-700 hover:bg-gray-100"
             onClick={() => closeAndClearFilter(col.key)}
+            className="border px-1 text-xs"
           >
             ×
           </button>
@@ -77,24 +68,43 @@ const TableHeader = ({
       );
     }
 
-    // Default: text input
+    // ✅ DROPDOWN filters
+    const value = filters[col.key] ?? [];
+
+    const opts = Array.isArray(cfg.options)
+      ? cfg.options.map((o) => ({
+        label: o.name ?? o.label ?? o.value,
+        value: (o.name ?? o.label ?? o.value)?.toString().trim(),
+      }))
+      : [];
+
     return (
       <div className="flex items-center gap-1 mt-1">
-        <input
-          type="text"
+        <Select
+          mode="multiple"
+          showSearch
           value={value}
-          onChange={(e) => onFilterChange(col.key, e.target.value)}
-          placeholder={`Filter ${col.label}`}
-          className={common}
-          // Keep open until user clicks Close (×)
-          autoFocus
+          placeholder={`Select ${col.label}`}
+          options={opts}
+          onChange={(val) => onFilterChange(col.key, val)}
+          optionFilterProp="label"
+
+          maxTagCount={1}              // VERY IMPORTANT (stop wrapping)
+          // maxTagTextLength={10}        // cut long names
+          style={{
+            width: "100%",
+            minWidth: 160,
+            maxWidth: 200,
+          }}
+          className="custom-select-single-line"
+
+
+          dropdownMatchSelectWidth={false} // prevents jump
         />
-        {/* Single Close (×): clears AND hides */}
+
         <button
-          type="button"
-          title="Close"
-          className="rounded border border-gray-300 px-1 text-[12px] leading-4 text-gray-700 hover:bg-gray-100"
           onClick={() => closeAndClearFilter(col.key)}
+          className="border px-1 text-xs"
         >
           ×
         </button>
@@ -102,12 +112,18 @@ const TableHeader = ({
     );
   };
 
+
+
   return (
     <thead className={theadClassName}>
       <tr>
         {filteredColumns.map((col) => {
           const isOpen = !!openFilterByKey[col.key];
-          const hasValue = String(filters[col.key] ?? "").trim() !== "";
+          // const hasValue = String(filters[col.key] ?? "").trim() !== "";
+          const val = filters[col.key];
+          const hasValue = Array.isArray(val)
+            ? val.length > 0
+            : String(val ?? "").trim() !== "";
           const iconActive = isOpen || hasValue;
 
           return (
@@ -121,10 +137,12 @@ const TableHeader = ({
             <th
               key={col.key}
               className={`whitespace-nowrap border-b border-gray-200 px-4 py-2 text-center text-sm font-semibold text-gray-700 align-top
-    ${col.key === "demandId" ? "sticky-demand-col" : ""}
-  `}
+      ${col.key === "demandId" ? "sticky-demand-col" : ""}
+    `}
             >
-              <div className="flex flex-col items-stretch gap-1">
+              <div className="flex flex-col items-stretch gap-1"
+              >
+
                 <div className="flex items-center justify-center gap-2">
                   <span>{col.label}</span>
 

@@ -5,6 +5,7 @@ import { Modal, Tabs, Button, message, Spin, Alert } from "antd";
 import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 
 import { getProfiles } from "../../api/Profiles/addProfile.js";
+import { getDemandsByProfileApi } from "../../api/Profiles/attachedDemand.js";
 import {
   attachProfilesToDemand,
   getAttachedProfilesByDemandId, // <-- fetch attached profiles from backend
@@ -331,6 +332,10 @@ export default function DemandDetailModal({
   // inner tabs under "Profile Shared": open / archived
   const [profileSubTab, setProfileSubTab] = useState("open");
 
+  const [searchText, setSearchText] = useState("");
+ 
+
+
   const demandPkId = row?.id ?? null;
 
   // ===== Onboarding state (list) =====
@@ -410,8 +415,9 @@ export default function DemandDetailModal({
 
   const openProfileUsage = async (profile) => {
     const pid = profileKey(profile);
-    if (!pid || !row?.id) {
-      message.error("Profile or Demand ID missing");
+
+    if (!pid) {
+      message.error("Profile ID missing");
       return;
     }
 
@@ -420,22 +426,19 @@ export default function DemandDetailModal({
     setViewLoading(true);
 
     try {
-      // SAME API you already use for small cards
-      const res = await getAttachedProfilesByDemandId(row.id);
+      // ✅ CORRECT API
+      const res = await getDemandsByProfileApi(pid);
+
       const list = extractList(res);
 
-      //  Filter SAME response for THIS profile only
-      const filtered = list.filter(
-        (p) => String(profileKey(p)) === String(pid)
-      );
-
-      setViewList(filtered);
+      setViewList(list);
     } catch (e) {
       message.error("Failed to load profile usage");
     } finally {
       setViewLoading(false);
     }
   };
+
 
 
   const loadAttached = async () => {
@@ -516,6 +519,28 @@ export default function DemandDetailModal({
     () => (attachedProfiles || []).filter((p) => !isOpenProfileStatus(p)),
     [attachedProfiles]
   );
+
+
+
+  const filteredProfiles = useMemo(() => {
+    let list = availableProfiles || [];
+
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase();
+
+      list = list.filter((p) => {
+        const name = (p?.candidateName || "").toLowerCase();
+        const exp = String(p?.experience || "").toLowerCase();
+
+        return name.includes(q) || exp.includes(q);
+      });
+    }
+
+    return list;
+  }, [availableProfiles, searchText]);
+
+
+
 
   /** ---- Header ---- */
   const header = (
@@ -721,25 +746,48 @@ export default function DemandDetailModal({
                         <Spin />
                       ) : viewList.length ? (
                         <div className="divide-y">
-                          {viewList.map((p, i) => (
-                            <div key={i} className="py-2 grid grid-cols-3 text-sm">
-                              <div className="font-medium">
-                                {p?.displayDemandId ??
-                                  p?.demandId ??
-                                  p?.demand?.demandId ??
-                                  "-"}
-                              </div>
+                          {viewList.map((p, i) => {
+                            const demandId =
+                              p?.displayDemandId ??
+                              p?.demandCode ??
+                              p?.demand ??
+                              p?.demand?.displayDemandId ??
+                              "-";
 
-                              <div>
-                                {p?.profileTrackerStatus?.name ?? "-"}
-                              </div>
 
-                              <div>
-                                {p?.profileStatus?.name ?? "-"}
+
+
+                            const status =
+                              p?.profileTrackerStatus?.name ??
+                              p?.status ??
+                              "-";
+
+                            return (
+                              <div
+                                key={i}
+                                className="flex items-center justify-between px-3 py-2 rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+                              >
+                                {/* LEFT SIDE */}
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold text-gray-800">
+                                    {demandId}
+                                  </span>
+                                </div>
+
+                                {/* RIGHT SIDE (STATUS BADGE) */}
+                                <span
+                                  className="text-xs font-semibold px-2 py-0.5 rounded-full border"
+                                  style={{
+                                    background: "#EDF2F7",
+                                    color: "#2D3748",
+                                    borderColor: "#CBD5E0",
+                                  }}
+                                >
+                                  {status}
+                                </span>
                               </div>
-                              
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-gray-500 text-sm">
@@ -749,6 +797,7 @@ export default function DemandDetailModal({
                     </Modal>
 
 
+
                     {/* Header actions - only in Open tab */}
                     <div className="mb-3 flex items-center justify-between">
                       <div className="text-gray-700 font-medium">
@@ -756,8 +805,6 @@ export default function DemandDetailModal({
                       </div>
 
                       {profileSubTab === "open" && !attachMode ? (
-
-
                         canAttachProfiles && (
                           <Button
                             icon={<PlusOutlined />}
@@ -770,21 +817,33 @@ export default function DemandDetailModal({
                             Attach Profile
                           </Button>
                         )
-
                       ) : profileSubTab === "open" && attachMode ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-end w-full gap-3 flex-wrap">
+
+                          {/* 🔍 SEARCH */}
+                          <input
+                            type="text"
+                            placeholder="Search by name..."
+                            className="border rounded px-3 py-1 text-sm w-56"
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                          />
+
+                          {/* BUTTONS */}
                           <Button onClick={() => setAttachMode(false)} disabled={working}>
                             Back
                           </Button>
+
                           <Button type="primary" loading={working} onClick={submitAttach}>
                             Submit
                           </Button>
+
                         </div>
                       ) : (
-                        // Archived tab: no attach controls
                         <div />
                       )}
                     </div>
+
 
                     {/* Body */}
                     {profileSubTab === "archived" ? (
@@ -831,7 +890,7 @@ export default function DemandDetailModal({
                             </div>
                           ) : availableProfiles?.length ? (
                             <div className="divide-y divide-gray-200">
-                              {availableProfiles.map((p) => {
+                              {filteredProfiles.map((p) => {
                                 const key = profileKey(p);
                                 return (
                                   <ProfileRow
@@ -928,8 +987,8 @@ export default function DemandDetailModal({
               },
             ].filter(Boolean)}
           />
-        </div>
+        </div >
       )}
-    </Modal>
+    </Modal >
   );
 }

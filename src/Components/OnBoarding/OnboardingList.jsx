@@ -427,6 +427,9 @@ function OnboardingDetailSection({ row }) {
 }
 
 export default function OnboardingList() {
+
+
+
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
 
@@ -449,6 +452,10 @@ export default function OnboardingList() {
   // 🔎 Query values (server-driven)
   const [query, setQuery] = useState({});
 
+
+  const [isHbuReady, setIsHbuReady] = useState(false);
+
+
   // Server dropdown values for search selects
   const [dd, setDd] = useState({
     wbsType: [],
@@ -463,6 +470,24 @@ export default function OnboardingList() {
   const { can } = usePermissions();
   const canUpdateOnboardingTracker = can("DashBoard", "Track", "Update onboardingTracker");
   const canExcelExport = can("DashBoard", "Track", "Export OnboardingTrackerSheet");
+
+
+
+ const allowedHbus = useMemo(() => {
+    const list = [];
+
+    if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
+    if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
+    if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
+    if (can("DashBoard", "HBU", "QE")) list.push("QE");
+    if (can("DashBoard", "HBU", "AI")) list.push("AI");
+    if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
+    if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
+    if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
+
+    return list;
+  }, [can]);
+
 
   // Fetch dropdowns once
   useEffect(() => {
@@ -556,7 +581,25 @@ export default function OnboardingList() {
     // -------- From AddDemand --------
     const did = intFrom(query.demandId);
     if (did != null) f.demandId = did;
-    if (has(query.hbu)) f.hbu = clean(query.hbu);
+   // ✅ CASE 1: both permission + UI
+if (allowedHbus.length > 0 && has(query.hbu)) {
+  if (allowedHbus.includes(clean(query.hbu))) {
+    f.hbu = clean(query.hbu);
+  } else {
+    f.hbu = allowedHbus[0];
+  }
+}
+
+// ✅ CASE 2: only permission
+else if (allowedHbus.length > 0) {
+  f.hbu = allowedHbus[0];
+}
+
+// ✅ CASE 3: only UI
+else if (has(query.hbu)) {
+  f.hbu = clean(query.hbu);
+}
+
     if (has(query.hiringManager)) f.hiringManager = clean(query.hiringManager);
     if (has(query.pmoSpoc)) f.pmoSpoc = clean(query.pmoSpoc);
     if (has(query.band)) f.band = clean(query.band);
@@ -638,10 +681,11 @@ export default function OnboardingList() {
   );
 
   // initial load
-  useEffect(() => {
-    fetchServer(0, size);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+ useEffect(() => {
+  if (!isHbuReady) return;
+
+  fetchServer(0, size);
+}, [isHbuReady]);
 
   const handleExport = async () => {
     try {
@@ -659,6 +703,19 @@ export default function OnboardingList() {
     const t = setTimeout(() => fetchServer(0, size), 250);
     return () => clearTimeout(t);
   }, [query, size, fetchServer]);
+
+
+
+  useEffect(() => {
+  if (allowedHbus.length > 0) {
+    setQuery((prev) => ({
+      ...prev,
+      hbu: allowedHbus[0]   // ✅ onboarding uses single HBU
+    }));
+  }
+
+  setIsHbuReady(true);
+}, [allowedHbus]);
 
   // column query change
   const handleQueryChange = (key, value) => {

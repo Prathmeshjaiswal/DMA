@@ -1,5 +1,3 @@
-
-
 // ================== src/pages/Profiles/ProfileTable.jsx ==================
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +32,11 @@ const maskPan = (pan) => {
   return "XXXXXX" + p.slice(-4);
 };
 
+
+
+
+
+
 export default function ProfileTable({
   rows = [],
   columns = [],
@@ -65,6 +68,12 @@ export default function ProfileTable({
   const [pendingCvFile, setPendingCvFile] = useState(null);
 
 
+  const scrollRef = React.useRef(null);
+
+const isDownRef = React.useRef(false);
+const startXRef = React.useRef(0);
+const scrollLeftRef = React.useRef(0);
+
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
 
@@ -77,6 +86,12 @@ export default function ProfileTable({
     skillCluster: dropdownOptions?.skillCluster ?? [],
     primarySkills: dropdownOptions?.primarySkills ?? [],
     secondarySkills: dropdownOptions?.secondarySkills ?? [],
+
+
+    origin: dropdownOptions?.origins ?? [],
+    karatStatuses: dropdownOptions?.karatStatuses ?? [],
+    sources: dropdownOptions?.sources ?? [],
+    overallStatuses: dropdownOptions?.overallStatuses ?? [],
 
     // REQUIRED
     profileStatus: dropdownOptions?.profileStatus ?? [],
@@ -124,6 +139,36 @@ export default function ProfileTable({
 
   // --- compute initial values for the edit form from the selected row
   const buildInitialValues = (row) => ({
+
+
+
+    originId: row?.origin?.id ? String(row.origin.id) : undefined,
+    karatStatusId: row?.karatStatus?.id ? String(row.karatStatus.id) : undefined,
+    sourceId: row?.source?.id ? String(row.source.id) : undefined,
+
+    overallStatusRdgId: row?.overallStatusRdg?.id
+      ? String(row.overallStatusRdg.id)
+      : undefined,
+
+
+    dateOfSubmission: row?.dateOfSubmission,
+    weekOf: row?.weekOf,
+    accountReceivedOn: row?.accountReceivedOn,
+    statusDate: row?.statusDate,
+
+    karatReadiness: row?.karatReadiness ?? "",
+    lobShared: row?.lobShared ?? "",
+    practice: row?.practice ?? "",
+    band: row?.band ?? "",
+    codes: row?.codes ?? "",
+    codeType: row?.codeType ?? "",
+    projectCode: row?.projectCode ?? "",
+
+    ageing: row?.ageing,
+    ageingRange: row?.ageingRange ?? "",
+    minBillingRate: row?.minBillingRate,
+
+
     candidateName: row?.candidateName ?? "",
     emailId: row?.emailId ?? "",
     phoneNumber:
@@ -137,10 +182,11 @@ export default function ProfileTable({
         ? String(row.sapId)
         : undefined,
 
-    experienceYears:
-      row?.experienceYears != null && row?.experienceYears !== ""
-        ? Number(row.experienceYears)
-        : undefined,
+  experienceYears:
+  row?.experience != null
+    ? parseFloat(row.experience)
+    : undefined,
+
     locationId:
       row?.locationId != null && row?.locationId !== "" ? String(row.locationId) : undefined,
     hbuId: row?.hbuId != null && row?.hbuId !== "" ? String(row.hbuId) : undefined,
@@ -240,7 +286,11 @@ export default function ProfileTable({
         patch.emailId = values.emailId.trim();
 
       if (values.phoneNumber)
-        patch.phoneNumber = String(values.phoneNumber).replace(/\D+/g, "");
+        // patch.phoneNumber = String(values.phoneNumber).replace(/\D+/g, "");
+        patch.phoneNumber = Number(
+          String(values.phoneNumber).replace(/\D+/g, "")
+        );
+
 
       if (values.sapId)
         patch.sapId = String(values.sapId).replace(/\D+/g, "");
@@ -271,6 +321,34 @@ export default function ProfileTable({
 
       if (values.panNumber)
         patch.panNumber = values.panNumber.toUpperCase().replace(/\s+/g, "");
+
+
+
+      if (values.originId != null) patch.originId = Number(values.originId); if (values.lobShared != null) patch.lobShared = values.lobShared;
+      if (values.practice != null) patch.practice = values.practice;
+      if (values.band != null) patch.band = values.band;
+
+      if (values.ageing != null) patch.ageing = Number(values.ageing);
+      if (values.ageingRange != null) patch.ageingRange = values.ageingRange;
+
+      if (values.codes != null) patch.codes = values.codes;
+      if (values.codeType != null) patch.codeType = values.codeType;
+      if (values.minBillingRate != null) patch.minBillingRate = Number(values.minBillingRate);
+      if (values.projectCode != null) patch.projectCode = values.projectCode;
+      if (values.karatStatusId != null) patch.karatStatusId = Number(values.karatStatusId);
+      if (values.sourceId != null) patch.sourceId = Number(values.sourceId);
+      if (values.overallStatusRdgId != null) {
+        patch.overallStatusRdgId = Number(values.overallStatusRdgId);
+      }
+
+
+      if (values.dateOfSubmission) patch.dateOfSubmission = values.dateOfSubmission;
+      if (values.weekOf) patch.weekOf = values.weekOf;
+      if (values.accountReceivedOn) patch.accountReceivedOn = values.accountReceivedOn;
+      if (values.statusDate) patch.statusDate = values.statusDate;
+
+      if (values.karatReadiness != null) patch.karatReadiness = values.karatReadiness;
+
 
       // ---------- SAVE ----------
       setSaving(true);
@@ -347,7 +425,19 @@ export default function ProfileTable({
           // REQUIRED for fixed columns
           width: isStickyCandidate ? 180 : colWidth,
 
-          //  THIS MAKES IT STICKY
+
+          // ✅ ADD THIS
+          // className: isStickyCandidate ? "sticky-candidate-col" : "",
+
+          // onCell: () => ({
+          //   className: isStickyCandidate ? "sticky-candidate-col" : "",
+          // }),
+
+          // onHeaderCell: () => ({
+          //   className: isStickyCandidate ? "sticky-candidate-col" : "",
+          // }),
+
+
           fixed: isStickyCandidate ? "left" : undefined,
 
 
@@ -443,7 +533,7 @@ export default function ProfileTable({
             return <div className="text-gray-800">{value}</div>;
           },
           onHeaderCell: () => ({
-            className: "bg-white !py-2 md:!py-2 text-gray-800",
+            className: "bg-white !py-2  text-gray-800",
           }),
           onCell: () => ({
             className: "align-middle !py-2",
@@ -646,70 +736,131 @@ export default function ProfileTable({
 
   return (
     <>
-      <div className="rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className=" rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* ---- Scoped CSS ---- */}
         <style>{`
-          .profiles-table .ant-table-thead > tr > th {
-            border-bottom: 1px solid #eef0f2;
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-          }
-          .profiles-table .ant-table-tbody > tr > td {
-            border-bottom: 1px solid #f3f4f6;
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-          }
-          .profiles-table .cell-ellipsis {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #1f2937;
-            max-width: 100%;
-            display: block;
-          }
-          .profiles-table .cell-ellipsis-compact { max-width: 180px; }
-
-          /* Sticky Candidate Column */
-.profiles-table .ant-table-cell-fix-left {
-  background: #ffffff;
-  z-index: 3;
-}
-
-/* Sticky header on left */
-.profiles-table .ant-table-thead .ant-table-cell-fix-left {
-  background: #f9fafb;
-  z-index: 4;
-}
-
-/* Divider between sticky and scrollable columns */
-.profiles-table .ant-table-cell-fix-left::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 100%;
-  background: #e5e7eb;
-}
-
-
-        `}
-
-        </style>
+        .profiles-table .ant-table-thead > tr > th {
+          border-bottom: 1px solid #eef0f2;
+          padding-top: 8px !important;
+          padding-bottom: 8px !important;
+        }
+ 
+        .profiles-table .ant-table-tbody > tr > td {
+          border-bottom: 1px solid #f3f4f6;
+          padding-top: 8px !important;
+          padding-bottom: 8px !important;
+        }
+ 
+        .profiles-table .cell-ellipsis {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #1f2937;
+          max-width: 100%;
+          display: block;
+        }
+ 
+        .profiles-table .cell-ellipsis-compact {
+          max-width: 180px;
+        }
+ 
+        /* 🔥 FIX: prevent sticky column overlapping navbar */
+        .profiles-table .ant-table-container {
+          position: relative;
+          z-index: 0;
+        }
+ 
+        /* 🔥 FIX: reduce z-index so navbar stays above */
+        .profiles-table .ant-table-cell-fix-left {
+          background: white;
+          z-index: 2;
+        }
+ 
+        .profiles-table .ant-table-thead .ant-table-cell-fix-left {
+          z-index: 3;
+          background: #f9fafb;
+        }
+ 
+        /* 🔥 FIX: right fixed column */
+        .profiles-table .ant-table-cell-fix-right {
+          z-index: 2;
+          background: white;
+        }
+ 
+        /* 🔥 FIX: vertical scroll body */
+        .profiles-table .ant-table-body {
+          overflow-y: auto !important;
+        }
+ 
+        /* Divider between sticky and scroll */
+        .profiles-table .ant-table-cell-fix-left::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 1px;
+          height: 100%;
+          background: #7094dc;
+        }
+      `}</style>
       </div>
+<div
+  ref={scrollRef}
+  className="overflow-x-auto cursor-grab active:cursor-grabbing"
+  style={{ overflowY: "auto" }}
 
-      <div className="">
-        <Table
-          rowKey={(r) =>
-            String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
-          }
-          dataSource={rows}
-          columns={antdColumns}
-          pagination={pagination}
-          size="middle"
-          className="profiles-table"
-          scroll={{ x: true }}
-        />
+  onMouseDown={(e) => {
+  const body = scrollRef.current?.querySelector('.ant-table-body');
+  if (!body) return;
+
+  isDownRef.current = true;
+  startXRef.current = e.pageX - scrollRef.current.offsetLeft;
+  scrollLeftRef.current = body.scrollLeft;
+}}
+
+  onMouseLeave={() => {
+    isDownRef.current = false;
+  }}
+
+  onMouseUp={() => {
+    isDownRef.current = false;
+  }}
+
+onMouseMove={(e) => {
+  if (!isDownRef.current) return;
+
+  e.preventDefault();
+
+  const body = scrollRef.current?.querySelector('.ant-table-body');
+  if (!body) return;
+
+  const x = e.pageX - scrollRef.current.offsetLeft;
+  const walk = (x - startXRef.current) * 1.5;
+
+  body.scrollLeft = scrollLeftRef.current - walk;
+}}
+
+ onWheel={(e) => {
+  const body = scrollRef.current?.querySelector('.ant-table-body');
+  if (!body) return;
+
+  if (e.deltaY !== 0) {
+    body.scrollLeft += e.deltaY;
+  }
+}}
+>
+  <Table
+    rowKey={(r) =>
+      String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
+    }
+    dataSource={rows}
+    columns={antdColumns}
+    pagination={pagination}
+    size="middle"
+    className="profiles-table"
+    scroll={{ x: true }}
+  />
+
 
 
         {/* ---- Edit Modal ---- */}
@@ -856,6 +1007,9 @@ export default function ProfileTable({
 
             <Form.Item name="experienceYears" label="Experience (yrs)">
               <InputNumber
+
+                key={editRow?.id}   // ✅ FORCE REFRESH
+
                 style={{ width: "100%" }}
                 controls={false}
                 min={0}
@@ -954,6 +1108,100 @@ export default function ProfileTable({
               />
             </Form.Item>
 
+            <Form.Item name="originId" label="Origin">
+              <AntdSelect
+                allowClear
+                options={opts.origin}
+                placeholder="Select Origin"
+                showSearch
+                optionFilterProp="label"
+              />
+            </Form.Item>
+
+            <Form.Item name="karatStatusId" label="Karat Status">
+              <AntdSelect
+                allowClear
+                options={opts.karatStatuses}
+                placeholder="Select Karat Status"
+              />
+            </Form.Item>
+
+            <Form.Item name="sourceId" label="Source">
+              <AntdSelect
+                allowClear
+                options={opts.sources}
+                placeholder="Select Source"
+              />
+            </Form.Item>
+
+            <Form.Item name="overallStatusRdgId" label="Overall Status">
+
+              <AntdSelect
+                allowClear
+                options={opts.overallStatuses}
+                placeholder="Select Overall Status"
+              />
+            </Form.Item>
+            <Form.Item name="dateOfSubmission" label="Date of Submission">
+              <Input type="date" />
+            </Form.Item>
+
+            <Form.Item name="weekOf" label="Week Of">
+              <Input type="date" />
+            </Form.Item>
+
+            <Form.Item name="accountReceivedOn" label="Account Received On">
+              <Input type="date" />
+            </Form.Item>
+
+            <Form.Item name="statusDate" label="Status Date">
+              <Input type="date" />
+            </Form.Item>
+
+            <Form.Item name="karatReadiness" label="Karat Readiness">
+              <Input />
+            </Form.Item>
+
+
+            <Form.Item name="band" label="Band">
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="codes" label="Codes">
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="codeType" label="Code Type">
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="projectCode" label="Project Code">
+              <Input />
+            </Form.Item>
+
+
+            <Form.Item name="lobShared" label="LOB Shared">
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="practice" label="Practice">
+              <Input />
+            </Form.Item>
+
+
+
+            <Form.Item name="ageing" label="Ageing">
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
+
+            <Form.Item name="ageingRange" label="Ageing Range">
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="minBillingRate" label="Min Billing Rate">
+              <InputNumber style={{ width: "100%" }} />
+            </Form.Item>
+
             {/* ================= CV UPLOAD / REPLACE ================= */}
             <Form.Item
               label="Resume / CV"
@@ -999,6 +1247,8 @@ export default function ProfileTable({
                     </span>
                   )}
                 </div>
+
+
 
                 <Button
                   type="default"

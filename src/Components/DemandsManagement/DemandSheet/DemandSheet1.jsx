@@ -13,6 +13,7 @@ import { getDemandsheet, searchDemands } from "../../api/Demands/getDemands.js";
 import { getDropDownData } from "../../api/Demands/addDemands.js";
 import { usePermissions } from "../../Auth/PermissionProvider.jsx";
 import { useAuth } from "../../Auth/AuthProvider.jsx";
+import { Navigate } from "react-router-dom";
 
 
 
@@ -31,32 +32,7 @@ const splitNames = (v) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-// const normalizeDemandDto = (d) => ({
-//   demandId: d.displayDemandId ?? d.demandId ?? d.id ?? "",
-//   rrNumber: String(d.rrNumber ?? ""),
-//   lob: nameOf(d.lob),
-//   skillCluster: nameOf(d.skillCluster),
-//   hiringManager: nameOf(d.hiringManager),
-//   deliveryManager: nameOf(d.deliveryManager),
-//   pm: nameOf(d.projectManager),
-//   pmo: nameOf(d.pmo),
-//   salesSpoc: nameOf(d.salesSpoc),
-//   hbu: nameOf(d.hbu),
-//   primarySkills: joinNames(d.primarySkills),
-//   secondarySkills: joinNames(d.secondarySkills),
-//   demandLocation: joinNames(d.demandLocations),
-//   priority: nameOf(d.priority),
-//   band: nameOf(d.band),
-//   experience: d.experience ?? "",
-//   status: nameOf(d.status),
-//   demandTimeline: nameOf(d.demandTimeline),
-//   demandType: nameOf(d.demandType),
-//   demandReceivedDate: d.demandReceivedDate ?? "",
-//   remark: d.remark ?? "",
-//   karat: d.karatFlag === true ? "Yes" : d.karatFlag === false ? "No" : "",
-//   id: d.id,
-//   jdFileName: d.jdFileName ?? d.fileName ?? null,
-// });
+
 
 
 const normalizeDemandDto = (d) => {
@@ -120,13 +96,14 @@ const hasAccessToken = () => {
 
 
 
+
 export default function DemandSheet1() {
   const navigate = useNavigate();
   const isFirstLoad = useRef(true);
   const hasLoadedOnce = useRef(false);
   const { isAuthenticated } = useAuth();
 
-
+const [isHbuReady, setIsHbuReady] = useState(false);
 
   //permission check
   const { can } = usePermissions();
@@ -140,6 +117,24 @@ export default function DemandSheet1() {
   const canViewProfileData = can("DashBoard", "Demands", "Profile Shared Details");
   const canViewOnboarding = can("DashBoard", "Demands", "Onboarding Data");
   const canViewHistory = can("DashBoard", "Demands", "Demand History");
+  const canAccessDemandPage = can("DashBoard", "Demands", "View Demand Page");
+
+  const allowedHbus = useMemo(() => {
+    const list = [];
+
+    if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
+    if (can("DashBoard", "HBU", "Experience")) list.push("Experience");
+    if (can("DashBoard", "HBU", "AI")) list.push("AI");
+    if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
+    if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
+    if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
+    if (can("DashBoard", "HBU", "QE")) list.push("QE");
+    if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
+    if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
+
+    return list;
+  }, [can]);
+
 
   // console.log("PERMISSIONS:", canUpdateDemands);
   // const { list } = usePermissions();
@@ -169,7 +164,7 @@ export default function DemandSheet1() {
     { key: "salesSpoc", label: "Sales Spoc" },
     { key: "pmo", label: "PMO" },
     { key: "band", label: "Band" },
-    { key: "experience", label: "Experience" },
+    { key: "experience", label: "Experience (yrs)" },
     { key: "pod", label: "Pod / Programme Name" },
 
     // ✅ EXTRA COLUMNS (selectable from column panel)
@@ -217,10 +212,24 @@ export default function DemandSheet1() {
 
   const [apiError, setApiError] = useState(null);
   const [dropdowns, setDropdowns] = useState(null);
+
+  const filteredHbuOptions = useMemo(() => {
+    if (!dropdowns?.hbuList) return [];
+
+    if (allowedHbus.length > 0) {
+      return dropdowns.hbuList.filter(h =>
+        allowedHbus.includes(h.name || h)
+      );
+    }
+
+    return dropdowns.hbuList;
+  }, [dropdowns, allowedHbus]);
+
+
   const [ddLoading, setDdLoading] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const [totalItems, setTotalItems] = useState(0);
 
   const [visibleColumns, setVisibleColumns] = useState(defaultVisible);
@@ -230,28 +239,56 @@ export default function DemandSheet1() {
   const [detailRow, setDetailRow] = useState(null);
 
   /* ================= FILTERS ================= */
+  // const [filters, setFilters] = useState({
+  //   demandId: "",
+  //   rrNumber: "",
+  //   lob: "",
+  //   skillCluster: "",
+  //   primarySkills: "",
+  //   secondarySkills: "",
+  //   priority: "",
+  //   status: "",
+  //   karat: "",
+  //   hbu: "",
+  //   demandTimeline: "",
+  //   demandType: "",
+  //   demandLocation: "",
+  //   hiringManager: "",
+  //   deliveryManager: "",
+  //   pm: "",
+  //   salesSpoc: "",
+  //   pmo: "",
+  //   band: "",
+  //   experience: "",
+  // });
+
+
   const [filters, setFilters] = useState({
+
     demandId: "",
     rrNumber: "",
-    lob: "",
-    skillCluster: "",
-    primarySkills: "",
-    secondarySkills: "",
-    priority: "",
-    status: "",
-    karat: "",
-    hbu: "",
-    demandTimeline: "",
-    demandType: "",
-    demandLocation: "",
-    hiringManager: "",
-    deliveryManager: "",
-    pm: "",
-    salesSpoc: "",
-    pmo: "",
-    band: "",
     experience: "",
+
+    lob: [],
+    skillCluster: [],
+    primarySkills: [],
+    secondarySkills: [],
+    priority: [],
+    status: [],
+    karat: [],
+    hbu: [],
+    pod: [],
+    demandTimeline: [],
+    demandType: [],
+    demandLocation: [],
+    hiringManager: [],
+    deliveryManager: [],
+    pm: [],
+    salesSpoc: [],
+    pmo: [],
+    band: [],
   });
+
 
   const filterConfig = useMemo(() => {
     const text = { type: "text" };
@@ -261,24 +298,52 @@ export default function DemandSheet1() {
     return {
       demandId: { type: "number", inputProps: { placeholder: "ID", step: 1 } },
       rrNumber: text,
-      lob: text,
-      skillCluster: text,
-      primarySkills: text,
-      secondarySkills: text,
+      // lob: text,
+      // skillCluster: text,
+      // primarySkills: text,
+      // secondarySkills: text,
 
 
-      hiringManager: text,
-      deliveryManager: text,
-      pm: text,
-      salesSpoc: text,
-      pmo: text,
-      band: text,
+      // hiringManager: text,
+      // deliveryManager: text,
+      // pm: text,
+      // salesSpoc: text,
+      // pmo: text,
+      // band: text,
       experience: text,
-      demandLocation: text,
+      // demandLocation: text,
 
-      priority: { type: "select", options: [{ name: "P1" }, { name: "P2" }, { name: "P3" }] },
-      status: text,
+      lob: { type: "select", options: dropdowns?.lobList || [] },
+      skillCluster: { type: "select", options: dropdowns?.skillClusterList || [] },
+      primarySkills: { type: "select", options: dropdowns?.primarySkillsList || [] },
+      secondarySkills: { type: "select", options: dropdowns?.secondarySkillsList || [] },
 
+      hiringManager: { type: "select", options: dropdowns?.hiringManagerList || [] },
+      deliveryManager: { type: "select", options: dropdowns?.deliveryManagerList || [] },
+      pm: { type: "select", options: dropdowns?.projectManagerList || [] },
+      salesSpoc: { type: "select", options: dropdowns?.salesSpocList || [] },
+      pmo: { type: "select", options: dropdowns?.pmoList || [] },
+
+      band: { type: "select", options: dropdowns?.bandList || [] },
+      // hbu: { type: "select", options: dropdowns?.hbuList || [] },
+      hbu: { type: "select", options: filteredHbuOptions },
+
+      pod: { type: "select", options: dropdowns?.podList || [] },
+
+      demandType: { type: "select", options: dropdowns?.demandTypeList || [] },
+
+      demandTimeline: { type: "select", options: dropdowns?.demandTimelineList || [] },
+
+
+      demandLocation: {
+        type: "select",
+        options: [
+          ...(dropdowns?.onshoreLocationList || []),
+          ...(dropdowns?.offshoreLocationList || []),
+        ],
+      },
+      priority: { type: "select", options: dropdowns?.priorityList || [] },
+      status: { type: "select", options: dropdowns?.statusList || [] },
       karat: {
         type: "select",
         options: [
@@ -287,16 +352,40 @@ export default function DemandSheet1() {
         ],
       },
 
-      hbu: text,
-      demandTimeline: mkSel(dropdowns?.demandTimeline),
-      demandType: mkSel(dropdowns?.demandType),
+
     };
   }, [dropdowns]);
 
+  // const hasAnyFilter = useMemo(
+  //   () => Object.values(filters).some((v) => String(v ?? "").trim() !== ""),
+  //   [filters]
+  // );
+
+
+useEffect(() => {
+  if (allowedHbus.length > 0) {
+    setFilters((prev) => ({
+      ...prev,
+      hbu: allowedHbus
+    }));
+  }
+
+  // ✅ mark ready AFTER setting filter
+  setIsHbuReady(true);
+}, [allowedHbus]);
+
+
+
   const hasAnyFilter = useMemo(
-    () => Object.values(filters).some((v) => String(v ?? "").trim() !== ""),
+    () =>
+      Object.values(filters).some((v) =>
+        Array.isArray(v)
+          ? v.length > 0
+          : String(v ?? "").trim() !== ""
+      ),
     [filters]
   );
+
 
   /* ================= SEARCH PAYLOAD ================= */
   const buildFilterPayload = (f) => {
@@ -311,85 +400,80 @@ export default function DemandSheet1() {
       payload.rrNumber = r ? Number(r) : f.rrNumber;
     }
 
-    if (f.lob) payload.lobName = f.lob;
-    if (f.skillCluster) payload.skillClusterName = f.skillCluster;
-    if (f.hiringManager) payload.hiringManagerName = f.hiringManager;
-    if (f.deliveryManager) payload.deliveryManagerName = f.deliveryManager;
-    if (f.pm) payload.projectManagerName = f.pm;
-    if (f.salesSpoc) payload.salesSpocName = f.salesSpoc;
-    if (f.pmo) payload.pmoName = f.pmo;
+    // if (f.lob) payload.lobName = f.lob;
+    if (f.lob?.length) payload.lobNames = f.lob;
 
 
-    if (f.status) payload.statusName = f.status;
-    if (f.priority) payload.priorityName = f.priority;
-    if (f.demandType) payload.demandTypeName = f.demandType;
-    if (f.hbu) payload.hbuName = f.hbu;
+    if (f.skillCluster?.length) payload.skillClusterNames = f.skillCluster;
+    if (f.hiringManager?.length) payload.hiringManagerNames = f.hiringManager;
+    if (f.deliveryManager?.length) payload.deliveryManagerNames = f.deliveryManager;
+    if (f.pm?.length) payload.projectManagerNames = f.pm;
+    if (f.salesSpoc?.length) payload.salesSpocNames = f.salesSpoc;
+    if (f.pmo?.length) payload.pmoNames = f.pmo;
+    if (f.status?.length) payload.statusNames = f.status;
+    if (f.priority?.length) payload.priorityNames = f.priority;
+    if (f.demandType?.length) payload.demandTypeNames = f.demandType;
+    // if (f.hbu?.length) payload.hbuNames = f.hbu;
+   // ✅ CASE 1: both permission + UI selection
+if (allowedHbus.length > 0 && f.hbu?.length > 0) {
+  payload.hbuNames = f.hbu.filter(h => allowedHbus.includes(h));
+}
+
+// ✅ CASE 2: only permission
+else if (allowedHbus.length > 0) {
+  payload.hbuNames = allowedHbus;
+}
+
+// ✅ CASE 3: only UI filter
+else if (f.hbu?.length > 0) {
+  payload.hbuNames = f.hbu;
+}
+
+    if (f.pod?.length) payload.podNames = f.pod;
 
 
-    //  KARAT FILTER
-    if (f.karat === "Yes") {
-      payload.karatFlag = true;
+    if (f.karat?.length) {
+      if (f.karat.length === 1) {
+        payload.karatFlag = f.karat[0] === "Yes";
+      }
     }
-    if (f.karat === "No") {
-      payload.karatFlag = false;
+
+    if (f.demandTimeline?.length) {
+      payload.demandTimelineNames = f.demandTimeline;
     }
 
-
-    if (f.demandTimeline) {
-      payload.demandTimelineName = f.demandTimeline;
-    }
-
-
-    if (f.demandType) {
-      payload.demandTypeName = f.demandType;
-    }
-
-    if (f.band) {
-      payload.bandName = String(f.band);
+    if (f.band?.length) {
+      payload.bandNames = f.band;
     }
 
 
     // ✅ EXPERIENCE RANGE FILTER (minExperience, maxExperience, experienceRange)
     if (f.experience) {
-      const raw = String(f.experience).trim();
-
-      // Save original string for backend (if it uses experienceRange)
-      payload.experienceRange = raw;
-
-      // Case 1: Range like "3-5"
-      if (raw.includes("-")) {
-        const [min, max] = raw.split("-").map(v => Number(v.trim()));
-        if (!isNaN(min)) payload.minExperience = min;
-        if (!isNaN(max)) payload.maxExperience = max;
-      }
-      // Case 2: Single value like "5"
-      else {
-        const val = Number(raw);
-        if (!isNaN(val)) {
-          payload.minExperience = val;
-          payload.maxExperience = val;
-        }
-      }
+      payload.experienceRange = f.experience;
     }
 
 
 
-    const prim = splitNames(f.primarySkills);
-    if (prim.length) payload.primarySkillNames = prim;
-
-    const sec = splitNames(f.secondarySkills);
-    if (sec.length) payload.secondarySkillNames = sec;
+    if (f.primarySkills?.length) payload.primarySkillNames = f.primarySkills;
+    if (f.secondarySkills?.length) payload.secondarySkillNames = f.secondarySkills;
 
 
 
-    if (f.demandLocation) {
-      payload.locationNames = splitNames(f.demandLocation);
+    if (f.demandLocation?.length) {
+      payload.locationNames = f.demandLocation;
     }
 
+    // ✅ CLEAN EMPTY ARRAY FIELDS (VERY IMPORTANT)
+    Object.keys(payload).forEach((key) => {
+      if (Array.isArray(payload[key]) && payload[key].length === 0) {
+        delete payload[key];
+      }
+    });
 
 
     return payload;
   };
+
 
   /* ================= API ================= */
   const loadDemands = useCallback(
@@ -432,22 +516,22 @@ export default function DemandSheet1() {
   //     }
   //   })();
   // }, []);
+useEffect(() => {
+  if (!isAuthenticated) return;
+  if (!canAccessDemandPage) return;
+  if (!hasAccessToken()) return;
+  if (!isHbuReady) return; // ✅ WAIT FOR FILTER
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (!canCreateDemand) return;
-    if (!hasAccessToken()) return; // ✅ CRITICAL
-
-    (async () => {
-      setPageLoading(true);
-      try {
-        await loadDropdowns();
-        await loadDemands(1, pageSize);
-      } finally {
-        setPageLoading(false);
-      }
-    })();
-  }, [isAuthenticated, canCreateDemand]);
+  (async () => {
+    setPageLoading(true);
+    try {
+      await loadDropdowns();
+      await loadDemands(1, pageSize); // ✅ now correct filter applied
+    } finally {
+      setPageLoading(false);
+    }
+  })();
+}, [isAuthenticated, canCreateDemand, isHbuReady]);
 
 
 
@@ -513,7 +597,7 @@ export default function DemandSheet1() {
   //   return (
   //     <div
   //       style={{
-  //         display: "flex",
+  //         display: "flex",ac
   //         justifyContent: "center",
   //         alignItems: "center",
   //         height: "200px",
@@ -610,6 +694,9 @@ export default function DemandSheet1() {
                 pageSize={pageSize}
                 total={totalItems}
                 showSizeChanger
+
+                pageSizeOptions={['5', '10', '20', '50', '100']}
+
                 onChange={onPageChange}
                 onShowSizeChange={onPageSizeChange}
               />

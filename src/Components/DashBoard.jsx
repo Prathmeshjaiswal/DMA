@@ -35,7 +35,7 @@ const writeCache = (payload) => {
       DASHBOARD_CACHE_KEY,
       JSON.stringify({ ...payload, ts: Date.now() })
     );
-  } catch {}
+  } catch { }
 };
 
 const timeAgo = (ts) => {
@@ -74,7 +74,8 @@ const normalizeLobStack = (list) => {
     open: Number(row?.openDemand ?? 0),
     fulfilled: Number(row?.fulfilledDemand ?? 0),
     shared: Number(row?.profileSharedCount ?? 0),
-  }));
+  }))
+    .filter(d => d.open || d.fulfilled || d.shared);
 };
 
 const normalizeHbuStack = (list) => {
@@ -84,7 +85,8 @@ const normalizeHbuStack = (list) => {
     open: Number(row?.openDemand ?? 0),
     fulfilled: Number(row?.fulfilledDemand ?? 0),
     shared: Number(row?.profileSharedCount ?? 0),
-  }));
+  }))
+    .filter(d => d.open || d.fulfilled || d.shared);
 };
 
 /* ---- Priority parser for object {p0Count, p1Count, p2Count} ---- */
@@ -99,6 +101,58 @@ const normalizePriorityObject = (obj) => {
     { name: 'P1', value: Number.isFinite(p1) ? p1 : 0 },
     { name: 'P2', value: Number.isFinite(p2) ? p2 : 0 },
   ];
+};
+
+
+const getDynamicWidth = (length) => {
+  const minWidth = 300;        // same as current
+  const perItem = 80;          // space per bar group (increase if needed)
+  return Math.max(minWidth, length * perItem);
+};
+
+
+
+const CustomTick = ({ x, y, payload }) => {
+  let label = payload.value;
+
+  // If long, show first 4 letters only
+  if (label.length > 8) {
+    label = label.substring(0, 4) + "..";
+  }
+
+  return (
+    <text x={x} y={y + 10} textAnchor="middle" fontSize={10}>
+      {label}
+    </text>
+  );
+};
+
+const renderPieLabel = ({
+  cx,
+  cy,
+  midAngle,
+  outerRadius,
+  // name,
+  value,
+  index,
+}) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 25; // ✅ THIS controls spacing from line
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill={COLORS[index % COLORS.length]}
+      fontSize={12}
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+    >
+      {value}
+    </text>
+  );
 };
 
 export default function Dashboard() {
@@ -143,7 +197,7 @@ export default function Dashboard() {
       setHbuRows(Array.isArray(hbu) ? hbu : (Array.isArray(hbu?.data) ? hbu.data : []));
       // ✅ Unwrap potential Axios shape; your API returns a P0/P1/P2 object
       setPriorityRaw((pri && (pri.data ?? pri)) || {});
-//       console.log("priorityu",pri);
+      //       console.log("priorityu",pri);
       writeCache({ count: c, lob, hbu, priority: pri, ts: Date.now() });
       setLastUpdated(Date.now());
     } catch (err) {
@@ -160,11 +214,11 @@ export default function Dashboard() {
   // }, []);
 
   useEffect(() => {
-  const [f, t] = selectedDate;
-  if (f && t) {
-    fetchAll(fmtYMD(f), fmtYMD(t));
-  }
-}, [selectedDate]);
+    const [f, t] = selectedDate;
+    if (f && t) {
+      fetchAll(fmtYMD(f), fmtYMD(t));
+    }
+  }, [selectedDate]);
 
 
   // const handleRangeChange = (range) => {
@@ -176,23 +230,23 @@ export default function Dashboard() {
 
 
   const handleRangeChange = (range) => {
-  if (!range) return;
-  setSelectedDate(range);
-};
+    if (!range) return;
+    setSelectedDate(range);
+  };
 
   // const displayFormat = (v) => v ? v.format('DD-MMM-YYYY').toUpperCase() : '';
   const displayFormat = (v) => {
-  if (!v) return '';
-  // Format as DD-MMM-YYYY, then adjust month capitalization
-  const formatted = v.format('DD-MMM-YYYY');
-  return formatted.replace(
-    /-([A-Z])([A-Z]{2})-/,
-    (_, first, rest) => `-${first}${rest.toLowerCase()}-`
-  );
-};
+    if (!v) return '';
+    // Format as DD-MMM-YYYY, then adjust month capitalization
+    const formatted = v.format('DD-MMM-YYYY');
+    return formatted.replace(
+      /-([A-Z])([A-Z]{2})-/,
+      (_, first, rest) => `-${first}${rest.toLowerCase()}-`
+    );
+  };
 
-// Example:
-// console.log(displayFormat(moment())); // e.g., "19-Apr-2026"
+  // Example:
+  // console.log(displayFormat(moment())); // e.g., "19-Apr-2026"
 
 
   const cards = useMemo(() => ([
@@ -208,7 +262,7 @@ export default function Dashboard() {
   const legendStyle = { fontSize: 11 };
 
   // Set your desired ticks; change to [1,2,3,4,5] if small values
-  const FIXED_TICKS = [1,2,3,4,5];
+  const FIXED_TICKS = [1, 2, 3, 4, 5];
 
   return (
     <>
@@ -238,7 +292,9 @@ export default function Dashboard() {
             {loading && <Spin size="small" className="mb-2" />}
 
             {/* KPI Cards */}
-            <section className="grid grid-cols-12 gap-4 mb-5">
+            {/* <section className="grid grid-cols-12 gap-4 mb-5"> */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 mb-5">
+
               {cards.map((card) => (
                 <div
                   key={card.key}
@@ -254,81 +310,180 @@ export default function Dashboard() {
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
               {/* LOB GROUPED BAR (attached bars, no background boxes) */}
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-semibold mb-2">LOB Summary</div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-semibold mb-3 text-center">LOB Summary</div>
+
                 <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={lobStack}
-                      barGap={0}           // attach series within a category
-                      barCategoryGap="18%" // spacing between categories
-                    >
-                      {/* No CartesianGrid to remove background boxes */}
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} ticks={FIXED_TICKS} />
-                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
-                      <Legend wrapperStyle={legendStyle} />
-                      <Bar dataKey="open" name="Open Demand" fill="#ff7f0e" maxBarSize={18} />
-                      <Bar dataKey="fulfilled" name="Fulfilled Demand" fill="#2ca02c" maxBarSize={18} />
-                      <Bar dataKey="shared" name="Profile Shared" fill="#1f77b4" maxBarSize={18} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                    <div style={{ width: getDynamicWidth(lobStack.length), height: 260 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+
+
+                        <BarChart
+                          data={lobStack}
+                          barGap={0}           // attach series within a category
+                          barCategoryGap={20} // spacing between categories
+                          barSize={8}
+                          margin={{ top: 20, right: 20, bottom: 10 }}
+                        >
+                          {/* No CartesianGrid to remove background boxes */}
+                          {/* <XAxis dataKey="name" tick={<CustomTick />} interval={0} tickMargin={10}/> */}
+                          <XAxis
+                            dataKey="name"
+                            interval={0}
+                            height={50}
+                            tick={({ x, y, payload }) => {
+                              const full = payload.value;
+
+                              // ✅ smart short name
+                              const short =
+                                full.length > 10
+                                  ? full.split(" ")[0] // first word only
+                                  : full;
+
+                              return (
+                                <g transform={`translate(${x},${y})`}>
+                                  <text
+                                    dy={16}
+                                    textAnchor="middle"
+                                    fill="#555"
+                                    fontSize={11}
+                                  >
+                                    {short}
+                                  </text>
+                                </g>
+                              );
+                            }}
+                          />
+
+
+                          {/* <YAxis allowDecimals={false} ticks={FIXED_TICKS} tickMargin={10} /> */}
+
+                          <YAxis
+                            domain={[0, 50]}
+                            ticks={[10, 20, 30, 40, 50]}
+                            allowDecimals={false}
+                            tickMargin={10}
+                          />
+
+                          <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
+
+                          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 11, paddingTop: 25, paddingLeft: 10 }}
+                          />
+                          <Bar dataKey="open" name="Open Demand" fill="#ff7f0e" maxBarSize={18} />
+                          <Bar dataKey="fulfilled" name="Fulfilled Demand" fill="#2ca02c" maxBarSize={18} />
+                          <Bar dataKey="shared" name="Profile Shared" fill="#1f77b4" maxBarSize={18} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* HBU GROUPED BAR (attached bars, no background boxes) */}
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-semibold mb-2">HBU Summary</div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-semibold mb-3 text-center">HBU Summary</div>
+
                 <div style={{ width: '100%', height: 260 }}>
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={hbuStack}
-                      barGap={0}
-                      barCategoryGap="18%"
-                    >
-                      {/* No grid */}
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} ticks={FIXED_TICKS} />
-                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
-                      <Legend wrapperStyle={legendStyle} />
-                      <Bar dataKey="open" name="Open Demand" fill="#ff7f0e" maxBarSize={18} />
-                      <Bar dataKey="fulfilled" name="Fulfilled Demand" fill="#2ca02c" maxBarSize={18} />
-                      <Bar dataKey="shared" name="Profile Shared" fill="#1f77b4" maxBarSize={18} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                    <div style={{ width: getDynamicWidth(hbuStack.length), height: 260 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+
+
+                        <BarChart
+                          data={hbuStack}
+                          barGap={0}
+                          barCategoryGap={20}
+                          barSize={8}
+                          margin={{ top: 20, right: 20, bottom: 10 }}
+                        >
+                          {/* No grid */}
+                          {/* <XAxis dataKey="name" tick={<CustomTick />} interval={0} tickMargin={10}/> */}
+                          <XAxis
+                            dataKey="name"
+                            interval={0}
+                            height={50}
+                            tick={({ x, y, payload }) => {
+                              const full = payload.value;
+
+                              // ✅ smart short name
+                              const short =
+                                full.length > 10
+                                  ? full.split(" ")[0] // first word only
+                                  : full;
+
+                              return (
+                                <g transform={`translate(${x},${y})`}>
+                                  <text
+                                    dy={16}
+                                    textAnchor="middle"
+                                    fill="#555"
+                                    fontSize={11}
+                                  >
+                                    {short}
+                                  </text>
+                                </g>
+                              );
+                            }}
+                          />
+
+                          {/* <YAxis allowDecimals={false} ticks={FIXED_TICKS} tickMargin={10} /> */}
+
+                          <YAxis
+                            domain={[0, 50]}
+                            ticks={[10, 20, 30, 40, 50]}
+                            allowDecimals={false}
+                            tickMargin={10}
+                          />
+
+                          <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
+
+                          <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 11, paddingTop: 25, paddingLeft: 10 }}
+                          />
+                          <Bar dataKey="open" name="Open Demand" fill="#ff7f0e" maxBarSize={18} />
+                          <Bar dataKey="fulfilled" name="Fulfilled Demand" fill="#2ca02c" maxBarSize={18} />
+                          <Bar dataKey="shared" name="Profile Shared" fill="#1f77b4" maxBarSize={18} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* PRIORITY PIE (compact tooltip; render only if any value > 0) */}
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-semibold mb-2">Priority Summary</div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-semibold mb-3 text-center">Priority Summary</div>
                 <div style={{ width: '100%', height: 260 }}>
-{/*                   {priorityTotal > 0 ? ( */}
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
-                        <Legend wrapperStyle={legendStyle} />
-                        <Pie
-                          data={priorityData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          label={({ name, value }) => `${name}: ${value}`}
-                          labelStyle={{ fontSize: 11 }}
-                        >
-                          {priorityData.map((entry, index) => (
-                            <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-{/*                   ) : ( */}
-{/*                     <div className="text-sm text-gray-500 flex items-center justify-center h-full"> */}
-{/*                       No priority datas. */}
-{/*                     </div> */}
-{/*                   )} */}
+
+                  {/*                   {priorityTotal > 0 ? ( */}
+                  <ResponsiveContainer>
+                    <PieChart margin={{ top: 20, right: 20, bottom: 20 }}>
+                      <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} />
+                      <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 13, paddingTop: 30, paddingLeft: 10 }}
+                      />
+                      <Pie
+                        data={priorityData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        labelLine={true}
+                        label={renderPieLabel}
+                      // labelStyle={{ fontSize: 11}}
+                      >
+
+                        {priorityData.map((entry, index) => (
+                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/*                   ) : ( */}
+                  {/*                     <div className="text-sm text-gray-500 flex items-center justify-center h-full"> */}
+                  {/*                       No priority datas. */}
+                  {/*                     </div> */}
+                  {/*                   )} */}
                 </div>
               </div>
 

@@ -38,7 +38,7 @@ export default function Layout({ children }) {
 
       {/* Content area: grows to fill space; pushes footer down */}
       <main
-        className="flex-1 transition-all duration-300"
+        className="flex-1 transition-all duration-300 pt-2"
         style={{
           marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0,
         }}
@@ -50,8 +50,8 @@ export default function Layout({ children }) {
 
       {/* Footer: mt-auto ensures it sticks to bottom when content is short */}
       <div
-        className="transition-all duration-300"
-        style={{ marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0 }}
+   className="transition-all duration-300"    
+     style={{ marginLeft: sidebarOpen ? SIDEBAR_WIDTH : 0 }}
       >
         <Footer />
       </div>

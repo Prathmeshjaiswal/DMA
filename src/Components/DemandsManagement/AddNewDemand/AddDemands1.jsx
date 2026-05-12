@@ -87,6 +87,7 @@ const INITIAL_FORM = () => ({
   remark: "",
   rrDrafts: [],
 
+  isAutoFilled: false,   // ✅ ADD THIS
   // 🔹 Default Karat -> YES (as requested)
   karat: "yes",
 });
@@ -139,6 +140,58 @@ const toYyyyMmDd = (d) => {
   return `${dt.getFullYear()}-${mm}-${dd}`;
 };
 
+
+
+
+const AUTO_MAPPING = {
+  ET: {
+    pm: "Himanshu Pandey",
+    dm: "Nitin",
+    pmo: "Mayuri H",
+  },
+
+  WPB: {
+    pm: "Swati Bhanawat",
+    dm: "Arun",
+    pmo: "Samyak J",
+  },
+
+  CTO: {
+    pm: "Sourabh Sharma",
+    dm: "Arun",
+    pmo: "Upal C",
+  },
+
+  GDT: {
+    pm: "Sourabh Sharma",
+    dm: "Arun",
+    pmo: "Upal C",
+  },
+
+  CIB: {
+    MSS: {
+      pm: "Ritesh Mujral",
+      dm: "Nitin",
+      pmo: "Samyak J",
+    },
+    WSIT: {
+      pm: "Kushal Bargal",
+      dm: "Nitin",
+      pmo: "Shubham K",
+      locationType: "offshore",
+    },
+  },
+};
+
+
+
+const findIdByLabel = (options, label) => {
+  return options?.find(
+    (o) => o.label?.toLowerCase() === label?.toLowerCase()
+  )?.value;
+};
+
+
 // Build EXACT payload for Step‑1 draft
 const buildDraftCreateRequest = (form, cibLobId) => ({
   hbuId: toNum(form.hbu),
@@ -172,9 +225,17 @@ const buildDraftCreateRequest = (form, cibLobId) => ({
   // 🔹 Experience as float rounded to 2 decimals (or null if empty)
   // experience: round2(form.experience),
 
+  // experience:
+  //   typeof form.experience === "string" && form.experience.trim() !== ""
+  //     ? form.experience.trim()
+  //     : null,
+
   experience:
     typeof form.experience === "string" && form.experience.trim() !== ""
-      ? form.experience.trim()
+      ? form.experience
+        .toLowerCase()
+        .replace(/yrs?|years?/g, "")
+        .replace(/\s+/g, "")
       : null,
 
 
@@ -446,6 +507,57 @@ export default function AddDemands1() {
     };
   }, [dropdowns]);
 
+
+
+
+  useEffect(() => {
+    if (!options || !options.lob.length) return;
+
+    const selectedLobLabel = options.lob.find(
+      o => String(o.value) === String(form.lob)
+    )?.label;
+
+    if (!selectedLobLabel) return;
+
+    let mapping = AUTO_MAPPING[selectedLobLabel];
+
+    if (selectedLobLabel === "CIB") {
+      const subLobLabel = options.subLob.find(
+        o => String(o.value) === String(form.subLob)
+      )?.label;
+
+      if (!subLobLabel) return;
+
+      mapping = AUTO_MAPPING.CIB[subLobLabel];
+    }
+
+    if (!mapping) return;
+
+
+
+    setForm(prev => {
+      // ✅ if user already interacted, DO NOTHING
+      if (prev.isAutoFilled) return prev;
+
+      const newPm = findIdByLabel(options.projectManager, mapping.pm);
+      const newDm = findIdByLabel(options.deliveryManager, mapping.dm);
+      const newPmo = findIdByLabel(options.pmo, mapping.pmo);
+
+      return {
+        ...prev,
+        pm: newPm || prev.pm,
+        deliveryManager: newDm || prev.deliveryManager,
+        pmo: newPmo || prev.pmo,
+        isAutoFilled: true,   // ✅ mark as filled
+
+        ...(mapping.locationType && {
+          locationType: mapping.locationType
+        })
+      };
+    });
+
+  }, [form.lob, form.subLob, options]);
+
   // useEffect(() => {
   //   console.log("OPTIONS.SUBLOB >>>", options?.subLob);
   // }, [options?.subLob]);
@@ -570,6 +682,7 @@ export default function AddDemands1() {
           copied?.experience != null
             ? String(copied.experience)
             : "",
+
         karat:
           copied?.karatFlag === true || copied?.karatFlag === 1
             ? "yes"
@@ -659,8 +772,9 @@ export default function AddDemands1() {
           // 🔹 Experience: show as fixed 2 decimals if present
           experience:
             data?.experience != null && data.experience !== ""
-              ? Number(round2(data.experience)).toFixed(2)
+              ? (prev.experience || String(data.experience))
               : prev.experience,
+
 
           remark: data?.remark ?? prev.remark,
           rrDrafts: Array.isArray(data?.rrDrafts) ? data.rrDrafts : prev.rrDrafts,
@@ -886,7 +1000,7 @@ export default function AddDemands1() {
 
     // Optional: you can enforce experience >= 0 if present
     if (form.experience !== "" && String(form.experience) < "0") {
-      return message.warning("Experience cannot be negative.");
+      return message.warning("Experience cannot be negative."); v
     }
 
     // console.log("BEFORE SUBMIT:");
@@ -1112,6 +1226,7 @@ export default function AddDemands1() {
                           ...prev,
                           lob: val,
                           subLob: isCib ? prev.subLob : "",
+                          isAutoFilled: false
                         };
                       });
                       setSubLobError(false);
@@ -1177,48 +1292,46 @@ export default function AddDemands1() {
                     Experience (Years):
                   </label>
 
+
                   <input
                     className={`${inputCls} w-1/4`}
                     type="text"
-                    placeholder="e.g., 6, 3-5, 7+"
+                    placeholder="e.g., 5, 3-5, 4+, 6 yrs"
                     value={form.experience}
-
 
                     onChange={(e) => {
                       let v = e.target.value;
-                      console.log(v);
 
-                      // ✅ Remove all spaces immediately
-                      v = v.replace(/\s+/g, "");
+                      // ✅ normalize spaces
+                      v = v.replace(/\s+/g, " ").trimStart();
 
-                      // ✅ Allow empty
-                      if (v === "") {
-                        setForm((p) => ({ ...p, experience: "" }));
-                        return;
-                      }
+                      // ✅ allow ONLY valid characters
+                      v = v.replace(/[^0-9.+\-a-zA-Z\s]/g, "");
 
-
-                      // const partialRegex = /^\d+$|^\d+-$|^\d+-\d+$|^\d+\+$/;
-                      const partialRegex = /^(\d+(\.\d{0,2})?|\d+-|\d+-\d+|\d+\+)$/;
-
-
-                      if (partialRegex.test(v)) {
-                        setForm((p) => ({ ...p, experience: v }));
-                      }
+                      setForm((p) => ({ ...p, experience: v }));
                     }}
 
+                    //                     onChange={(e) => {
+                    //   setForm((p) => ({ ...p, experience: e.target.value }));
+                    // }}
 
                     onBlur={() => {
                       if (!form.experience) return;
 
-                      const finalRegex = /^(\d+|\d+-\d+|\d+\+)$/;
+                      // remove "yrs", "yrs.", "year", etc.
+                      const clean = form.experience
+                        .toLowerCase()
+                        .replace(/yrs?|years?/g, "")
+                        .replace(/\s+/g, "");
 
-                      if (!finalRegex.test(form.experience)) {
-                        alert("Invalid format! Use formats like 3, 2-5, or 7+");
-                        //   setForm((p) => ({ ...p, experience: "" }));
+                      const valid = /^(\d+(\.\d+)?|\d+-\d+|\d+\+)$/;
+
+                      if (!valid.test(clean)) {
+                        message.warning("Use formats like: 3, 3-5, 7+, 4.5, 4+ yrs");
                       }
                     }}
                   />
+
                 </div>
               </div>
             </div>
@@ -1305,7 +1418,14 @@ export default function AddDemands1() {
                 options={options?.deliveryManager}
                 placeholder="Select Delivery Manager"
                 otherValue={form.deliveryManagerOther}
-                onChangeSelect={(val) => setForm({ ...form, deliveryManager: val })}
+                onChangeSelect={(val) =>
+                  setForm(prev => ({
+                    ...prev,
+                    deliveryManager: val,
+                    isAutoFilled: true
+                  }))
+                }
+
                 onChangeOther={(val) => setForm({ ...form, deliveryManagerOther: val })}
                 inputCls={inputCls}
                 labelCls={labelCls}
@@ -1318,7 +1438,14 @@ export default function AddDemands1() {
                 options={options?.projectManager}
                 placeholder="Select Project Manager"
                 otherValue={form.pmOther}
-                onChangeSelect={(val) => setForm({ ...form, pm: val })}
+                onChangeSelect={(val) =>
+                  setForm(prev => ({
+                    ...prev,
+                    pm: val,
+                    isAutoFilled: true
+                  }))
+                }
+
                 onChangeOther={(val) => setForm({ ...form, pmOther: val })}
                 inputCls={inputCls}
                 labelCls={labelCls}
@@ -1361,7 +1488,11 @@ export default function AddDemands1() {
                 placeholder="Select PMO"
                 otherValue={form.pmoOther}
                 onChangeSelect={(val) =>
-                  setForm({ ...form, pmo: val })
+                  setForm(prev => ({
+                    ...prev,
+                    pmo: val,
+                    isAutoFilled: true
+                  }))
                 }
                 onChangeOther={(val) =>
                   setForm({ ...form, pmoOther: val })
@@ -1391,7 +1522,7 @@ export default function AddDemands1() {
 
             {/* ✅ SECOND ROW: HBU SPOC */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 px-3 pb-3">
-              <OtherableSelect
+              {/* <OtherableSelect
                 label="HBU SPOC"
                 name="hbuSpoc"
                 value={form.hbuSpoc}
@@ -1406,7 +1537,7 @@ export default function AddDemands1() {
                 }
                 inputCls={inputCls}
                 labelCls={labelCls}
-              />
+              /> */}
 
 
 

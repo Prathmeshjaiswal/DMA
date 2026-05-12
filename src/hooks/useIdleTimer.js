@@ -3,8 +3,8 @@ import api from "../Components/api/client";
 import { logout } from "../Components/api/logout";
 
 //  CONFIG (production values)
-const WARNING_TIME = 10 * 60 * 1000;  // 10 minutes idle → show popup
-const LOGOUT_TIME = 15 * 60 * 1000;  // 15 minutes idle → logout
+const WARNING_TIME = 40 * 60 * 1000;  // 10 minutes idle → show popup
+const LOGOUT_TIME = 45 * 60 * 1000;  // 15 minutes idle → logout
 
 export default function useIdleTimer() {
     const lastActivityRef = useRef(Date.now());

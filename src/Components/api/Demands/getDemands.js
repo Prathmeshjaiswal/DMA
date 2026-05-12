@@ -12,7 +12,7 @@ export const getDemandsheet = async (page = null, size = null) => {
 };
 
 
-export async function searchDemands(filter = {}, page = 0, size = 10) {
+export async function searchDemands(filter = {}, page = 0, size = 5) {
   const res = await api.post('/addNewDemand/search', filter, {
     params: { page, size },
    

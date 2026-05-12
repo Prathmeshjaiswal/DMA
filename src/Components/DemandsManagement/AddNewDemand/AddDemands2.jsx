@@ -10,6 +10,12 @@ export default function AddDemands2() {
   const navigate = useNavigate();
   const { state } = useLocation();
 
+
+  const [useSameJD, setUseSameJD] = useState(false);
+  const [globalFile, setGlobalFile] = useState(null);
+  const [globalText, setGlobalText] = useState('');
+  const globalFileRef = useRef(null);
+
   // From navigation
   const navDraftId = state?.draftId ?? null;
   const navForm1Data = state?.form1Data ?? null;
@@ -104,6 +110,14 @@ export default function AddDemands2() {
     setRrNumbers(Array.from({ length: rowCount }, () => ''));
   }, [rowCount]);
 
+
+  useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'instant' // use 'smooth' if you want animation
+  });
+}, []);
+
   const onChangeRR = (index, value) => {
     const cleaned = (value || '').replace(/\D/g, '');
 
@@ -138,6 +152,44 @@ export default function AddDemands2() {
     const init = {};
     for (let i = 0; i < rowCount; i++) init[i] = 'file';
     setRowMode(init);
+  }, [rowCount]);
+
+
+
+  useEffect(() => {
+    const saved = localStorage.getItem('step2Data');
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+
+
+      if (parsed.rowCount !== rowCount) {
+        console.log("Row count changed → clearing Step2 data");
+        localStorage.removeItem('step2Data');
+        return;
+      }
+
+      if (parsed.rrNumbers) setRrNumbers(parsed.rrNumbers);
+      if (parsed.rowMode) setRowMode(parsed.rowMode);
+      if (parsed.rowText) setRowText(parsed.rowText);
+      if (parsed.useSameJD !== undefined) setUseSameJD(parsed.useSameJD);
+      if (parsed.globalText) setGlobalText(parsed.globalText);
+      if (parsed.globalFileName) {
+        setGlobalFile({ name: parsed.globalFileName }); // ✅ fake file for UI
+      }
+
+      if (parsed.fileNames) {
+        const fakeFiles = {};
+        Object.keys(parsed.fileNames).forEach((k) => {
+          fakeFiles[k] = { name: parsed.fileNames[k] }; // dummy object
+        });
+        setRowFiles(fakeFiles);
+      }
+
+    } catch (e) {
+      console.error("Failed to restore step2 state", e);
+    }
   }, [rowCount]);
 
   const isAllowedType = (f) => {
@@ -233,6 +285,52 @@ export default function AddDemands2() {
     return undefined;
   };
 
+
+  // ✅ MOVE HERE (top level, after states)
+  // const saveStep2State = () => {
+  //   const fileNames = {};
+
+  //   Object.keys(rowFiles).forEach((k) => {
+  //     fileNames[k] = rowFiles[k]?.name;
+  //   });
+
+  //   const data = {
+  //     rrNumbers,
+  //     rowMode,
+  //     rowText,
+  //     useSameJD,
+  //     globalText,
+  //     fileNames, // ✅ store only names
+  //   };
+
+  //   localStorage.setItem('step2Data', JSON.stringify(data));
+  // };
+
+
+
+  const saveStep2State = () => {
+    const fileNames = {};
+
+    // ✅ store row file names
+    Object.keys(rowFiles).forEach((k) => {
+      fileNames[k] = rowFiles[k]?.name;
+    });
+
+    const data = {
+      rrNumbers,
+      rowMode,
+      rowText,
+      useSameJD,
+      globalText,
+      fileNames,
+      rowCount,
+      // IMPORTANT: store global JD file name
+      globalFileName: globalFile?.name || null,
+    };
+
+    localStorage.setItem('step2Data', JSON.stringify(data));
+  };
+
   // ---------- Save Draft ----------
   const onSaveDraft = async () => {
     try {
@@ -258,53 +356,46 @@ export default function AddDemands2() {
       const files = [];
       const rrDrafts = [];
 
-      for (let idx = 0; idx < rowCount; idx++) {
-        const rrNumber = Number(rrNumbers[idx] || 0);
-        const mode = rowMode[idx];
+      // ✅ Skip row validation if using global JD
+      if (!useSameJD) {
+        for (let idx = 0; idx < rowCount; idx++) {
+          const mode = rowMode[idx];
 
-        const rrDraftId = getRrDraftIdAt(idx);
-        const positionIndex = idx + 1;
-
-        let fileName = null;
-        let jdText = null;
-
-        if (mode === 'file') {
-          const f = rowFiles[idx];
-          if (f) {
-            files.push(f);
-            fileName = f.name || `RR${rrNumber || positionIndex}.txt`;
+          if (!mode) {
+            message.warning(`Please choose input for row #${idx + 1}.`);
+            return;
           }
-        } else {
-          const content = (rowText[idx] || '').trim();
-          if (content) jdText = content;
+
+          if (mode === 'file') {
+            if (!rowFiles[idx]) {
+              message.warning(`Please attach JD for row #${idx + 1}.`);
+              return;
+            }
+
+            const msg = validateFile(rowRawFiles[idx] || rowFiles[idx]);
+            if (msg) {
+              setRowErrors((prev) => ({ ...prev, [idx]: msg }));
+              message.warning(`Row ${idx + 1}: ${msg}`);
+              return;
+            }
+          } else if (mode === 'text') {
+            const t = (rowText[idx] || '').trim();
+            if (!t) {
+              message.warning(`Please enter text (JD) for row #${idx + 1}.`);
+              return;
+            }
+
+            const words = countWords(t);
+            if (words > WORD_LIMIT) {
+              message.warning(`Text exceeds ${WORD_LIMIT} words for row #${idx + 1}.`);
+              return;
+            }
+          }
         }
-
-        const noRR = !rrNumbers[idx] || String(rrNumbers[idx]).trim() === '';
-        const noContent = !fileName && !jdText;
-        if (rrDraftId == null && noRR && noContent) continue;
-
-        if (rrDraftId == null && (positionIndex < 1 || positionIndex > maxIndex)) {
-          message.error(`Row #${idx + 1}: positionIndex out of range (${positionIndex}). Expected 1..${maxIndex}.`);
-          return;
-        }
-
-        const rowEntry = {
-          rrNumber: Number.isFinite(rrNumber) ? rrNumber : 0,
-          fileName: fileName || null,
-          jdText: jdText || null,
-          filenameHint: `RR${rrNumber || positionIndex}_JD`,
-          clearFile: false,
-        };
-        if (rrDraftId != null) rowEntry.rrDraftId = rrDraftId;
-        else rowEntry.positionIndex = positionIndex;
-
-        rrDrafts.push(rowEntry);
       }
 
-      if (!rrDrafts.length) {
-        message.info('Nothing to save in draft yet.');
-        return;
-      }
+
+
 
       const request = {
         hbuId: toNum(pickFirst(meta?.hbuId, meta?.hbu)),
@@ -327,7 +418,8 @@ export default function AddDemands2() {
         hiringManagerId: toNum(pickFirst(meta?.hiringManagerId, meta?.hiringManager)),
         deliveryManagerId: toNum(pickFirst(meta?.deliveryManagerId, meta?.deliveryManager)),
         skillClusterId: toNum(pickFirst(meta?.skillClusterId, meta?.skillCluster?.value, meta?.skillCluster)),
-        experience: String(pickFirst(meta?.experience, '') ?? ''),
+        // experience: String(pickFirst(meta?.experience, '') ?? ''),
+        experience: meta?.experience ?? "",
         remark: String(pickFirst(meta?.remark, '') ?? ''),
         numberOfPositions: toNum(pickFirst(meta?.numberOfPositions, meta?.noOfPositions)) ?? rowCount,
         flag: true,
@@ -372,64 +464,52 @@ export default function AddDemands2() {
       return;
     }
 
-    // Per-row validation
-    for (let idx = 0; idx < rowCount; idx++) {
-      const mode = rowMode[idx];
-      if (!mode) {
-        message.warning(`Please choose input for row #${idx + 1}.`);
-        return;
-      }
-      if (mode === 'file') {
-        if (!rowFiles[idx]) {
-          message.warning(`Please attach JD for row #${idx + 1}.`);
-          return;
-        }
-        const msg = validateFile(rowRawFiles[idx] || rowFiles[idx]);
-        if (msg) {
-          setRowErrors((prev) => ({ ...prev, [idx]: msg }));
-          message.warning(`Row ${idx + 1}: ${msg}`);
-          return;
-        }
-      } else if (mode === 'text') {
-        const t = (rowText[idx] || '').trim();
-        if (!t) {
-          message.warning(`Please enter text (JD) for row #${idx + 1}.`);
-          return;
-        }
-        const words = countWords(t);
-        if (words > WORD_LIMIT) {
-          message.warning(`Text exceeds ${WORD_LIMIT} words for row #${idx + 1}. Current: ${words}`);
-          return;
-        }
-      }
-    }
+
 
     setSubmitting(true);
     try {
       const files = [];
       const rrs = [];
-
       for (let idx = 0; idx < rowCount; idx++) {
         let f = null;
         let fileName = null;
 
-        if (rowMode[idx] === 'file') {
-          f = rowFiles[idx];
-        } else {
-          const content = (rowText[idx] || '').trim();
-          const blob = new Blob([content], { type: 'text/plain' });
-          const fname = `JD_row${idx + 1}.txt`;
-          try {
-            f = new File([blob], fname, { type: 'text/plain' });
-          } catch {
-            // Safari fallback
-            blob.lastModifiedDate = new Date();
-            // @ts-ignore
-            blob.name = fname;
-            f = blob;
+        // ✅ GLOBAL JD
+        if (useSameJD) {
+          if (globalFile) {
+            f = globalFile;
+          } else {
+            const content = (globalText || '').trim();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const fname = `JD_global.txt`;
+
+            try {
+              f = new File([blob], fname, { type: 'text/plain' });
+            } catch {
+              blob.name = fname;
+              f = blob;
+            }
+          }
+        }
+        // ✅ ROW JD
+        else {
+          if (rowMode[idx] === 'file') {
+            f = rowFiles[idx];
+          } else {
+            const content = (rowText[idx] || '').trim();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const fname = `JD_row${idx + 1}.txt`;
+
+            try {
+              f = new File([blob], fname, { type: 'text/plain' });
+            } catch {
+              blob.name = fname;
+              f = blob;
+            }
           }
         }
 
+        // ✅ push
         if (f) {
           fileName = f.name || `JD_row${idx + 1}.txt`;
           files.push(f);
@@ -459,7 +539,8 @@ export default function AddDemands2() {
         demandLocationId: toNumArr(pickFirst(meta?.demandLocationId, meta?.locationIds, meta?.demandLocation)),
         demandTimelineId: toNum(pickFirst(meta?.demandTimelineId, meta?.demandTimeline)),
         demandTypeId: toNum(pickFirst(meta?.demandTypeId, meta?.demandType)),
-        experience: String(pickFirst(meta?.experience, '') || ''),
+        // experience: String(pickFirst(meta?.experience, '') || ''),
+        experience: meta?.experience ?? "",
         externalInternalId: toNum(pickFirst(meta?.externalInternalId, meta?.externalInternal)),
         hbuId: toNum(pickFirst(meta?.hbuId, meta?.hbu)),
         hbuSpocId: toNum(pickFirst(meta?.hbuSpocId, meta?.hubSpocId, meta?.hbu_spoc_id)),
@@ -497,6 +578,8 @@ export default function AddDemands2() {
 
       // Clear stored draftId so new flows don't prefill
       try { localStorage.removeItem('step1DraftId'); } catch { }
+
+      localStorage.removeItem('step2Data');
 
       // Go to Demand Sheet
       navigate("/demandsheet1");
@@ -541,6 +624,79 @@ export default function AddDemands2() {
             </div>
           </div>
         </div>
+
+
+
+        {/* Global jd */}
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 mt-4">
+          <div className="rounded-lg border bg-white shadow-sm p-4">
+
+            <div className="flex items-center gap-4">
+
+              <input
+                type="checkbox"
+                checked={useSameJD}
+                onChange={(e) => setUseSameJD(e.target.checked)}
+              />
+
+              <span className="font-semibold text-gray-800">
+                Use same JD for all demands
+              </span>
+
+              {useSameJD && (
+                <div className="flex items-center gap-3 ml-4">
+
+                  {/* Attach */}
+                  <button
+                    type="button"
+                    onClick={() => globalFileRef.current?.click()}
+                    className="px-3 py-1.5 bg-black text-white rounded text-sm"
+                  >
+                    Attach JD
+                  </button>
+
+                  <input
+                    ref={globalFileRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      if (!f) return;
+
+                      const msg = validateFile(f);
+                      if (msg) {
+                        message.error(msg);
+                        setGlobalFile(null);
+                        return;
+                      }
+
+                      setGlobalFile(f);
+                    }}
+                  />
+
+                  {/* ✅ File Name */}
+                  {globalFile && (
+                    <span className="text-sm text-green-600 truncate max-w-xs">
+                      {globalFile.name}
+                    </span>
+                  )}
+
+                  {/* ✅ Text option */}
+                  {!globalFile && (
+                    <textarea
+                      className="border rounded px-2 py-1 text-sm h-16 w-64"
+                      placeholder="Enter JD text..."
+                      value={globalText}
+                      onChange={(e) => setGlobalText(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+
 
         {/* Rows */}
         <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 mt-4 sm:mt-6">
@@ -592,7 +748,7 @@ export default function AddDemands2() {
                         /> */}
 
 
-                          <div className="flex flex-col">
+                        <div className="flex flex-col">
                           <input
                             type="text"
                             inputMode="numeric"
@@ -615,71 +771,89 @@ export default function AddDemands2() {
                         <div className="flex items-start gap-3">
                           {/* LEFT: content */}
                           <div className="flex-1 min-w-0">
-                            {mode === 'text' ? (
-                              <div className="w-full">
-                                <textarea
-                                  rows={4}
-                                  placeholder={`Paste or type JD text (max ${WORD_LIMIT} words)…`}
-                                  value={rowText[idx] ?? ''}
-                                  onChange={(e) => setRowText((p) => ({ ...p, [idx]: e.target.value }))}
-                                  className="w-full h-20 md:w-11/12 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                />
+                            {/* {mode === 'text' ? ( */}
+
+                            {useSameJD ? (
+                              <div className="text-sm text-blue-600 font-medium mt-1">
+                                Using global JD
                               </div>
-                            ) : (
-                              <div
-                                className={`flex-1 min-w-0 h-12 rounded-md border px-3 py-2 text-xs flex items-center justify-between cursor-pointer ${rowFiles[idx]
+                            ) : mode === 'text' ?
+                              (
+                                <div className="text-gray-500 text-sm">Using global JD</div>
+                              ) : mode === 'text' ? (
+
+                                <div className="w-full">
+                                  <textarea
+                                    rows={4}
+                                    placeholder={`Paste or type JD text (max ${WORD_LIMIT} words)…`}
+                                    value={rowText[idx] ?? ''}
+                                    onChange={(e) => setRowText((p) => ({ ...p, [idx]: e.target.value }))}
+                                    className="w-full h-20 md:w-11/12 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className={`flex-1 min-w-0 h-12 rounded-md border px-3 py-2 text-xs flex items-center justify-between cursor-pointer ${rowFiles[idx]
                                     ? 'border-green-300 bg-green-50 text-green-800'
                                     : 'border-dashed border-gray-300 text-gray-600 bg-gray-50'
-                                  }`}
-                                title="You can also drop a file here"
-                                onClick={() => triggerFileDialog(idx)}
-                              >
-                                <span className="truncate">
-                                  {rowFiles[idx] ? rowFiles[idx].name : 'Drop here or click Attach JD'}
-                                </span>
-                                <input
-                                  ref={(el) => setFileRef(idx, el)}
-                                  type="file"
-                                  accept=".txt,.pdf,.doc,.docx,image/*"
-                                  onChange={(e) => onFileChange(idx, e)}
-                                  className="sr-only"
-                                  aria-hidden="true"
-                                />
-                              </div>
-                            )}
+                                    }`}
+                                  title="You can also drop a file here"
+                                  onClick={() => triggerFileDialog(idx)}
+                                >
+                                  <span className="truncate">
+                                    {rowFiles[idx] ? rowFiles[idx].name : 'Drop here or click Attach JD'}
+                                  </span>
+                                  <input
+                                    ref={(el) => setFileRef(idx, el)}
+                                    type="file"
+                                    accept=".txt,.pdf,.doc,.docx,image/*"
+                                    onChange={(e) => onFileChange(idx, e)}
+                                    className="sr-only"
+                                    aria-hidden="true"
+                                  />
+                                </div>
+                              )}
                           </div>
 
                           {/* RIGHT: controls */}
-                          <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
-                            <button
-                              type="button"
-                              onClick={() => clearRowFile(idx)}
-                              className={`inline-flex items-center justify-center rounded px-2 py-1 text-xs border border-gray-300 ${mode === 'file' && rowFiles[idx] ? 'bg-white text-gray-700 hover:bg-gray-50' : 'invisible'
-                                }`}
-                            >
-                              Clear
-                            </button>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setRowMode((p) => ({ ...p, [idx]: 'file' }));
-                                setTimeout(() => triggerFileDialog(idx), 0);
-                              }}
-                              className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white text-xs font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-                            >
-                              Attach JD
-                            </button>
+                          {!useSameJD && (
+                            <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
 
-                            <button
-                              type="button"
-                              onClick={() => setRowMode((p) => ({ ...p, [idx]: 'text' }))}
-                              className={`inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 ${mode === 'text' ? 'invisible' : ''
-                                }`}
-                            >
-                              Add Text
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => clearRowFile(idx)}
+                                className={`inline-flex items-center justify-center rounded px-2 py-1 text-xs border border-gray-300 ${mode === 'file' && rowFiles[idx]
+                                  ? 'bg-white text-gray-700 hover:bg-gray-50'
+                                  : 'invisible'
+                                  }`}
+                              >
+                                Clear
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRowMode((p) => ({ ...p, [idx]: 'file' }));
+                                  setTimeout(() => triggerFileDialog(idx), 0);
+                                }}
+                                className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white text-xs font-semibold"
+                              >
+                                Attach JD
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setRowMode((p) => ({ ...p, [idx]: 'text' }))}
+                                className={`inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 ${mode === 'text' ? 'invisible' : ''
+                                  }`}
+                              >
+                                Add Text
+                              </button>
+
+                            </div>
+                          )}
+
                         </div>
 
                         {/* Row error */}
@@ -697,54 +871,97 @@ export default function AddDemands2() {
 
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="rounded-xl bg-white shadow-sm border border-gray-200 p-4">
-            <div className="flex justify-end gap-3">
-              {/* Previous -> go back to Step‑1 route with draftId */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (draftIdNum) {
-                    localStorage.setItem('step1DraftId', String(draftIdNum));
-                    navigate('/addDemands1', { state: { draftId: draftIdNum, __fromStep2: true } });
-                  } else {
-                    navigate('/addDemands1');
+
+            <div className="flex justify-between items-center">
+
+              {/* ✅ LEFT SIDE */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('step2Data');
+                    localStorage.removeItem('step1DraftId');
+
+                    setRrNumbers([]);
+                    setRowFiles({});
+                    setRowText({});
+                    setRowMode({});
+                    setGlobalFile(null);
+                    setGlobalText('');
+                    setUseSameJD(false);
+
+                    navigate('/demandsheet1');
+                  }}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-50"
+                >
+                  Clear & Exit
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+
+                {/* Previous -> go back to Step‑1 route with draftId */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveStep2State();
+                    if (draftIdNum) {
+                      localStorage.setItem('step1DraftId', String(draftIdNum));
+                      navigate('/addDemands1', { state: { draftId: draftIdNum, __fromStep2: true } });
+                    } else {
+                      navigate('/addDemands1');
+                    }
+                  }}
+
+
+                  className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm"
+                >
+
+
+                  Previous
+                </button>
+
+                {/* Save Draft */}
+                <button
+                  type="button"
+                  onClick={onSaveDraft}
+
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 shadow-sm"
+                >
+
+                  Save Draft
+                </button>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={
+                    submitting ||
+                    rowCount === 0 ||
+                    Array.from({ length: rowCount }).some((_, idx) => {
+                      const v = rrNumbers[idx];
+                      return v === undefined || v === '' || isNaN(Number(v)) || Number(v) < 0;
+                    }) ||
+
+                    (useSameJD
+                      ? (!globalFile && !globalText.trim())
+
+                      : Array.from({ length: rowCount }).some((_, idx) => {
+                        const mode = rowMode[idx];
+                        if (!mode) return true;
+                        if (mode === 'file') return !rowFiles[idx];
+                        if (mode === 'text') return !(rowText[idx] || '').trim();
+                        return true;
+                      })
+                    )
                   }
-                }}
-                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700"
-              >
-                Previous
-              </button>
 
-              {/* Save Draft */}
-              <button
-                type="button"
-                onClick={onSaveDraft}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              >
-                Save Draft
-              </button>
+                  className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm disabled:opacity-60"
+                >
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={
-                  submitting ||
-                  rowCount === 0 ||
-                  Array.from({ length: rowCount }).some((_, idx) => {
-                    const v = rrNumbers[idx];
-                    return v === undefined || v === '' || isNaN(Number(v)) || Number(v) < 0;
-                  }) ||
-                  Array.from({ length: rowCount }).some((_, idx) => {
-                    const mode = rowMode[idx];
-                    if (!mode) return true;
-                    if (mode === 'file') return !rowFiles[idx];
-                    if (mode === 'text') return !(rowText[idx] || '').trim();
-                    return true;
-                  })
-                }
-                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-3 py-2 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Submitting…' : 'Submit Demands'}
-              </button>
+                  {submitting ? 'Submitting…' : 'Submit Demands'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

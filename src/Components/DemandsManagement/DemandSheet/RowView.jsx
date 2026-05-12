@@ -212,7 +212,7 @@ export default function RowView({
                       )}
 
                       {/* Lock: copy demand id */}
-                      <button
+                      {/* <button
                         type="button"
                         onClick={copyToClipboard}
                         className="hover:opacity-90"
@@ -223,7 +223,7 @@ export default function RowView({
                         ) : (
                           <UnlockOutlined style={{ color: "white" }} />
                         )}
-                      </button>
+                      </button> */}
 
                       {/* Small 'Copied!' text while active */}
                       {copied && (

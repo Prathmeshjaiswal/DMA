@@ -247,6 +247,12 @@ function adaptOptions(dto = {}) {
     secondarySkills: toOpt(dto.secondarySkills),
     skillCluster: toOpt(dto.skillClusters),
     profileStatus: toOpt(dto.profileStatusList),
+
+    origins: toOpt(dto.origins),
+    karatStatuses: toOpt(dto.karatStatuses),
+    sources: toOpt(dto.sources),
+    overallStatuses: toOpt(dto.overallStatuses),
+
   };
 }
 
@@ -316,6 +322,28 @@ export default function RDGTATeam() {
     cv: null,
     panNumber: "",
     profileStatus: null,
+
+
+    origin: null,
+    karatStatus: null,
+    source: null,
+    overallStatusRdg: null,
+
+    dateOfSubmission: "",
+    karatReadiness: "",
+    weekOf: "",
+    accountReceivedOn: "",
+    statusDate: "",
+    lobShared: "",
+    practice: "",
+    band: "",
+    ageing: "",
+    ageingRange: "",
+    codes: "",
+    codeType: "",
+    minBillingRate: "",
+    projectCode: "",
+
   });
 
 
@@ -580,7 +608,30 @@ export default function RDGTATeam() {
       // If your backend accepts PAN for profiles, uncomment and ensure the key matches:
       // panNumber: panCheck.value,
       ...(form.panNumber ? { panNumber: form.panNumber } : {}),
+
+
+      originId: form.origin?.value ?? null,
+      karatStatusId: form.karatStatus?.value ?? null,
+      sourceId: form.source?.value ?? null,
+      overallStatusRdgId: form.overallStatusRdg?.value ?? null,
+
+      dateOfSubmission: form.dateOfSubmission || null,
+      karatReadiness: form.karatReadiness,
+      weekOf: form.weekOf || null,
+      accountReceivedOn: form.accountReceivedOn || null,
+      statusDate: form.statusDate || null,
+
+      lobShared: form.lobShared,
+      practice: form.practice,
+      band: form.band,
+      ageing: form.ageing ? Number(form.ageing) : null,
+      ageingRange: form.ageingRange,
+      codes: form.codes,
+      codeType: form.codeType,
+      minBillingRate: form.minBillingRate ? Number(form.minBillingRate) : null,
+      projectCode: form.projectCode,
     };
+
 
     try {
       // If you navigate to this page for editing, you can pass an id in location.state.id
@@ -652,37 +703,6 @@ export default function RDGTATeam() {
               />
             </div>
 
-            <div>
-              <label className={labelCls}>Email Address</label>
-              <input
-                className={`${inputCls} mt-1`}
-                name="emailId"
-                type="email"
-                value={form.emailId}
-                onChange={handleInput}
-                placeholder="name@example.com"
-              />
-              {errors.emailId && (
-                <p className="text-[11px] text-red-600 mt-1">{errors.emailId}</p>
-              )}
-            </div>
-
-            {/* ✅ SAP ID: show only when EMP ID is empty */}
-            {!form.empId && (
-              <div>
-                <label className={labelCls}>SAP ID</label>
-                <input
-                  className={inputCls}
-                  name="sapId"
-                  value={form.sapId}
-                  onChange={handleInput}
-                  placeholder="e.g. 128754"
-                  autoComplete="off"
-                  inputMode="numeric"
-                />
-              </div>
-            )}
-
             {/* ✅ EMP ID: show only when SAP ID is empty */}
             {!form.sapId && (
               <div>
@@ -701,6 +721,93 @@ export default function RDGTATeam() {
                 )}
               </div>
             )}
+
+
+            <div>
+              <label className={labelCls}>Email Address</label>
+              <input
+                className={`${inputCls} mt-1`}
+                name="emailId"
+                type="email"
+                value={form.emailId}
+                onChange={handleInput}
+                placeholder="name@example.com"
+              />
+              {errors.emailId && (
+                <p className="text-[11px] text-red-600 mt-1">{errors.emailId}</p>
+              )}
+            </div>
+
+
+            {/* ✅ Contact Number (ALIGNED LIKE EMAIL) */}
+            <div>
+              <label className={labelCls}>Contact Number</label>
+
+              <div className="flex gap-2 mt-1">
+
+                {/* Country Code */}
+                <select
+                  className="w-24 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  name="countryId"
+                  value={form.countryId}
+                  onChange={(e) => {
+                    const selected = countryCodes.find(
+                      (c) => String(c.id) === String(e.target.value)
+                    );
+
+                    setForm((p) => ({
+                      ...p,
+                      countryId: e.target.value,
+                    }));
+
+                    if (selected?.callingCode && form.phoneNumber) {
+                      const res = validatePhoneByCountry(form.phoneNumber, selected.callingCode);
+                      setPhoneError(res.ok ? "" : res.reason);
+                    }
+                  }}
+                >
+                  {countryCodes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.callingCode}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Phone Input */}
+                <input
+                  className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-[13px]"
+                  name="phoneNumber"
+                  value={form.phoneNumber}
+                  placeholder="Enter phone number"
+                  inputMode="numeric"
+                  onChange={(e) => {
+                    const val = onlyDigits(e.target.value);
+                    setForm((p) => ({ ...p, phoneNumber: val }));
+                    setPhoneTouched(true);
+
+                    const selected = countryCodes.find(
+                      (c) => String(c.id) === String(form.countryId)
+                    );
+
+                    if (selected?.callingCode && val) {
+                      const res = validatePhoneByCountry(val, selected.callingCode);
+                      setPhoneError(res.ok ? "" : res.reason);
+                    }
+                  }}
+                />
+
+              </div>
+
+              {phoneTouched && phoneError && (
+                <p className="text-[11px] text-red-600 mt-1">
+                  {phoneError}
+                </p>
+              )}
+            </div>
+
+
+
+
 
 
             {/* NEW: PAN Number */}
@@ -735,40 +842,6 @@ export default function RDGTATeam() {
               )}
             </div>
 
-            {/* --- UPDATED: show Emp ID for Internal OR Admin --- */}
-            {/* {showEmpIdField && (
-              <div>
-                <label className={labelCls}>Employee ID</label>
-                <input
-                  className={`${inputCls} mt-1 ${empIdTouched && empIdError ? "border-red-500 focus:ring-red-600" : ""
-                    }`}
-                  name="empId"
-                  value={form.empId}
-                  onChange={handleInput}
-                  onBlur={() => {
-                    setEmpIdTouched(true);
-
-                    // Empty Emp ID → no error
-                    if (!form.empId) {
-                      setEmpIdError("");
-                      return;
-                    }
-
-
-                    const r = validateEmpId(form.empId);
-                    // if not Internal, do not block submit—just clear/show helper
-                    setEmpIdError(r.ok ? "" : r.reason);
-                  }}
-                  placeholder="e.g., 128713"
-                  inputMode="numeric"
-                  autoComplete="off"
-                />
-                {empIdTouched && empIdError && (
-                  <p className="text-[11px] text-red-600 mt-1">{empIdError}</p>
-                )}
-              </div>
-            )} */}
-
             <div>
               <label className={labelCls}>Experience (years)</label>
               <input
@@ -782,10 +855,193 @@ export default function RDGTATeam() {
                 placeholder="e.g., 5"
               />
             </div>
+            <div>
+              <label className={labelCls}>Date of Submission</label>
+              <input
+                type="date"
+                className={`${inputCls} mt-1`}
+                value={form.dateOfSubmission}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, dateOfSubmission: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Week Of</label>
+              <input
+                type="date"
+                className={`${inputCls} mt-1`}
+                value={form.weekOf}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, weekOf: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Account Received On</label>
+              <input
+                type="date"
+                className={`${inputCls} mt-1`}
+                value={form.accountReceivedOn}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, accountReceivedOn: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Status Date</label>
+              <input
+                type="date"
+                className={`${inputCls} mt-1`}
+                value={form.statusDate}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, statusDate: e.target.value }))
+                }
+              />
+            </div>
+
+
+            <div>
+              <label className={labelCls}>Min Billing Rate</label>
+              <input
+                type="number"
+                className={`${inputCls} mt-1`}
+                value={form.minBillingRate}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, minBillingRate: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Karat Readiness</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.karatReadiness}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, karatReadiness: e.target.value }))
+                }
+                placeholder="e.g. Ready / Not Ready"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>LOB Shared</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.lobShared}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, lobShared: e.target.value }))
+                }
+                placeholder="Yes / No"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Practice</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.practice}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, practice: e.target.value }))
+                }
+                placeholder="e.g. Java, React"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Band</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.band}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, band: e.target.value }))
+                }
+                placeholder="e.g. B3"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Codes</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.codes}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, codes: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Code Type</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.codeType}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, codeType: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Ageing (Days)</label>
+              <input
+                type="number"
+                className={`${inputCls} mt-1`}
+                value={form.ageing}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, ageing: e.target.value }))
+                }
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Ageing Range</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.ageingRange}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, ageingRange: e.target.value }))
+                }
+                placeholder="e.g. 0–30"
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Project Code</label>
+              <input
+                className={`${inputCls} mt-1`}
+                value={form.projectCode}
+                onChange={(e) =>
+                  setForm(p => ({ ...p, projectCode: e.target.value }))
+                }
+                placeholder="PRJ‑123"
+              />
+            </div>
+
+
+            {/* ✅ SAP ID: show only when EMP ID is empty */}
+            {!form.empId && (
+              <div>
+                <label className={labelCls}>SAP ID</label>
+                <input
+                  className={inputCls}
+                  name="sapId"
+                  value={form.sapId}
+                  onChange={handleInput}
+                  placeholder="e.g. 128754"
+                  autoComplete="off"
+                  inputMode="numeric"
+                />
+              </div>
+            )}
 
 
 
             <div>
+
               <label className={labelCls}>Status</label>
               <Select
                 options={safe(options?.profileStatus)}
@@ -800,93 +1056,62 @@ export default function RDGTATeam() {
               />
             </div>
 
-          </div>
-
-          {/* Contact Number — UPDATED: same grid & same input size as other fields */}
-          <div className="pt-3 pb-">
-            <label className={labelTitle}>Contact Number</label>
-          </div>
-          <div className={`${grid2} ${sectionGap}`}>
             <div>
-              <div className="flex items-center gap-2 mt-1">
-                <select
-                  className="w-28 h-9 rounded-md border border-gray-300 bg-white px-2 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
-                  name="countryId"
-                  value={form.countryId}
-                  onChange={(e) => {
-                    const val = onlyDigits(e.target.value);
-
-                    setForm((p) => ({ ...p, phoneNumber: val }));
-                    setPhoneTouched(true);
-
-                    // ✅ use latest countryId safely
-                    const countryId = form.countryId;
-                    const selected = countryCodes.find(
-                      (c) => String(c.id) === String(countryId)
-                    );
-
-                    if (selected?.callingCode && val) {
-                      const res = validatePhoneByCountry(val, selected.callingCode);
-                      setPhoneError(res.ok ? "" : res.reason);
-                    } else {
-                      setPhoneError("");
-                    }
-                  }}
-                >
-                  {countryCodes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.callingCode}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex-1">
-                  {/* UPDATED: use inputCls to match size with other inputs */}
-                  <input
-                    className={`${inputCls}`} // UPDATED
-                    name="phoneNumber"
-                    value={form.phoneNumber}
-                    placeholder="Phone number"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    onChange={(e) => {
-                      const val = onlyDigits(e.target.value);
-                      setForm((p) => ({ ...p, phoneNumber: val }));
-                      setPhoneTouched(true);
-                      const selected = countryCodes.find(
-                        (c) => String(c.id) === String(form.countryId)
-                      );
-                      if (selected?.callingCode && val) {
-                        const res = validatePhoneByCountry(val, selected.callingCode);
-                        setPhoneError(res.ok ? "" : res.reason);
-                      } else {
-                        setPhoneError("");
-                      }
-                    }}
-                    onBlur={() => {
-                      setPhoneTouched(true);
-                      const selected = countryCodes.find(
-                        (c) => String(c.id) === String(form.countryId)
-                      );
-                      if (!selected?.callingCode || !form.phoneNumber) return;
-                      const res = validatePhoneByCountry(
-                        form.phoneNumber,
-                        selected.callingCode
-                      );
-                      if (!res.ok) setPhoneError(res.reason);
-                    }}
-                  />
-                  {phoneTouched && phoneError && (
-                    <p className="text-[11px] text-red-600 mt-1 leading-snug">
-                      {phoneError}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <label className={labelCls}>Origin</label>
+              <Select
+                options={safe(options.origins)}
+                value={form.origin}
+                onChange={(v) => setForm(p => ({ ...p, origin: v }))}
+                className="mt-1"
+                styles={selectStyles}
+              />
             </div>
 
-            {/* empty cell to keep 2-column balance when needed */}
-            <div className="hidden sm:block" />
+            <div>
+              <label className={labelCls}>Karat Status</label>
+              <Select
+                options={safe(options.karatStatuses)}
+                value={form.karatStatus}
+                onChange={(v) => setForm(p => ({ ...p, karatStatus: v }))}
+                className="mt-1"
+                styles={selectStyles}
+                placeholder="Select Karat Status"
+                isClearable
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Source</label>
+              <Select
+                options={safe(options.sources)}
+                value={form.source}
+                onChange={(v) => setForm(p => ({ ...p, source: v }))}
+                className="mt-1"
+                styles={selectStyles}
+                placeholder="Select Source"
+                isClearable
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>Overall Status</label>
+              <Select
+                options={safe(options.overallStatuses)}
+                value={form.overallStatusRdg}
+                onChange={(v) => setForm(p => ({ ...p, overallStatusRdg: v }))}
+                className="mt-1"
+                styles={selectStyles}
+                placeholder="Select Overall Status"
+                isClearable
+              />
+            </div>
+
+
+
+
           </div>
+
+
 
           {/* Skills */}
           <div className={`${sectionGap}`}>
@@ -1008,7 +1233,7 @@ export default function RDGTATeam() {
           </div>
 
           {/* CV */}
-          <div className={`${sectionGap}`}>
+          {/* <div className={`${sectionGap}`}>
             <label className={labelTitle}>CV Attachment</label>
             <div className="mt-3">
               <input
@@ -1020,16 +1245,52 @@ export default function RDGTATeam() {
               <p className="text-[12px] text-gray-500 mt-1">
                 Allowed: <span className="font-medium">PDF, DOC, DOCX</span> — Max 10&nbsp;MB
               </p>
-              {form.cv && (
-                <p className="text-[11px] text-gray-600 mt-1">
-                  Selected: <span className="font-medium">{form.cv.name}</span>
-                </p>
-              )}
+            </div>
+          </div> */}
+
+          {/* CV */}
+          <div className={`${sectionGap}`}>
+            <label className={labelTitle}>CV Attachment</label>
+
+            {/*  FORCE LEFT ALIGN */}
+            <div className="mt-3 flex flex-col gap-2 items-start">
+
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFile}
+                className="text-[13px] 
+        file:mr-3 file:h-9 file:px-3 
+        file:rounded-md file:border-0 
+        file:text-[13px] file:font-medium 
+        file:bg-gray-900 file:text-white 
+        hover:file:bg-black transition"
+              />
+
+              {/*  NOW IT WILL STAY JUST BELOW BUTTON */}
+              <p className="text-[11px] text-gray-500 mt-1">
+                Allowed: PDF, DOC, DOCX — Max 10 MB
+              </p>
+
             </div>
           </div>
 
+
+
+
           {/* Save */}
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end gap-3 mt-6">
+
+
+            <button
+              type="button"
+              onClick={() => navigate("/profileSheet")}
+              className="px-6 py-2 border border-gray-300 text-gray-700 bg-white rounded-md
+               hover:bg-gray-100 focus:outline-none"
+            >
+              Cancel
+            </button>
+
             <button
               type="submit"
               className="px-6 py-2 text-white bg-gray-900 rounded-md hover:bg-black focus:outline-none"

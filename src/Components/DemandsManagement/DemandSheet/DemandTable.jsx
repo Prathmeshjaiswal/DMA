@@ -6,22 +6,6 @@ import TableHeader from "./TableHeader";
 import RowEdit from "./RowEdit";
 import RowView from "./RowView";
 
-/**
- * DemandTable
- *
- * Props:
- * - rows: Array<object>
- * - columns: Array<{ key: string, label: string, ... }>
- * - visibleColumns: string[] (keys in columns to render)
- * - dropdowns: object (forwarded to RowEdit)
- * - className: string (wrapper classes)
- * - onViewRow: fn(row) (open detail modal)
- * - filters: object (per-column filter values)           // <-- NEW
- * - filterConfig: object (per-column filter config)      // <-- NEW
- * - onFilterChange: fn(key, value)                       // <-- NEW
- * - theadClassName: string (optional header class)
- * - actionsLabel: string (optional actions col label)
- */
 export default function DemandTable({
   rows = [],
   columns = [],
@@ -57,11 +41,20 @@ export default function DemandTable({
     setEditingId(null);
   };
 
+
+
+  const scrollRef = React.useRef(null);
+const isDownRef = React.useRef(false);
+const startXRef = React.useRef(0);
+const scrollLeftRef = React.useRef(0);
+
+  
+
   return (
     <>
-    
-<style>
-      {`
+
+      <style>
+        {`
         .sticky-demand-col {
           position: sticky;
           left: 0;
@@ -75,76 +68,149 @@ export default function DemandTable({
           z-index: 10;
           background: #f9fafb;
         }
+
+
+        /* ✅ Sticky Header */
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 8;           /* below demandId header */
+  background: #f9fafb;  /* REQUIRED otherwise it becomes transparent */
+}
+
+
+
+  .custom-select-single-line .ant-select-selector {
+  display: flex !important;
+  align-items: center !important;
+  height: 36px !important;
+  overflow: hidden !important;
+}
+
+.custom-select-single-line .ant-select-selection-overflow {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+}
+
+.custom-select-single-line .ant-select-selection-item {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-single-line .ant-select-selection-overflow-item-rest {
+  white-space: nowrap !important;
+}
+
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
       `}
-    </style>
+      </style>
 
-    <div className={`rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1000px] border-collapse">
-          <TableHeader
-            columns={columns}
-            visibleColumns={visibleColumns}
-            editingId={editingId}
-            theadClassName={theadClassName}
-            actionsLabel={actionsLabel}
-            // Filters in header
-            filters={filters}
-            filterConfig={filterConfig}
-            onFilterChange={onFilterChange}
+      <div className={`rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}>
 
-          />
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="text-center py-8 text-gray-500"
-                >
-                  Loading...
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, idx) => {
-                const rowKey = row?.demandId ?? row?.id ?? `row-${idx}`;
-                const isEditing = editingId === (row?.demandId ?? row?.id);
-                const isEditingAny = Boolean(editingId);
-                const isLocked = isEditingAny && !isEditing;
+     <div
+  ref={scrollRef}
+  className="overflow-auto max-h-[70vh] cursor-grab active:cursor-grabbing"
+  onMouseDown={(e) => {
+    isDownRef.current = true;
+    startXRef.current = e.pageX - scrollRef.current.offsetLeft;
+    scrollLeftRef.current = scrollRef.current.scrollLeft;
 
-                if (isEditing) {
+    document.body.classList.add("no-select"); // ✅ disable text globally
+  }}
+  onMouseLeave={() => {
+    isDownRef.current = false;
+    document.body.classList.remove("no-select");
+  }}
+  onMouseUp={() => {
+    isDownRef.current = false;
+    document.body.classList.remove("no-select");
+  }}
+  onMouseMove={(e) => {
+    if (!isDownRef.current) return;
+
+    e.preventDefault(); // ✅ important
+
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+
+    scrollRef.current.scrollLeft = scrollLeftRef.current - walk;
+  }}
+>
+          <table className="w-full min-w-[1000px] border-collapse">
+            <TableHeader
+              columns={columns}
+              visibleColumns={visibleColumns}
+              editingId={editingId}
+              theadClassName={theadClassName}
+              actionsLabel={actionsLabel}
+              // Filters in header
+              filters={filters}
+              filterConfig={filterConfig}
+              onFilterChange={onFilterChange}
+
+            />
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="text-center py-8 text-gray-500"
+                  >
+                    Loading...
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row, idx) => {
+                  // const rowKey = row?.demandId ?? row?.id ?? `row-${idx}`;
+                  const rowKey = row?.id ?? `${row?.demandId}-${idx}`;
+                  const isEditing = editingId === (row?.demandId ?? row?.id);
+                  const isEditingAny = Boolean(editingId);
+                  const isLocked = isEditingAny && !isEditing;
+
+                  if (isEditing) {
+                    return (
+                      <RowEdit
+                        key={rowKey}
+                        row={row}
+                        columns={columns}
+                        visibleColumns={visibleColumns}
+                        dropdowns={dropdowns}
+                        onSaved={cancelEdit}
+                        cancelEdit={cancelEdit}
+                      />
+                    );
+                  }
+
                   return (
-                    <RowEdit
+                    <RowView
                       key={rowKey}
                       row={row}
                       columns={columns}
                       visibleColumns={visibleColumns}
-                      dropdowns={dropdowns}
-                      onSaved={cancelEdit}
-                      cancelEdit={cancelEdit}
+                      startEdit={startEdit}
+                      isLocked={isLocked}
+                      onViewRow={onViewRow}
+                      canUpdateDemands={canUpdateDemands}
+                      canViewDemands={canViewDemands}
                     />
                   );
-                }
-
-                return (
-                  <RowView
-                    key={rowKey}
-                    row={row}
-                    columns={columns}
-                    visibleColumns={visibleColumns}
-                    startEdit={startEdit}
-                    isLocked={isLocked}
-                    onViewRow={onViewRow}
-                    canUpdateDemands={canUpdateDemands}
-                    canViewDemands={canViewDemands}
-                  />
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-    
+
 
     </>
   );

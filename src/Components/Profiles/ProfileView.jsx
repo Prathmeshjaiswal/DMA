@@ -162,10 +162,10 @@ export default function ProfileView({
   profile,
   width = 900,
   initialTab = "profile",
-  canViewDemandData=false,
-        canViewHistory=false,
-        canViewOnboardingdata=false,
-        canAttachDemand=false,
+  canViewDemandData = false,
+  canViewHistory = false,
+  canViewOnboardingdata = false,
+  canAttachDemand = false,
 }) {
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -178,6 +178,9 @@ export default function ProfileView({
   // ✅ refs to avoid re-creating callbacks / effects loops
   const attachedDemandsRef = useRef([]);
   const demandTabLoadedForProfileRef = useRef(null);
+
+  const [searchText, setSearchText] = useState("");
+
 
   useEffect(() => {
     attachedDemandsRef.current = attachedDemands;
@@ -247,7 +250,8 @@ export default function ProfileView({
       });
 
       setAttachedDemands(mapped);
-      setAttachMode((prev) => prev || mapped.length === 0);
+      // setAttachMode((prev) => prev || mapped.length === 0);
+      setAttachMode((prev) => profile?.cvFileName ? (prev || mapped.length === 0) : false);
       setSelectedDemandIds(mapped.map((d) => String(d.id)));
 
       return mapped; // ✅ give caller the exact set we just loaded
@@ -260,6 +264,29 @@ export default function ProfileView({
       return [];
     }
   }, []);
+
+
+  const filteredDemands = useMemo(() => {
+    let list = matchingDemands || [];
+
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase();
+
+      list = list.filter((d) => {
+        const demandId = String(d?.demandId || "").toLowerCase();
+        const title = String(d?.title || "").toLowerCase();
+        const skills = String(d?.primarySkills || "").toLowerCase();
+
+        return (
+          demandId.includes(q) ||
+          title.includes(q) ||
+          skills.includes(q)
+        );
+      });
+    }
+
+    return list;
+  }, [matchingDemands, searchText]);
 
   // ✅ Stable callback (no deps) — uses ref to read current attachments
   const loadMatchingDemands = useCallback(
@@ -276,10 +303,10 @@ export default function ProfileView({
           Array.isArray(resp?.data?.content)
             ? resp.data.content
             : Array.isArray(resp?.content)
-            ? resp.content
-            : Array.isArray(resp)
-            ? resp
-            : [];
+              ? resp.content
+              : Array.isArray(resp)
+                ? resp
+                : [];
 
         const normalized = list.map((d) => {
           const id = d.id ?? d.demandId ?? d.displayDemandId ?? Math.random();
@@ -355,6 +382,12 @@ export default function ProfileView({
   }, [open]);
 
   const attachSelected = async () => {
+
+    if (!profile?.cvFileName) {
+      message.error("Profile must have CV uploaded before attaching demands");
+      return;
+    }
+
     const rawId = profile?.id ?? profile?.profileId;
     const profileId = Number(rawId);
     if (!profileId || Number.isNaN(profileId)) {
@@ -552,8 +585,8 @@ export default function ProfileView({
                 </DetailBlock>
               ),
             },
-            
-            canViewDemandData&& {
+
+            canViewDemandData && {
               key: "demand",
               label: "Demand Details",
               children: (
@@ -561,10 +594,10 @@ export default function ProfileView({
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-sm">Demands</h4>
                     {canAttachDemand && !attachMode && attachedDemands.length > 0 && (
-                      <Button type="primary" icon={<PlusOutlined />} onClick={() => setAttachMode(true)}>
+                      <Button type="primary" icon={<PlusOutlined />} disabled={!profile?.cvFileName} onClick={() => { if (!profile?.cvFileName) { message.error("Upload CV before attaching demands"); return; } setAttachMode(true); }}>
                         Attach Demand
                       </Button>
-                    ) }
+                    )}
                   </div>
 
                   {/* Attached cards */}
@@ -623,12 +656,32 @@ export default function ProfileView({
                     </div>
                   )}
 
-                  {(attachMode || attachedDemands.length === 0) && (
+
+                  {!profile?.cvFileName ? (
+                    <div className="text-red-600 text-sm font-medium">
+                      Upload CV to enable demand attachment
+                    </div>
+                  ) : (attachMode || attachedDemands.length === 0) && (
                     <div className="rounded-lg border border-gray-300 bg-white p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-semibold">Attach Demands</h3>
                         <div className="flex items-center gap-2">
-                          {attachedDemands.length > 0 && <Button onClick={() => setAttachMode(false)}>Back</Button>}
+
+                          {/* 🔍 SEARCH */}
+                          <input
+                            type="text"
+                            placeholder="Search demand..."
+                            className="border border-gray-300 rounded-md px-3 py-1 text-sm w-56"
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                          />
+
+                          {attachedDemands.length > 0 && (
+                            <Button onClick={() => setAttachMode(false)}>
+                              Back
+                            </Button>
+                          )}
+
                           <Button
                             type="default"
                             icon={<PaperClipOutlined />}
@@ -637,13 +690,15 @@ export default function ProfileView({
                           >
                             Attach
                           </Button>
+
                         </div>
+
                       </div>
 
                       <div className="border border-gray-200 rounded-md">
                         {Array.isArray(matchingDemands) && matchingDemands.length > 0 ? (
                           <div className="divide-y divide-gray-200">
-                            {matchingDemands.map((item) => {
+                            {filteredDemands.map((item) => {
                               const rowId = String(item.id);
                               const checked = selectedDemandIds.map(String).includes(rowId);
                               const toggle = (next) => toggleSelect(rowId, next);
@@ -686,8 +741,8 @@ export default function ProfileView({
                 </div>
               ),
             },
-            
-            canViewOnboardingdata &&{
+
+            canViewOnboardingdata && {
               key: "onboarding",
               label: "Onboarding Detail",
               children: (
@@ -726,7 +781,7 @@ export default function ProfileView({
                 </div>
               ),
             },
-            canViewHistory &&{
+            canViewHistory && {
               key: "history",
               label: "History",
               children: (

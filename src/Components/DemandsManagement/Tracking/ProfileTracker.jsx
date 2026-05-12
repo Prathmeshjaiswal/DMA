@@ -115,7 +115,7 @@ function Pill({ priority }) {
 function Th({ children, w, className = "" }) {
   return (
     <th
-      className={`px-3 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200 ${className}`}
+      className={`px-3 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap border-b border-gray-200 ${className}`}
       style={w ? { width: w, minWidth: w } : undefined}
     >
       {children}
@@ -125,7 +125,7 @@ function Th({ children, w, className = "" }) {
 
 function Td({ children, className = "" }) {
   return (
-    <td className={`px-3 py-2 text-sm text-gray-800 whitespace-nowrap border-b border-gray-100 align-top ${className}`}>
+    <td className={`px-3 py-2 text-sm text-gray-800 whitespace-nowrap border-b border-gray-100 align-middle ${className}`}>
       {children}
     </td>
   );
@@ -326,7 +326,7 @@ function sanitizeDateInput(v) {
     .slice(0, 10);
 }
 
-function buildFilterPayload(f, dd) {
+function buildFilterPayload(f, dd, allowedHbus) {
   const payload = {};
 
   if (f.demandNumber && /^\d+$/.test(String(f.demandNumber).trim())) {
@@ -350,8 +350,23 @@ function buildFilterPayload(f, dd) {
   if (f.lobNames?.length)
     payload.lobNames = f.lobNames;
 
-  if (f.hbuNames?.length)
+  // ✅ CASE 1: both permission + UI
+  if (allowedHbus.length > 0 && f.hbuNames?.length) {
+    const filtered = f.hbuNames.filter(h => allowedHbus.includes(h));
+
+    // ✅ fallback if nothing matches
+    payload.hbuNames = filtered.length ? filtered : allowedHbus;
+  }
+
+  // ✅ CASE 2: only permission
+  else if (allowedHbus.length > 0) {
+    payload.hbuNames = allowedHbus;
+  }
+
+  // ✅ CASE 3: only UI
+  else if (f.hbuNames?.length) {
     payload.hbuNames = f.hbuNames;
+  }
 
   if (f.externalInternalNames?.length)
     payload.externalInternalNames = f.externalInternalNames;
@@ -435,7 +450,7 @@ function HeaderWithSearch({
   toggle,
 }) {
   return (
-    <div className="flex flex-col items-start justify-center gap-1">
+    <div className="flex flex-col items-center justify-center gap-1 w-full">
       <div className="flex items-center gap-2">
         <span>{label}</span>
         <SearchOutlined
@@ -478,7 +493,7 @@ function HeaderDateRange({
 }) {
   const openKey = `${keyFrom}__${keyTo}`;
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-center gap-1 w-full">
       <div className="flex items-center gap-2">
         <span>{label}</span>
         <SearchOutlined
@@ -541,7 +556,7 @@ function HeaderMultiSelect({
   toggle,
 }) {
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-center gap-1">
       <div className="flex items-center gap-2">
         <span>{label}</span>
         <SearchOutlined
@@ -588,7 +603,7 @@ function HeaderNumberRange({
 }) {
   const openKey = `${keyMin}__${keyMax}`;
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-center gap-1 w-full">
       <div className="flex items-center gap-2">
         <span>{label}</span>
         <SearchOutlined
@@ -649,6 +664,9 @@ export default function ProfileTracker() {
     decisionDate: '',
   });
 
+  const [isHbuReady, setIsHbuReady] = useState(false);
+
+
   const [dd, setDd] = useState({
     profileTrackerStatuses: [],
   });
@@ -659,10 +677,6 @@ export default function ProfileTracker() {
     setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
   const debouncedFilters = useDebounced(filters);
 
-  const filterPayload = useMemo(
-    () => buildFilterPayload(debouncedFilters, dd),
-    [debouncedFilters, dd]
-  );
 
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -675,6 +689,28 @@ export default function ProfileTracker() {
 
   const canExportExcel = can("DashBoard", "Track", "Export ProfileTrackerSheet");
   const canUpdateProfileTracker = can("DashBoard", "Track", "Update ProfileTracker")
+
+  const allowedHbus = useMemo(() => {
+    const list = [];
+
+    if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
+    if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
+    if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
+    if (can("DashBoard", "HBU", "QE")) list.push("QE");
+    if (can("DashBoard", "HBU", "AI")) list.push("AI");
+    if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
+    if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
+    if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
+
+    return list;
+  }, [can]);
+
+
+   const filterPayload = useMemo(
+    () => buildFilterPayload(debouncedFilters, dd, allowedHbus),
+    [debouncedFilters, dd, allowedHbus]
+  );
+
 
   useEffect(() => {
     (async () => {
@@ -726,6 +762,68 @@ export default function ProfileTracker() {
     })();
   }, []);
 
+  const scrollRef = React.useRef(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    const onMouseDown = (e) => {
+      isDown = true;
+      el.classList.add("cursor-grabbing");
+
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+
+      document.body.classList.add("no-select"); // ✅ ADD THIS LINE
+    };
+
+
+    const onMouseLeave = () => {
+      isDown = false;
+      el.classList.remove("cursor-grabbing");
+
+      document.body.classList.remove("no-select"); // ✅ ADD THIS
+    };
+
+
+    const onMouseUp = () => {
+      isDown = false;
+      el.classList.remove("cursor-grabbing");
+
+      document.body.classList.remove("no-select"); // ✅ ADD THIS LINE
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5; // speed
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+
+
+    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("mouseleave", onMouseLeave);
+    el.addEventListener("mouseup", onMouseUp);
+    el.addEventListener("mousemove", onMouseMove);
+
+    return () => {
+      el.removeEventListener("mousedown", onMouseDown);
+      el.removeEventListener("mouseleave", onMouseLeave);
+      el.removeEventListener("mouseup", onMouseUp);
+      el.removeEventListener("mousemove", onMouseMove);
+    };
+  }, []);
+
+
+
+
   const load = async (pg = page, sz = size, payload = filterPayload) => {
     try {
       setLoading(true);
@@ -776,8 +874,24 @@ export default function ProfileTracker() {
   }, []);
 
   useEffect(() => {
+    if (!isHbuReady) return;   // ✅ WAIT
+
     load(0, size, filterPayload);
-  }, [filterPayload]);
+  }, [isHbuReady]);
+
+
+
+  useEffect(() => {
+    if (allowedHbus.length > 0) {
+      setFilters((prev) => ({
+        ...prev,
+        hbuNames: allowedHbus   // ✅ multi-select support
+      }));
+    }
+
+    setIsHbuReady(true);
+  }, [allowedHbus]);
+
 
   const onPageChange = (current, pageSize) => {
     load(current - 1, pageSize, filterPayload);
@@ -1066,40 +1180,43 @@ export default function ProfileTracker() {
 
     <>
 
-<style>
-  {
-    `
- /* ===== TABLE BASE ===== */
+      <style>
+        {
+          `
+ /* ===== TABLE ===== */
 .profile-table {
   border-collapse: separate;
   border-spacing: 0;
 }
 
-/* ===== HEADER (ALL HEADERS ABOVE BODY) ===== */
+/* ===== ALL HEADER CELLS ===== */
 .profile-table thead th {
   position: sticky;
   top: 0;
   background: #f9fafb;
-  z-index: 30;  /* increase */
+  z-index: 10;
 }
 
-/* ===== FIRST 3 HEADER (HIGHEST) ===== */
-th.sticky-col-edit,
-th.sticky-col-demand,
-th.sticky-col-candidate {
-  z-index: 40; /* MUST be highest */
+/* ===== STICKY HEADER COLUMNS ===== */
+.profile-table thead th.sticky-col-edit,
+.profile-table thead th.sticky-col-demand,
+.profile-table thead th.sticky-col-candidate {
+  position: sticky;
+  top: 0;
+  z-index: 50; /* higher than normal headers */
+  background: #f9fafb;
 }
 
-/* ===== BODY STICKY COLUMNS ===== */
-td.sticky-col-edit,
-td.sticky-col-demand,
-td.sticky-col-candidate {
+/* ===== STICKY BODY COLUMNS ===== */
+.profile-table tbody td.sticky-col-edit,
+.profile-table tbody td.sticky-col-demand,
+.profile-table tbody td.sticky-col-candidate {
   position: sticky;
   background: white;
-  z-index: 20; /* BELOW HEADER */
+  z-index: 20;
 }
 
-/* ===== COLUMN POSITIONS ===== */
+/* ===== LEFT POSITIONS ===== */
 .sticky-col-edit {
   left: 0;
   width: 80px;
@@ -1108,676 +1225,699 @@ td.sticky-col-candidate {
 
 .sticky-col-demand {
   left: 80px;
-  width: 180px;
-  min-width: 180px;
+  width: 120px;
+  min-width: 120px;
 }
 
 .sticky-col-candidate {
-  left: 260px;
-  width: 260px;
-  min-width: 260px;
+  left: 200px;
+  width: 200px;
+  min-width: 200px;
 }
 
 /* ===== SHADOW ===== */
-.sticky-col-edit,
-.sticky-col-demand,
-.sticky-col-candidate {
+.profile-table thead th.sticky-col-edit,
+.profile-table thead th.sticky-col-demand,
+.profile-table thead th.sticky-col-candidate,
+.profile-table tbody td.sticky-col-edit,
+.profile-table tbody td.sticky-col-demand,
+.profile-table tbody td.sticky-col-candidate {
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
 }
 
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
     `
-  }
-</style>
+        }
+      </style>
 
 
-    <Layout>
-      <div className="py-1">
-        <div className=" grid grid-cols-3 w-full items-center">
-          <div></div>
-          <div className="w-2/3">
-            <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
-              Profile Tracker
-            </h2>
-          </div>
+      <Layout>
+        <div className="py-1">
+          <div className=" grid grid-cols-3 w-full items-center">
+            <div></div>
+            <div className="w-2/3">
+              <h2 className="text-2xl md:text-2xl font-bold tracking-tight text-gray-900">
+                Profile Tracker
+              </h2>
+            </div>
 
-          <div className="flex items-start justify-end gap-1 py-1">
-            {canExportExcel && (
-              <Button
-                type="default"
-                icon={<ExportOutlined />}
-                loading={loading}
-                onClick={handleExport}
-                className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 py-2"
-              >
-                Export Profile TrackerSheet
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {loading && (
-          <div className="text-sm text-gray-700 my-2">
-            Loading…
-          </div>
-        )}
-        {apiErr && (
-          <div className="text-sm text-red-600 my-2">
-            Error: {apiErr}
-          </div>
-        )}
-        <div className="overflow-x-auto rounded-md border border-gray-200">
-          <table className="profile-table min-w-max border-collapse">
-            <thead className="bg-gray-50">
-              <tr>
-               <Th w={60} className="sticky-col-edit">EDIT</Th>
-
-               <Th w={180}className="sticky-col-demand">
-                  <HeaderWithSearch
-                    label="Demand Number"
-                    keyName="demandNumber"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-              <Th className="sticky-col-candidate">
-                  <HeaderWithSearch
-                    label="Candidate Name"
-                    keyName="candidateName"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-                <Th>
-                  <HeaderMultiSelect
-                    label="LOB"
-                    keyName="lobNames"
-                    options={dd.lobs || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderMultiSelect
-                    label="Priority"
-                    keyName="priorityNames"
-                    options={dd.priorities || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-
-                </Th>
-
-
-                <Th>
-                  <HeaderMultiSelect
-                    label="Location"
-                    keyName="demandLocationNames"
-                    options={dd.locations || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th w={180}>
-                  <HeaderMultiSelect
-                    label="Skill Cluster"
-                    keyName="skillClusterNames"
-                    options={dd.skillClusters || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-
-                </Th>
-
-                <Th w={220}>
-                  <HeaderMultiSelect
-                    label="Primary Skill"
-                    keyName="demandPrimarySkillNames"
-                    options={dd.primarySkills || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-
-                </Th>
-
-                <Th w={220}>
-                  <HeaderMultiSelect
-                    label="Secondary Skill"
-                    keyName="demandSecondarySkillNames"
-                    options={dd.secondarySkills || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-
-
-                <Th>
-                  <HeaderMultiSelect
-                    label="HBU"
-                    keyName="hbuNames"
-                    options={dd.hbus || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-
-                </Th>
-
-
-                <Th>
-                  <HeaderMultiSelect
-                    label="External/Internal"
-                    keyName="externalInternalNames"
-                    options={dd.externalInternals || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderMultiSelect
-                    label="Hiring Manager"
-                    keyName="hiringManagerNames"
-                    options={dd.hiringManagers || []}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-
-                </Th>
-
-                <Th>
-                  <HeaderDateRange
-                    label="Attached Date"
-                    keyFrom="attachedDateFrom"
-                    keyTo="attachedDateTo"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderDateRange
-                    label="Profile Shared Date"
-                    keyFrom="profileSharedDateFrom"
-                    keyTo="profileSharedDateTo"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderDateRange
-                    label="Interview Date"
-                    keyFrom="interviewDateFrom"
-                    keyTo="interviewDateTo"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderDateRange
-                    label="Decision Date"
-                    keyFrom="decisionDateFrom"
-                    keyTo="decisionDateTo"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                {/* ONLY ONE STATUS SELECT REMAINS */}
-                <Th>
-                  <HeaderMultiSelect
-                    label="Status"
-                    keyName="profileTrackerStatusNames"
-                    options={dd.profileTrackerStatuses}
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-
-                <Th>
-                  <HeaderNumberRange
-                    label="Aging"
-                    keyMin="agingMin"
-                    keyMax="agingMax"
-                    filters={filters}
-                    setFilters={setFilters}
-                    openSearch={openSearch}
-                    toggle={toggleSearch}
-                  />
-                </Th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {!rows?.length && !loading ? (
-                <tr>
-                  <td
-                    colSpan={20}
-                    className="p-3 text-sm text-gray-500"
-                  >
-                    No data found.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((p) => {
-                  const rowId = getRowId(p);
-                  const isEdit = editId === rowId;
-
-                  const demandCode =
-                    p?.demand?.displayDemandId ||
-                    `${p?.demand?.lob?.name ?? ''}-${p?.demand?.demandId}`;
-
-                  const skillClusterText =
-                    p?.demand?.skillCluster?.name ?? '-';
-                  const primarySkillsText = Array.isArray(
-                    p?.demand?.primarySkills
-                  )
-                    ? p.demand.primarySkills
-                      .map(nameOf)
-                      .join(', ')
-                    : p?.demand?.primarySkills ?? '-';
-
-                  const secondarySkillsText = Array.isArray(
-                    p?.demand?.secondarySkills
-                  )
-                    ? p.demand.secondarySkills
-                      .map(nameOf)
-                      .join(', ')
-                    : p?.demand?.secondarySkills ?? '-';
-
-                  const attachedDate = getAttachedDate(p);
-                  const aging = calculateDaysFrom(attachedDate);
-
-                  const candidateName =
-                    p?.profile?.candidateName ?? '-';
-                  const empId = p?.profile?.empId;
-
-                  const jdFileName = getJdFileName(p);
-                  const cvFileName = getCvFileName(p);
-
-                  // --- BASE DATES FOR VALIDATION (inside rows.map) ---
-                  const demandCreationStr = getDemandCreationDate(p)
-                    ? displayDate(getDemandCreationDate(p))
-                    : '';
-                  const attachedDateStr = attachedDate ? displayDate(attachedDate) : '';
-
-                  return (
-                    <tr key={rowId} className="even:bg-gray-50/50">
-                      <Td className="sticky-col-edit">
-                        {!isEdit ? (
-                          canUpdateProfileTracker && (
-                            <button
-                              type="button"
-                              onClick={() => onEdit(p)}
-                              className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
-                            >
-                              <EditOutlined /> Edit
-                            </button>
-                          )
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => onSave(p)}
-                              className="inline-flex items-center gap-1 rounded border border-green-600 text-green-700 px-2 py-1 text-xs hover:bg-green-50"
-                            >
-                              <SaveOutlined /> Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={onCancel}
-                              className="inline-flex items-center gap-1 rounded border border-gray-400 px-2 py-1 text-xs hover:bg-gray-100"
-                            >
-                              <CloseOutlined /> Cancel
-                            </button>
-                          </div>
-                        )}
-                      </Td>
-
-                      <Td className="sticky-col-demand">
-                        <div className="flex items-center justify-between gap-2 min-h-[44px]">
-                          <span className="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-600 px-2 py-0.5 text-xs font-semibold">
-                            {demandCode || '-'}
-                          </span>
-                          <div className="shrink-0 flex items-center">
-                            <Tooltip
-                              title={
-                                jdFileName
-                                  ? `Download JD (${prettifyFilename(
-                                    jdFileName
-                                  )})`
-                                  : 'JD not available'
-                              }
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                  jdFileName &&
-                                  handleJdDownload(
-                                    jdFileName,
-                                    e
-                                  )
-                                }
-                                className={`p-1 rounded ${jdFileName
-                                  ? 'hover:bg-blue-50 hover:text-blue-700'
-                                  : 'text-gray-300 cursor-not-allowed'
-                                  }`}
-                                disabled={!jdFileName}
-                              >
-                                <DownloadOutlined />
-                              </button>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </Td>
-
-                      <Td className="sticky-col-candidate">
-                        <div className="flex items-center justify-between gap-2 min-h-[44px]">
-                          <div className="flex flex-col leading-tight">
-                            <span className="font-medium text-gray-900 whitespace-nowrap">
-                              {candidateName}
-                            </span>
-                            {empId ? (
-                              <span className="text-xs text-gray-500 whitespace-nowrap">
-                                ({empId})
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="shrink-0 flex items-center">
-                            <Tooltip
-                              title={
-                                cvFileName
-                                  ? `Download CV (${prettifyFilename(
-                                    cvFileName
-                                  )})`
-                                  : 'CV not available'
-                              }
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) =>
-                                  cvFileName &&
-                                  handleCvDownload(
-                                    cvFileName,
-                                    e
-                                  )
-                                }
-                                className={`p-1 rounded ${cvFileName
-                                  ? 'hover:bg-blue-50 hover:text-blue-700'
-                                  : 'text-gray-300 cursor-not-allowed'
-                                  }`}
-                                disabled={!cvFileName}
-                              >
-                                <DownloadOutlined />
-                              </button>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </Td>
-
-                      <Td>{p?.demand?.lob?.name || '-'}</Td>
-
-                      <Td>
-                        <Pill
-                          priority={
-                            p?.demand?.priority?.name ??
-                            p?.priority
-                          }
-                        />
-                      </Td>
-
-                      <Td>{demandLocationNamesText(p)}</Td>
-
-                      <TdWrapWithTooltip
-                        text={skillClusterText}
-                        w={180}
-                      />
-                      <TdWrapWithTooltip
-                        text={primarySkillsText}
-                        w={220}
-                      />
-                      <TdWrapWithTooltip
-                        text={secondarySkillsText}
-                        w={220}
-                      />
-
-
-                      <Td>{p?.demand?.hbu?.name || '-'}</Td>
-
-
-
-                      <Td>
-                        {nameOf(p?.profile?.externalInternal) || '-'}
-                      </Td>
-                      <Td>
-                        {p?.demand?.hiringManager?.name ?? '-'}
-                      </Td>
-
-                      {/* Attached Date + (show rule error in edit mode if any) */}
-                      <Td>
-                        <div className="flex flex-col">
-                          <span>{displayDate(attachedDate) || '-'}</span>
-                          {isEdit && editErrors.attachedDate ? (
-                            <div className="text-xs text-red-600 mt-1 leading-tight whitespace-normal">
-                              {editErrors.attachedDate}
-                            </div>
-                          ) : null}
-                        </div>
-                      </Td>
-
-                      {/* Profile Shared Date */}
-                      <Td>
-                        {!isEdit ? (
-                          displayDate(p?.profileSharedDate) || '-'
-                        ) : (
-                          <>
-                            <DatePicker
-                              allowClear
-                              value={toDayjs(
-                                editDraft.profileSharedDate
-                              )}
-                              format={BACKEND_FMT}
-                              onChange={(d) =>
-                                setEditDraft((x) => {
-                                  const next = {
-                                    ...x,
-                                    profileSharedDate: d
-                                      ? d.format(BACKEND_FMT)
-                                      : '',
-                                  };
-                                  const { errors } = validateTrackerDates(
-                                    next,
-                                    demandCreationStr,
-                                    attachedDateStr
-                                  );
-                                  setEditErrors(errors);
-                                  return next;
-                                })
-                              }
-                              size="small"
-                            />
-                            {editErrors.profileSharedDate ? (
-                              <div className="text-xs text-red-600 mt-1 leading-tight">
-                                {editErrors.profileSharedDate}
-                              </div>
-                            ) : null}
-                          </>
-                        )}
-                      </Td>
-
-                      {/* Interview Date */}
-                      <Td>
-                        {!isEdit ? (
-                          displayDate(p?.interviewDate) || '-'
-                        ) : (
-                          <>
-                            <DatePicker
-                              allowClear
-                              value={toDayjs(
-                                editDraft.interviewDate
-                              )}
-                              format={BACKEND_FMT}
-                              onChange={(d) =>
-                                setEditDraft((x) => {
-                                  const next = {
-                                    ...x,
-                                    interviewDate: d
-                                      ? d.format(BACKEND_FMT)
-                                      : '',
-                                  };
-                                  const { errors } = validateTrackerDates(
-                                    next,
-                                    demandCreationStr,
-                                    attachedDateStr
-                                  );
-                                  setEditErrors(errors);
-                                  return next;
-                                })
-                              }
-                              size="small"
-                            />
-                            {editErrors.interviewDate ? (
-                              <div className="text-xs text-red-600 mt-1 leading-tight">
-                                {editErrors.interviewDate}
-                              </div>
-                            ) : null}
-                          </>
-                        )}
-                      </Td>
-
-                      {/* Decision Date */}
-                      <Td>
-                        {!isEdit ? (
-                          displayDate(p?.decisionDate) || '-'
-                        ) : (
-                          <>
-                            <DatePicker
-                              allowClear
-                              value={toDayjs(
-                                editDraft.decisionDate
-                              )}
-                              format={BACKEND_FMT}
-                              onChange={(d) =>
-                                setEditDraft((x) => {
-                                  const next = {
-                                    ...x,
-                                    decisionDate: d
-                                      ? d.format(BACKEND_FMT)
-                                      : '',
-                                  };
-                                  const { errors } = validateTrackerDates(
-                                    next,
-                                    demandCreationStr,
-                                    attachedDateStr
-                                  );
-                                  setEditErrors(errors);
-                                  return next;
-                                })
-                              }
-                              size="small"
-                            />
-                            {editErrors.decisionDate ? (
-                              <div className="text-xs text-red-600 mt-1 leading-tight">
-                                {editErrors.decisionDate}
-                              </div>
-                            ) : null}
-                          </>
-                        )}
-                      </Td>
-
-                      {/* FINAL REMAINING STATUS COLUMN */}
-                      <Td>
-                        {!isEdit ? (
-                          p?.profileTrackerStatus?.name ?? '-'
-                        ) : (
-                          <select
-                            className="h-8 rounded border border-gray-300 bg-white px-2 text-sm"
-                            value={String(
-                              editDraft.statusId ?? ''
-                            )}
-                            onChange={(e) =>
-                              setEditDraft((d) => ({
-                                ...d,
-                                statusId: e.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">-</option>
-                            {dd.profileTrackerStatuses.map(
-                              (o) => (
-                                <option
-                                  key={o.id}
-                                  value={o.id}
-                                >
-                                  {o.name}
-                                </option>
-                              )
-                            )}
-                          </select>
-                        )}
-                      </Td>
-
-                      <Td>{formatAging(aging)}</Td>
-                    </tr>
-                  );
-                })
+            <div className="flex items-start justify-end gap-1 py-1">
+              {canExportExcel && (
+                <Button
+                  type="default"
+                  icon={<ExportOutlined />}
+                  loading={loading}
+                  onClick={handleExport}
+                  className="bg-green-800 hover:bg-green-900 text-white font-semibold border border-green-900 py-2"
+                >
+                  Export Profile TrackerSheet
+                </Button>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
 
-        <div className="mt-3 flex items-center justify-end">
-          <Pagination
-            current={page + 1}
-            pageSize={size}
-            total={total}
-            showSizeChanger
-            pageSizeOptions={[5, 10, 20, 50, 100]}
-            onChange={onPageChange}
-            onShowSizeChange={onShowSizeChange}
-            showTotal={(t, range) =>
-              `${range[0]}-${range[1]} of ${t}`
-            }
-          />
+          {loading && (
+            <div className="text-sm text-gray-700 my-2">
+              Loading…
+            </div>
+          )}
+          {apiErr && (
+            <div className="text-sm text-red-600 my-2">
+              Error: {apiErr}
+            </div>
+          )}
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-md border border-gray-200 cursor-grab"
+          >
+            <table className="profile-table min-w-max border-collapse">
+              <thead className="bg-gray-50">
+                <tr>
+                  <Th w={60} className="sticky-col-edit">EDIT</Th>
+
+                  <Th w={120} className="sticky-col-demand">
+                    <HeaderWithSearch
+                      label="Demand Number"
+                      keyName="demandNumber"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th className="sticky-col-candidate">
+                    <HeaderWithSearch
+                      label="Candidate Name"
+                      keyName="candidateName"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+                  <Th>
+                    <HeaderMultiSelect
+                      label="LOB"
+                      keyName="lobNames"
+                      options={dd.lobs || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderMultiSelect
+                      label="Priority"
+                      keyName="priorityNames"
+                      options={dd.priorities || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+
+                  </Th>
+
+
+                  <Th>
+                    <HeaderMultiSelect
+                      label="Location"
+                      keyName="demandLocationNames"
+                      options={dd.locations || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th w={180}>
+                    <HeaderMultiSelect
+                      label="Skill Cluster"
+                      keyName="skillClusterNames"
+                      options={dd.skillClusters || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+
+                  </Th>
+
+                  <Th w={220}>
+                    <HeaderMultiSelect
+                      label="Primary Skill"
+                      keyName="demandPrimarySkillNames"
+                      options={dd.primarySkills || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+
+                  </Th>
+
+                  <Th w={220}>
+                    <HeaderMultiSelect
+                      label="Secondary Skill"
+                      keyName="demandSecondarySkillNames"
+                      options={dd.secondarySkills || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+
+
+                  <Th>
+                    <HeaderMultiSelect
+                      label="HBU"
+                      keyName="hbuNames"
+                      options={dd.hbus || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+
+                  </Th>
+
+
+                  <Th>
+                    <HeaderMultiSelect
+                      label="External/Internal"
+                      keyName="externalInternalNames"
+                      options={dd.externalInternals || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderMultiSelect
+                      label="Hiring Manager"
+                      keyName="hiringManagerNames"
+                      options={dd.hiringManagers || []}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+
+                  </Th>
+
+                  <Th>
+                    <HeaderDateRange
+                      label="Attached Date"
+                      keyFrom="attachedDateFrom"
+                      keyTo="attachedDateTo"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderDateRange
+                      label="Profile Shared Date"
+                      keyFrom="profileSharedDateFrom"
+                      keyTo="profileSharedDateTo"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderDateRange
+                      label="Interview Date"
+                      keyFrom="interviewDateFrom"
+                      keyTo="interviewDateTo"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderDateRange
+                      label="Decision Date"
+                      keyFrom="decisionDateFrom"
+                      keyTo="decisionDateTo"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  {/* ONLY ONE STATUS SELECT REMAINS */}
+                  <Th>
+                    <HeaderMultiSelect
+                      label="Status"
+                      keyName="profileTrackerStatusNames"
+                      options={dd.profileTrackerStatuses}
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+
+                  <Th>
+                    <HeaderNumberRange
+                      label="Aging"
+                      keyMin="agingMin"
+                      keyMax="agingMax"
+                      filters={filters}
+                      setFilters={setFilters}
+                      openSearch={openSearch}
+                      toggle={toggleSearch}
+                    />
+                  </Th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {!rows?.length && !loading ? (
+                  <tr>
+                    <td
+                      colSpan={20}
+                      className="p-3 text-sm text-gray-500"
+                    >
+                      No data found.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((p) => {
+                    const rowId = getRowId(p);
+                    const isEdit = editId === rowId;
+
+                    const demandCode =
+                      p?.demand?.displayDemandId ||
+                      `${p?.demand?.lob?.name ?? ''}-${p?.demand?.demandId}`;
+
+                    const skillClusterText =
+                      p?.demand?.skillCluster?.name ?? '-';
+                    const primarySkillsText = Array.isArray(
+                      p?.demand?.primarySkills
+                    )
+                      ? p.demand.primarySkills
+                        .map(nameOf)
+                        .join(', ')
+                      : p?.demand?.primarySkills ?? '-';
+
+                    const secondarySkillsText = Array.isArray(
+                      p?.demand?.secondarySkills
+                    )
+                      ? p.demand.secondarySkills
+                        .map(nameOf)
+                        .join(', ')
+                      : p?.demand?.secondarySkills ?? '-';
+
+                    const attachedDate = getAttachedDate(p);
+                    const aging = calculateDaysFrom(attachedDate);
+
+                    const candidateName =
+                      p?.profile?.candidateName ?? '-';
+                    const empId = p?.profile?.empId;
+
+                    const jdFileName = getJdFileName(p);
+                    const cvFileName = getCvFileName(p);
+
+                    // --- BASE DATES FOR VALIDATION (inside rows.map) ---
+                    const demandCreationStr = getDemandCreationDate(p)
+                      ? displayDate(getDemandCreationDate(p))
+                      : '';
+                    const attachedDateStr = attachedDate ? displayDate(attachedDate) : '';
+
+                    return (
+                      <tr key={rowId} className="even:bg-gray-50/50">
+                        <Td className="sticky-col-edit">
+                          {!isEdit ? (
+                            canUpdateProfileTracker && (
+                              <button
+                                type="button"
+                                onClick={() => onEdit(p)}
+                                className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-100"
+                              >
+                                <EditOutlined /> Edit
+                              </button>
+                            )
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onSave(p)}
+                                className="inline-flex items-center gap-1 rounded border border-green-600 text-green-700 px-2 py-1 text-xs hover:bg-green-50"
+                              >
+                                <SaveOutlined /> Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onCancel}
+                                className="inline-flex items-center gap-1 rounded border border-gray-400 px-2 py-1 text-xs hover:bg-gray-100"
+                              >
+                                <CloseOutlined /> Cancel
+                              </button>
+                            </div>
+                          )}
+                        </Td>
+
+                        <Td className="sticky-col-demand ">
+                          <div className="flex items-center gap-2 min-h-[44px]">
+                            <span className="inline-flex items-center justify-center rounded-full bg-green-50 text-green-700 border border-green-600 px-3 py-0.5 text-xs font-semibold min-w-[80px]">
+                              {demandCode || '-'}
+                            </span>
+                            <div className="shrink-0 flex items-center">
+                              <Tooltip
+                                title={
+                                  jdFileName
+                                    ? `Download JD (${prettifyFilename(
+                                      jdFileName
+                                    )})`
+                                    : 'JD not available'
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    jdFileName &&
+                                    handleJdDownload(
+                                      jdFileName,
+                                      e
+                                    )
+                                  }
+                                  className={` items-start p-1 rounded ${jdFileName
+                                    ? 'hover:bg-blue-50 hover:text-blue-700'
+                                    : 'text-gray-300 cursor-not-allowed'
+                                    }`}
+                                  disabled={!jdFileName}
+                                >
+                                  <DownloadOutlined />
+                                </button>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        </Td>
+
+                        <Td className="sticky-col-candidate">
+                          <div className="flex items-center w-full min-h-[44px]">
+
+                            {/* LEFT: Candidate Name */}
+                            <Tooltip title={candidateName}>
+                              <div className="flex flex-col max-w-[180px] ">
+                                <span className="font-medium text-gray-900 break-all leading-snug line-clamp-2">
+                                  {candidateName}
+                                </span>
+
+                                {empId && (
+                                  <span className="text-xs text-gray-500 text-left">
+                                    ({empId})
+                                  </span>
+                                )}
+                              </div>
+                            </Tooltip>
+
+                            {/* RIGHT: CV Download (push to extreme right) */}
+                            <div className="ml-auto flex items-start">
+                              <Tooltip
+                                title={
+                                  cvFileName
+                                    ? `Download CV (${prettifyFilename(cvFileName)})`
+                                    : "CV not available"
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    cvFileName && handleCvDownload(cvFileName, e)
+                                  }
+                                  className={`p-1 rounded ${cvFileName
+                                    ? "hover:bg-blue-50 hover:text-blue-700"
+                                    : "text-gray-300 cursor-not-allowed"
+                                    }`}
+                                  disabled={!cvFileName}
+                                >
+                                  <DownloadOutlined />
+                                </button>
+                              </Tooltip>
+                            </div>
+
+                          </div>
+                        </Td>
+
+                        <Td>{p?.demand?.lob?.name || '-'}</Td>
+
+                        <Td>
+                          <Pill
+                            priority={
+                              p?.demand?.priority?.name ??
+                              p?.priority
+                            }
+                          />
+                        </Td>
+
+                        <Td>{demandLocationNamesText(p)}</Td>
+
+                        <TdWrapWithTooltip
+                          text={skillClusterText}
+                          w={180}
+                        />
+                        <TdWrapWithTooltip
+                          text={primarySkillsText}
+                          w={220}
+                        />
+                        <TdWrapWithTooltip
+                          text={secondarySkillsText}
+                          w={220}
+                        />
+
+
+                        <Td>{p?.demand?.hbu?.name || '-'}</Td>
+
+
+
+                        <Td>
+                          {nameOf(p?.profile?.externalInternal) || '-'}
+                        </Td>
+                        <Td>
+                          {p?.demand?.hiringManager?.name ?? '-'}
+                        </Td>
+
+                        {/* Attached Date + (show rule error in edit mode if any) */}
+                        <Td>
+                          <div className="flex flex-col">
+                            <span>{displayDate(attachedDate) || '-'}</span>
+                            {isEdit && editErrors.attachedDate ? (
+                              <div className="text-xs text-red-600 mt-1 leading-tight whitespace-normal">
+                                {editErrors.attachedDate}
+                              </div>
+                            ) : null}
+                          </div>
+                        </Td>
+
+                        {/* Profile Shared Date */}
+                        <Td>
+                          {!isEdit ? (
+                            displayDate(p?.profileSharedDate) || '-'
+                          ) : (
+                            <>
+                              <DatePicker
+                                allowClear
+                                value={toDayjs(
+                                  editDraft.profileSharedDate
+                                )}
+                                format={BACKEND_FMT}
+                                onChange={(d) =>
+                                  setEditDraft((x) => {
+                                    const next = {
+                                      ...x,
+                                      profileSharedDate: d
+                                        ? d.format(BACKEND_FMT)
+                                        : '',
+                                    };
+                                    const { errors } = validateTrackerDates(
+                                      next,
+                                      demandCreationStr,
+                                      attachedDateStr
+                                    );
+                                    setEditErrors(errors);
+                                    return next;
+                                  })
+                                }
+                                size="small"
+                              />
+                              {editErrors.profileSharedDate ? (
+                                <div className="text-xs text-red-600 mt-1 leading-tight">
+                                  {editErrors.profileSharedDate}
+                                </div>
+                              ) : null}
+                            </>
+                          )}
+                        </Td>
+
+                        {/* Interview Date */}
+                        <Td>
+                          {!isEdit ? (
+                            displayDate(p?.interviewDate) || '-'
+                          ) : (
+                            <>
+                              <DatePicker
+                                allowClear
+                                value={toDayjs(
+                                  editDraft.interviewDate
+                                )}
+                                format={BACKEND_FMT}
+                                onChange={(d) =>
+                                  setEditDraft((x) => {
+                                    const next = {
+                                      ...x,
+                                      interviewDate: d
+                                        ? d.format(BACKEND_FMT)
+                                        : '',
+                                    };
+                                    const { errors } = validateTrackerDates(
+                                      next,
+                                      demandCreationStr,
+                                      attachedDateStr
+                                    );
+                                    setEditErrors(errors);
+                                    return next;
+                                  })
+                                }
+                                size="small"
+                              />
+                              {editErrors.interviewDate ? (
+                                <div className="text-xs text-red-600 mt-1 leading-tight">
+                                  {editErrors.interviewDate}
+                                </div>
+                              ) : null}
+                            </>
+                          )}
+                        </Td>
+
+                        {/* Decision Date */}
+                        <Td>
+                          {!isEdit ? (
+                            displayDate(p?.decisionDate) || '-'
+                          ) : (
+                            <>
+                              <DatePicker
+                                allowClear
+                                value={toDayjs(
+                                  editDraft.decisionDate
+                                )}
+                                format={BACKEND_FMT}
+                                onChange={(d) =>
+                                  setEditDraft((x) => {
+                                    const next = {
+                                      ...x,
+                                      decisionDate: d
+                                        ? d.format(BACKEND_FMT)
+                                        : '',
+                                    };
+                                    const { errors } = validateTrackerDates(
+                                      next,
+                                      demandCreationStr,
+                                      attachedDateStr
+                                    );
+                                    setEditErrors(errors);
+                                    return next;
+                                  })
+                                }
+                                size="small"
+                              />
+                              {editErrors.decisionDate ? (
+                                <div className="text-xs text-red-600 mt-1 leading-tight">
+                                  {editErrors.decisionDate}
+                                </div>
+                              ) : null}
+                            </>
+                          )}
+                        </Td>
+
+                        {/* FINAL REMAINING STATUS COLUMN */}
+                        <Td>
+                          {!isEdit ? (
+                            p?.profileTrackerStatus?.name ?? '-'
+                          ) : (
+                            <select
+                              className="h-8 rounded border border-gray-300 bg-white px-2 text-sm"
+                              value={String(
+                                editDraft.statusId ?? ''
+                              )}
+                              onChange={(e) =>
+                                setEditDraft((d) => ({
+                                  ...d,
+                                  statusId: e.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">-</option>
+                              {dd.profileTrackerStatuses.map(
+                                (o) => (
+                                  <option
+                                    key={o.id}
+                                    value={o.id}
+                                  >
+                                    {o.name}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          )}
+                        </Td>
+
+                        <Td>{formatAging(aging)}</Td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-3 flex items-center justify-end">
+            <Pagination
+              current={page + 1}
+              pageSize={size}
+              total={total}
+              showSizeChanger
+              pageSizeOptions={[5, 10, 20, 50, 100]}
+              onChange={onPageChange}
+              onShowSizeChange={onShowSizeChange}
+              showTotal={(t, range) =>
+                `${range[0]}-${range[1]} of ${t}`
+              }
+            />
+          </div>
         </div>
-      </div>
-    </Layout>
+      </Layout>
     </>
   );
 }

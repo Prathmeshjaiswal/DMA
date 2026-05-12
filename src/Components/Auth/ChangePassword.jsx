@@ -65,7 +65,7 @@ const handleSubmit = async (e) => {
       // Optional: clear fields or navigate away after success
       // setForm({ userId: "", tempPassword: "", password: "" });
       // setNewPwd(""); setConfirmPwd("");
-      // navigate("/login");
+      navigate("/login", { replace: true });
     } else {
       const msg = resp?.message || "Failed to change password.";
       setServerMsg(msg);

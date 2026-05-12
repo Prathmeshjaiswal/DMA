@@ -112,6 +112,16 @@ function adaptOptions(dto = {}) {
 
     // ADD THIS
     profileStatus: toOpt(dto.profileStatusList),
+
+
+    
+
+origins: toOpt(dto.origins),
+  karatStatuses: toOpt(dto.karatStatuses),
+  sources: toOpt(dto.sources),
+  overallStatuses: toOpt(dto.overallStatuses),
+
+
   };
 }
 ``
@@ -209,6 +219,30 @@ function adaptRow(item) {
   // PAN kept in data; UI visibility controlled by a flag
   const panNumber = asText(pick("panNumber", "pan", "pan_no", "panNo", "taxId")) || "";
 
+
+  // --- NEW RDG FIELDS ---
+ const origin = asText(item?.origin?.name || item?.originName);
+const karatStatus = asText(item?.karatStatus?.name || item?.karatStatusName);
+const source = asText(item?.source?.name || item?.sourceName);
+const overallStatus = asText(item?.overallStatusRdg?.name || item?.overallStatusName);
+
+  const dateOfSubmission = pick("dateOfSubmission");
+  const weekOf = pick("weekOf");
+  const accountReceivedOn = pick("accountReceivedOn");
+  const statusDate = pick("statusDate");
+
+  const karatReadiness = asText(pick("karatReadiness"));
+  const lobShared = asText(pick("lobShared"));
+  const practice = asText(pick("practice"));
+  const band = asText(pick("band"));
+  const ageing = pick("ageing");
+  const ageingRange = asText(pick("ageingRange"));
+  const codes = asText(pick("codes"));
+  const codeType = asText(pick("codeType"));
+  const minBillingRate = pick("minBillingRate");
+  const projectCode = asText(pick("projectCode"));
+
+
   // Status (backend returns profileStatus as RefDTO {id,name})
   const profileStatus = asText(pick("profileStatus", "profileStatusName", "status", "statusName"));
   const profileStatusId =
@@ -255,6 +289,29 @@ function adaptRow(item) {
     updatedByUserId,
     createdAt,
     updatedAt,
+
+    origin,
+    weekOf,
+    accountReceivedOn,
+    statusDate,
+
+    karatReadiness,
+    lobShared,
+    practice,
+    band,
+    ageing,
+    ageingRange,
+    codes,
+    codeType,
+    minBillingRate,
+    projectCode,
+
+    karatStatus,
+    source,
+    overallStatus,
+
+    dateOfSubmission,
+
   };
 }
 
@@ -266,6 +323,8 @@ export default function ProfileSheet() {
 
   const [bulkErrors, setBulkErrors] = useState([]);
   const [showBulkErrorModal, setShowBulkErrorModal] = useState(false);
+
+  const [isHbuReady, setIsHbuReady] = useState(false);
 
 
   const handleBulkUpload = () => {
@@ -369,6 +428,28 @@ export default function ProfileSheet() {
   const canViewProfile = can("DashBoard", "Profiles", "View Profile");
 
 
+  const allowedHbus = useMemo(() => {
+  const list = [];
+
+  if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
+  if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
+  if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
+  if (can("DashBoard", "HBU", "QE")) list.push("QE");
+  if (can("DashBoard", "HBU", "AI")) list.push("AI");
+  if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
+  if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
+  if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
+
+  return list;
+}, [can]);
+
+
+
+
+
+
+
+
 
   // console.log("canExcelExport:", canExcelExport);
   // console.log(
@@ -417,7 +498,33 @@ export default function ProfileSheet() {
       { key: "panNumber", label: "PAN Number" },
       { key: "empId", label: "Employee ID" },
       { key: "activeStatus", label: "Status" },
-      { key: "profileStatus", label: "Current Status" },
+      { key: "profileStatus", label: "Profile Status" },
+
+      { key: "origin", label: "Origin" },
+       {key: "lobShared", label: "LOB Shared" },
+      { key: "practice", label: "Practice" },
+      { key: "band", label: "Band" },
+
+      { key: "ageing", label: "Ageing" },
+      { key: "ageingRange", label: "Ageing Range" },
+
+      { key: "codes", label: "Codes" },
+      { key: "codeType", label: "Code Type" },
+
+      { key: "minBillingRate", label: "Min Billing Rate" },
+      { key: "projectCode", label: "Project Code" },
+
+      { key: "karatStatus", label: "Karat Status" },
+      { key: "source", label: "Source" },
+      { key: "overallStatus", label: "Overall Status" },
+
+      { key: "dateOfSubmission", label: "DOS" },
+      { key: "weekOf", label: "Week Of" },
+      { key: "accountReceivedOn", label: "Account Received On" },
+      { key: "statusDate", label: "Status Date" },
+
+      { key: "karatReadiness", label: "Karat Readiness" },
+
       { key: "sapId", label: "SAP ID" },
       { key: "phoneNumber", label: "Phone" },
       { key: "experienceYears", label: "Exp (yrs)" },
@@ -480,6 +587,33 @@ export default function ProfileSheet() {
       "secondarySkills",
       "location",
       "hbu",
+
+
+  "origin",
+  "karatStatus",
+  "source",
+  "overallStatus",
+
+  "dateOfSubmission",
+  "weekOf",
+  "accountReceivedOn",
+  "statusDate",
+
+  "karatReadiness",
+  "lobShared",
+  "practice",
+  "band",
+
+  "ageing",
+  "ageingRange",
+
+  "codes",
+  "codeType",
+
+  "minBillingRate",
+  "projectCode",
+
+
     ],
     [showEmpId, showSapId, canPanVisibility]
     // [showEmpId,isPmoRole]
@@ -549,7 +683,24 @@ export default function ProfileSheet() {
 
     if (clean(query.skillCluster)) filter.skillClusterName = clean(query.skillCluster);
     if (clean(query.location)) filter.locationName = clean(query.location);
-    if (clean(query.hbu)) filter.hbuName = clean(query.hbu);
+   // ✅ CASE 1: both permission + UI
+if (allowedHbus.length > 0 && clean(query.hbu)) {
+  if (allowedHbus.includes(clean(query.hbu))) {
+    filter.hbuName = clean(query.hbu);
+  } else {
+    filter.hbuName = allowedHbus[0];
+  }
+}
+
+// ✅ CASE 2: only permission
+else if (allowedHbus.length > 0) {
+  filter.hbuName = allowedHbus[0];
+}
+
+// ✅ CASE 3: only UI
+else if (clean(query.hbu)) {
+  filter.hbuName = clean(query.hbu);
+}
 
     if (clean(query.primarySkills)) {
       const raw = clean(query.primarySkills);
@@ -590,9 +741,13 @@ export default function ProfileSheet() {
 
         // console.log("RAW API RESPONSE:", resp);
 
-        const adapted = Array.isArray(resp.items)
-          ? resp.items.map((it) => adaptRow(it))
-          : [];
+        // const adapted = Array.isArray(resp.items)
+        //   ? resp.items.map((it) => adaptRow(it))
+        //   : [];
+        const list = resp.items || resp.content || [];
+const adapted = Array.isArray(list)
+  ? list.map((it) => adaptRow(it))
+  : [];
 
         setRows(adapted);
         setTotal(resp.totalElements ?? adapted.length);
@@ -621,10 +776,29 @@ export default function ProfileSheet() {
   useEffect(() => {
     loadDropdowns();
   }, [loadDropdowns]);
-  useEffect(() => {
-    fetchServer(0, size);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+
+
+useEffect(() => {
+  if (!isHbuReady) return; // ✅ WAIT FOR HBU
+
+  fetchServer(0, size);
+}, [isHbuReady]);
+
+
+
+useEffect(() => {
+  if (allowedHbus.length > 0) {
+    setQuery((prev) => ({
+      ...prev,
+      hbu: allowedHbus[0]
+    }));
+  }
+
+  // ✅ mark ready AFTER setting filter
+  setIsHbuReady(true);
+}, [allowedHbus]);
+
 
 
   const handleExport = async () => {
@@ -731,10 +905,10 @@ export default function ProfileSheet() {
       <Layout>
         <div>
           {/* title + add */}
-          <div className="mb-4 grid grid-cols-3 w-full items-center">
+          <div className="mt-2 mb-3 grid grid-cols-3 w-full items-center">
             <div />
-            <div className="text-center">
-              <h1 className="text-lg font-bold">Profile Sheet</h1>
+            <div className=" text-center">
+              <h1 className="text-lg font-bold m-0">Profile Sheet</h1>
             </div>
             <div className="flex items-start justify-end gap-2">
               {canCreateProfile && (
