@@ -70,9 +70,9 @@ export default function ProfileTable({
 
   const scrollRef = React.useRef(null);
 
-const isDownRef = React.useRef(false);
-const startXRef = React.useRef(0);
-const scrollLeftRef = React.useRef(0);
+  const isDownRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftRef = React.useRef(0);
 
   const [openSearch, setOpenSearch] = useState({});
   const toggleSearch = (key) => setOpenSearch((s) => ({ ...s, [key]: !s[key] }));
@@ -182,10 +182,10 @@ const scrollLeftRef = React.useRef(0);
         ? String(row.sapId)
         : undefined,
 
-  experienceYears:
-  row?.experience != null
-    ? parseFloat(row.experience)
-    : undefined,
+    experienceYears:
+      row?.experience != null
+        ? parseFloat(row.experience)
+        : undefined,
 
     locationId:
       row?.locationId != null && row?.locationId !== "" ? String(row.locationId) : undefined,
@@ -399,6 +399,80 @@ const scrollLeftRef = React.useRef(0);
   // console.log("ProfileTable profileStatus opts:", dropdownOptions?.profileStatus);
   // ``
 
+
+
+
+  const renderFilterInput = (key) => {
+    const getOptions = () => {
+      switch (key) {
+        case "skillCluster":
+          return opts.skillCluster;
+
+        case "location":
+          return opts.locations;
+
+        case "hbu":
+          return opts.hbu;
+
+        case "externalInternal":
+          return opts.externalInternal;
+
+        case "primarySkills":
+          return opts.primarySkills;
+
+        case "secondarySkills":
+          return opts.secondarySkills;
+
+        case "origin":
+          return opts.origin;
+
+        case "karatStatus":
+          return opts.karatStatuses;
+
+        case "source":
+          return opts.sources;
+
+        case "overallStatus":
+          return opts.overallStatuses;
+
+        default:
+          return null;
+      }
+    };
+
+    const options = getOptions();
+
+    // ✅ MULTI DROPDOWN
+    if (options) {
+      return (
+        <AntdSelect
+          mode="multiple"
+          allowClear
+          showSearch
+          placeholder="Select"
+          options={options}
+          value={query?.[key] || []}
+          onChange={(val) => onQueryChange?.(key, val)}
+          style={{ width: 180 }}
+          maxTagCount="responsive"
+          onClick={(e) => e.stopPropagation()}
+        />
+      );
+    }
+
+    // ✅ fallback (normal text)
+    return (
+      <Input
+        size="small"
+        allowClear
+        placeholder={`Search ${key}`}
+        value={query?.[key] ?? ""}
+        onChange={(e) => onQueryChange?.(key, e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+      />
+    );
+  };
+
   // ------- columns (narrow widths & ellipsis) -------
   const antdColumns = useMemo(() => {
     const base = columns
@@ -454,7 +528,7 @@ const scrollLeftRef = React.useRef(0);
                   title="Search"
                 />
               </div>
-              {openSearch[c.key] && (
+              {/* {openSearch[c.key] && (
                 <Input
                   size="small"
                   allowClear
@@ -464,7 +538,10 @@ const scrollLeftRef = React.useRef(0);
                   onClick={(e) => e.stopPropagation()}
                   style={{ width: 140 }}
                 />
-              )}
+              )} */}
+
+              {openSearch[c.key] && renderFilterInput(c.key)}
+
             </div>
           ),
           render: (text, row) => {
@@ -739,127 +816,168 @@ const scrollLeftRef = React.useRef(0);
       <div className=" rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* ---- Scoped CSS ---- */}
         <style>{`
-        .profiles-table .ant-table-thead > tr > th {
-          border-bottom: 1px solid #eef0f2;
-          padding-top: 8px !important;
-          padding-bottom: 8px !important;
-        }
- 
-        .profiles-table .ant-table-tbody > tr > td {
-          border-bottom: 1px solid #f3f4f6;
-          padding-top: 8px !important;
-          padding-bottom: 8px !important;
-        }
- 
-        .profiles-table .cell-ellipsis {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: #1f2937;
-          max-width: 100%;
-          display: block;
-        }
- 
-        .profiles-table .cell-ellipsis-compact {
-          max-width: 180px;
-        }
- 
-        /* 🔥 FIX: prevent sticky column overlapping navbar */
-        .profiles-table .ant-table-container {
-          position: relative;
-          z-index: 0;
-        }
- 
-        /* 🔥 FIX: reduce z-index so navbar stays above */
-        .profiles-table .ant-table-cell-fix-left {
-          background: white;
-          z-index: 2;
-        }
- 
-        .profiles-table .ant-table-thead .ant-table-cell-fix-left {
-          z-index: 3;
-          background: #f9fafb;
-        }
- 
-        /* 🔥 FIX: right fixed column */
-        .profiles-table .ant-table-cell-fix-right {
-          z-index: 2;
-          background: white;
-        }
- 
-        /* 🔥 FIX: vertical scroll body */
-        .profiles-table .ant-table-body {
-          overflow-y: auto !important;
-        }
- 
-        /* Divider between sticky and scroll */
-        .profiles-table .ant-table-cell-fix-left::after {
-          content: "";
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 1px;
-          height: 100%;
-          background: #7094dc;
-        }
-      `}</style>
+/* ================= TABLE BASE ================= */
+.profiles-table .ant-table-thead > tr > th {
+  border-bottom: 1px solid #eef0f2;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.profiles-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f3f4f6;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* ================= TEXT ELLIPSIS ================= */
+.profiles-table .cell-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1f2937;
+  display: block;
+}
+
+.profiles-table .cell-ellipsis-compact {
+  max-width: 180px;
+}
+
+/* ================= CONTAINER ================= */
+.profiles-table .ant-table-container {
+  position: relative;
+}
+
+/* ================= STICKY HEADER (BASE) ================= */
+.profiles-table .ant-table-thead > tr > th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 5;   /* ✅ normal header LOW */
+}
+
+/* ================= HEADER WRAPPER ================= */
+.profiles-table .ant-table-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* ================= LEFT FIXED COLUMN ================= */
+
+/* ✅ HEADER (ALWAYS ON TOP) */
+.profiles-table .ant-table-thead > tr > th.ant-table-cell-fix-left {
+  position: sticky !important;
+  left: 0;
+  z-index: 1000 !important;  /* ✅ highest */
+  background: #f9fafb;
+}
+
+/* ✅ BODY */
+.profiles-table .ant-table-tbody > tr > td.ant-table-cell-fix-left {
+  position: sticky !important;
+  left: 0;
+  z-index: 900;
+  background: #ffffff;
+}
+
+/* ================= RIGHT FIXED COLUMN ================= */
+.profiles-table .ant-table-cell-fix-right {
+  z-index: 800;
+  background: #ffffff;
+}
+
+/* ================= NORMAL HEADERS ================= */
+.profiles-table .ant-table-thead > tr > th:not(.ant-table-cell-fix-left) {
+  z-index: 5;   /* ✅ always below sticky */
+}
+
+/* ================= LEFT SHADOW (PRO LOOK) ================= */
+.profiles-table .ant-table-cell-fix-left::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+  pointer-events: none;
+}
+
+/* ================= DRAG UX ================= */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+`}</style>
       </div>
-<div
-  ref={scrollRef}
-  className="overflow-x-auto cursor-grab active:cursor-grabbing"
-  style={{ overflowY: "auto" }}
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto cursor-grab active:cursor-grabbing"
+        style={{ overflowY: "auto" }}
 
-  onMouseDown={(e) => {
-  const body = scrollRef.current?.querySelector('.ant-table-body');
-  if (!body) return;
 
-  isDownRef.current = true;
-  startXRef.current = e.pageX - scrollRef.current.offsetLeft;
-  scrollLeftRef.current = body.scrollLeft;
-}}
+        onMouseDown={(e) => {
+          const body = scrollRef.current?.querySelector('.ant-table-body');
+          if (!body) return;
 
-  onMouseLeave={() => {
-    isDownRef.current = false;
-  }}
+          isDownRef.current = true;
+          startXRef.current = e.pageX - scrollRef.current.offsetLeft;
+          scrollLeftRef.current = body.scrollLeft;
 
-  onMouseUp={() => {
-    isDownRef.current = false;
-  }}
+          document.body.style.cursor = "grabbing";   // ✅ UX fix
+        }}
 
-onMouseMove={(e) => {
-  if (!isDownRef.current) return;
+        onMouseUp={() => {
+          isDownRef.current = false;
+          document.body.style.cursor = "default";
+        }}
 
-  e.preventDefault();
+        onMouseLeave={() => {
+          isDownRef.current = false;
+          document.body.style.cursor = "default";
+        }}
 
-  const body = scrollRef.current?.querySelector('.ant-table-body');
-  if (!body) return;
+        onMouseMove={(e) => {
+          if (!isDownRef.current) return;
 
-  const x = e.pageX - scrollRef.current.offsetLeft;
-  const walk = (x - startXRef.current) * 1.5;
+          e.preventDefault(); // ✅ prevents text highlight
 
-  body.scrollLeft = scrollLeftRef.current - walk;
-}}
+          const body = scrollRef.current?.querySelector('.ant-table-body');
+          if (!body) return;
 
- onWheel={(e) => {
-  const body = scrollRef.current?.querySelector('.ant-table-body');
-  if (!body) return;
+          const x = e.pageX - scrollRef.current.offsetLeft;
+          const walk = (x - startXRef.current) * 1.5;
 
-  if (e.deltaY !== 0) {
-    body.scrollLeft += e.deltaY;
-  }
-}}
->
-  <Table
-    rowKey={(r) =>
-      String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
-    }
-    dataSource={rows}
-    columns={antdColumns}
-    pagination={pagination}
-    size="middle"
-    className="profiles-table"
-    scroll={{ x: true }}
-  />
+          body.scrollLeft = scrollLeftRef.current - walk;
+        }}
+
+        onWheel={(e) => {
+          const body = scrollRef.current?.querySelector('.ant-table-body');
+          if (!body) return;
+
+          // ✅ Only convert to horizontal when SHIFT is pressed
+          if (e.shiftKey) {
+            e.preventDefault();
+            body.scrollLeft += e.deltaY;
+          }
+        }}
+
+      >
+        <Table
+          rowKey={(r) =>
+            String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
+          }
+          dataSource={rows}
+          columns={antdColumns}
+          pagination={pagination}
+          size="middle"
+          className="profiles-table"
+          loading={false}
+          scroll={{ y: "70vh", x: "max-content" }}
+            sticky
+        />
 
 
 
