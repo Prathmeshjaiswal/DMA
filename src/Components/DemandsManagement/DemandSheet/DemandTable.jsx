@@ -118,26 +118,33 @@ thead th {
 
      <div
   ref={scrollRef}
-  className="overflow-auto max-h-[70vh] cursor-grab active:cursor-grabbing"
+  className="overflow-auto max-h-[70vh] cursor-grab active:cursor-grabbing profiles-table"
+
   onMouseDown={(e) => {
+    const btn = e.target.closest('.ant-btn');
+    if (btn) return; // ✅ allow button click
+
     isDownRef.current = true;
     startXRef.current = e.pageX - scrollRef.current.offsetLeft;
     scrollLeftRef.current = scrollRef.current.scrollLeft;
 
-    document.body.classList.add("no-select"); // ✅ disable text globally
+    document.body.classList.add("no-select");
   }}
+
   onMouseLeave={() => {
     isDownRef.current = false;
     document.body.classList.remove("no-select");
   }}
+
   onMouseUp={() => {
     isDownRef.current = false;
     document.body.classList.remove("no-select");
   }}
+
   onMouseMove={(e) => {
     if (!isDownRef.current) return;
 
-    e.preventDefault(); // ✅ important
+    e.preventDefault();
 
     const x = e.pageX - scrollRef.current.offsetLeft;
     const walk = (x - startXRef.current) * 1.5;
@@ -145,6 +152,7 @@ thead th {
     scrollRef.current.scrollLeft = scrollLeftRef.current - walk;
   }}
 >
+
           <table className="w-full min-w-[1000px] border-collapse">
             <TableHeader
               columns={columns}

@@ -445,18 +445,24 @@ export default function ProfileTable({
     // ✅ MULTI DROPDOWN
     if (options) {
       return (
-        <AntdSelect
-          mode="multiple"
-          allowClear
-          showSearch
-          placeholder="Select"
-          options={options}
-          value={query?.[key] || []}
-          onChange={(val) => onQueryChange?.(key, val)}
-          style={{ width: 180 }}
-          maxTagCount="responsive"
-          onClick={(e) => e.stopPropagation()}
-        />
+       <AntdSelect
+  mode="multiple"
+  allowClear
+  showSearch
+  placeholder="Select"
+  options={options}
+
+  value={query?.[key] || []}
+
+  // ✅ FIX: convert IDs → LABELS
+  onChange={(val) => {
+  onQueryChange?.(key, val);   // ✅ store VALUES, not labels
+}}
+
+  style={{ width: 180 }}
+  maxTagCount="responsive"
+  onClick={(e) => e.stopPropagation()}
+/>
       );
     }
 
@@ -489,6 +495,9 @@ export default function ProfileTable({
 
         //  Make Candidate Name sticky
         const isStickyCandidate = c.key === "candidateName"
+
+        
+
 
 
         return {
@@ -816,92 +825,81 @@ export default function ProfileTable({
       <div className=" rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* ---- Scoped CSS ---- */}
         <style>{`
-/* ================= TABLE BASE ================= */
-.profiles-table .ant-table-thead > tr > th {
-  border-bottom: 1px solid #eef0f2;
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
+/* ================= BASE ================= */
+.profiles-table .ant-table-container {
+  position: relative;
 }
-
-.profiles-table .ant-table-tbody > tr > td {
-  border-bottom: 1px solid #f3f4f6;
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
-}
-
-/* ================= TEXT ELLIPSIS ================= */
-.profiles-table .cell-ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #1f2937;
-  display: block;
-}
-
-.profiles-table .cell-ellipsis-compact {
-  max-width: 180px;
-}
-
-/* ================= CONTAINER ================= */
+/* ================= BASE ================= */
 .profiles-table .ant-table-container {
   position: relative;
 }
 
-/* ================= STICKY HEADER (BASE) ================= */
-.profiles-table .ant-table-thead > tr > th {
-  position: sticky;
-  top: 0;
-  background: #f9fafb;
-  z-index: 5;   /* ✅ normal header LOW */
-}
-
-/* ================= HEADER WRAPPER ================= */
+/* ================= HEADER ================= */
 .profiles-table .ant-table-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
-/* ================= LEFT FIXED COLUMN ================= */
-
-/* ✅ HEADER (ALWAYS ON TOP) */
-.profiles-table .ant-table-thead > tr > th.ant-table-cell-fix-left {
+/* ✅ NORMAL HEADERS */
+.profiles-table .ant-table-thead > tr > th {
   position: sticky !important;
-  left: 0;
-  z-index: 1000 !important;  /* ✅ highest */
-  background: #f9fafb;
+  top: 0 !important;
+  background: #f9fafb !important;
+  z-index: 1100 !important;
 }
 
-/* ✅ BODY */
-.profiles-table .ant-table-tbody > tr > td.ant-table-cell-fix-left {
+/* ================= ✅ LEFT FIXED (FINAL FIX) ================= */
+
+/* ✅ IMPORTANT: handle BOTH classes */
+.profiles-table .ant-table-cell-fix-left,
+.profiles-table .ant-table-cell-fix-left-last {
   position: sticky !important;
-  left: 0;
-  z-index: 900;
-  background: #ffffff;
+  left: 0 !important;
+  background: #ffffff !important;
+  z-index: 1200 !important;
 }
 
-/* ================= RIGHT FIXED COLUMN ================= */
+/* ✅ HEADER LEFT */
+.profiles-table .ant-table-thead
+  > tr
+  > th.ant-table-cell-fix-left,
+.profiles-table .ant-table-thead
+  > tr
+  > th.ant-table-cell-fix-left-last {
+  z-index: 1300 !important;
+  background: #f9fafb !important;
+}
+
+/* ✅ REMOVE any transform issues (VERY IMPORTANT) */
+.profiles-table .ant-table-cell-fix-left,
+.profiles-table .ant-table-cell-fix-left-last {
+  transform: translateZ(0);
+}
+
+/* ================= RIGHT FIXED ================= */
 .profiles-table .ant-table-cell-fix-right {
-  z-index: 800;
+  z-index: 60 !important;
   background: #ffffff;
 }
 
-/* ================= NORMAL HEADERS ================= */
-.profiles-table .ant-table-thead > tr > th:not(.ant-table-cell-fix-left) {
-  z-index: 5;   /* ✅ always below sticky */
+/* ================= BODY ================= */
+.profiles-table .ant-table-tbody > tr > td {
+  background: #fff;
 }
 
-/* ================= LEFT SHADOW (PRO LOOK) ================= */
+/* ================= SHADOW ================= */
 .profiles-table .ant-table-cell-fix-left::after {
   content: "";
   position: absolute;
-  top: 0;
   right: 0;
-  width: 8px;
+  top: 0;
+  width: 6px;
   height: 100%;
   background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
   pointer-events: none;
 }
+
 
 /* ================= DRAG UX ================= */
 .no-select {
@@ -914,8 +912,8 @@ export default function ProfileTable({
       </div>
       <div
         ref={scrollRef}
-        className="overflow-x-auto cursor-grab active:cursor-grabbing"
-        style={{ overflowY: "auto" }}
+        className="cursor-grab active:cursor-grabbing"
+        style={{ overflowY: "auto", overflowX: "hidden" }}
 
 
         onMouseDown={(e) => {
@@ -965,7 +963,7 @@ export default function ProfileTable({
         }}
 
       >
-        <Table
+          <Table
           rowKey={(r) =>
             String(r.id ?? r.profileId ?? r.emailId ?? `${r.emailId}-${r.phoneNumber}`)
           }
@@ -1018,6 +1016,8 @@ export default function ProfileTable({
             <Form.Item
               name="candidateName"
               label="Candidate Name"
+              
+
               rules={[{ whitespace: true, message: "Candidate name is required" }]}
             >
               <Input placeholder="Candidate name" />

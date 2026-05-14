@@ -114,12 +114,12 @@ function adaptOptions(dto = {}) {
     profileStatus: toOpt(dto.profileStatusList),
 
 
-    
 
-origins: toOpt(dto.origins),
-  karatStatuses: toOpt(dto.karatStatuses),
-  sources: toOpt(dto.sources),
-  overallStatuses: toOpt(dto.overallStatuses),
+
+    origins: toOpt(dto.origins),
+    karatStatuses: toOpt(dto.karatStatuses),
+    sources: toOpt(dto.sources),
+    overallStatuses: toOpt(dto.overallStatuses),
 
 
   };
@@ -221,10 +221,10 @@ function adaptRow(item) {
 
 
   // --- NEW RDG FIELDS ---
- const origin = asText(item?.origin?.name || item?.originName);
-const karatStatus = asText(item?.karatStatus?.name || item?.karatStatusName);
-const source = asText(item?.source?.name || item?.sourceName);
-const overallStatus = asText(item?.overallStatusRdg?.name || item?.overallStatusName);
+  const origin = asText(item?.origin?.name || item?.originName);
+  const karatStatus = asText(item?.karatStatus?.name || item?.karatStatusName);
+  const source = asText(item?.source?.name || item?.sourceName);
+  const overallStatus = asText(item?.overallStatusRdg?.name || item?.overallStatusName);
 
   const dateOfSubmission = pick("dateOfSubmission");
   const weekOf = pick("weekOf");
@@ -325,6 +325,13 @@ export default function ProfileSheet() {
   const [showBulkErrorModal, setShowBulkErrorModal] = useState(false);
 
   const [isHbuReady, setIsHbuReady] = useState(false);
+
+
+  const mapValuesToLabels = (options = [], values = []) => {
+  const map = new Map(options.map(o => [String(o.value), o.label]));
+  return values.map(v => map.get(String(v))).filter(Boolean);
+};
+
 
 
   const handleBulkUpload = () => {
@@ -429,19 +436,19 @@ export default function ProfileSheet() {
 
 
   const allowedHbus = useMemo(() => {
-  const list = [];
+    const list = [];
 
-  if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
-  if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
-  if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
-  if (can("DashBoard", "HBU", "QE")) list.push("QE");
-  if (can("DashBoard", "HBU", "AI")) list.push("AI");
-  if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
-  if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
-  if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
+    if (can("DashBoard", "HBU", "HBU1")) list.push("HBU1");
+    if (can("DashBoard", "HBU", "HBU2")) list.push("HBU2");
+    if (can("DashBoard", "HBU", "Engineering")) list.push("Engineering");
+    if (can("DashBoard", "HBU", "QE")) list.push("QE");
+    if (can("DashBoard", "HBU", "AI")) list.push("AI");
+    if (can("DashBoard", "HBU", "DATA")) list.push("DATA");
+    if (can("DashBoard", "HBU", "DPA")) list.push("DPA");
+    if (can("DashBoard", "HBU", "CIMS")) list.push("CIMS");
 
-  return list;
-}, [can]);
+    return list;
+  }, [can]);
 
 
 
@@ -487,6 +494,7 @@ export default function ProfileSheet() {
     () => [
       { key: "candidateName", label: "Candidate Name" },
       { key: "emailId", label: "Email ID" },
+      { key: "externalInternal", label: "Type" },
 
       { key: "l1InterviewDate", label: "L1 Interview Date" },
       { key: "currentLocation", label: "Current Location" },
@@ -501,7 +509,7 @@ export default function ProfileSheet() {
       { key: "profileStatus", label: "Profile Status" },
 
       { key: "origin", label: "Origin" },
-       {key: "lobShared", label: "LOB Shared" },
+      { key: "lobShared", label: "LOB Shared" },
       { key: "practice", label: "Practice" },
       { key: "band", label: "Band" },
 
@@ -552,17 +560,16 @@ export default function ProfileSheet() {
   const ALL_COLUMNS = useMemo(() => {
     return ALL_COLUMNS_BASE.filter((col) => {
       if (col.key === "panNumber" && !canPanVisibility) return false;
-      if (col.key === "sapId" && !showSapId) return false;
       return true;
     });
-  }, [canPanVisibility, showSapId, ALL_COLUMNS_BASE]);
+  }, [canPanVisibility, ALL_COLUMNS_BASE]);
 
   // Default visible (PAN present in base list but filtered by flag below)
   const defaultVisibleBase = useMemo(
     () => [
       "candidateName",
       "emailId",
-
+      "externalInternal",
       "activeStatus",
       "l1InterviewDate",
       "currentLocation",
@@ -573,10 +580,8 @@ export default function ProfileSheet() {
 
       ...(canPanVisibility ? ["panNumber"] : []),
       // ...(isPmoRole ? ["panNumber"] : []), //  CONDITIONAL
-      ...(showEmpId ? ["empId"] : []),
-
-      ...(showSapId ? ["sapId"] : []),
-
+      "empId",
+      "sapId",
       // "panNumber", // filtered out when SHOW_PAN === 0
       // ...(showEmpId ? ["empId"] : []),
       "profileStatus",
@@ -589,29 +594,29 @@ export default function ProfileSheet() {
       "hbu",
 
 
-  "origin",
-  "karatStatus",
-  "source",
-  "overallStatus",
+      "origin",
+      "karatStatus",
+      "source",
+      "overallStatus",
 
-  "dateOfSubmission",
-  "weekOf",
-  "accountReceivedOn",
-  "statusDate",
+      "dateOfSubmission",
+      "weekOf",
+      "accountReceivedOn",
+      "statusDate",
 
-  "karatReadiness",
-  "lobShared",
-  "practice",
-  "band",
+      "karatReadiness",
+      "lobShared",
+      "practice",
+      "band",
 
-  "ageing",
-  "ageingRange",
+      "ageing",
+      "ageingRange",
 
-  "codes",
-  "codeType",
+      "codes",
+      "codeType",
 
-  "minBillingRate",
-  "projectCode",
+      "minBillingRate",
+      "projectCode",
 
 
     ],
@@ -681,37 +686,117 @@ export default function ProfileSheet() {
       }
     }
 
-    if (clean(query.skillCluster)) filter.skillClusterName = clean(query.skillCluster);
-    if (clean(query.location)) filter.locationName = clean(query.location);
-   // ✅ CASE 1: both permission + UI
-if (allowedHbus.length > 0 && clean(query.hbu)) {
-  if (allowedHbus.includes(clean(query.hbu))) {
-    filter.hbuName = clean(query.hbu);
-  } else {
-    filter.hbuName = allowedHbus[0];
-  }
-}
+const addList = (val) => Array.isArray(val) && val.length ? val : null;
 
-// ✅ CASE 2: only permission
+// ✅ ManyToOne
+
+if (addList(query.skillCluster))
+  filter.skillClusterNames = mapValuesToLabels(
+    dropdownOptions.skillCluster,
+    query.skillCluster
+  );
+
+
+if (addList(query.location))
+  filter.locationNames = mapValuesToLabels(
+    dropdownOptions.demandLocation,
+    query.location
+  );
+
+
+
+if (addList(query.externalInternal))
+  filter.externalInternalNames = mapValuesToLabels(
+    dropdownOptions.externalInternal,
+    query.externalInternal
+  );
+
+
+    // ✅ MULTI HBU WITH PERMISSION CONTROL
+    // if (allowedHbus.length > 0 && Array.isArray(query.hbu) && query.hbu.length > 0) {
+    //   const filtered = query.hbu.filter((h) => allowedHbus.includes(h));
+
+    //   filter.hbuNames = filtered.length ? filtered : allowedHbus;
+    // }
+
+    // // ✅ ONLY PERMISSION (no UI selection)
+    // else if (allowedHbus.length > 0) {
+    //   filter.hbuNames = allowedHbus;
+    // }
+
+    // // ✅ ONLY UI (no permission restriction)
+    // else if (Array.isArray(query.hbu) && query.hbu.length > 0) {
+    //   filter.hbuNames = query.hbu;
+    // }
+
+
+    if (allowedHbus.length > 0 && Array.isArray(query.hbu) && query.hbu.length > 0) {
+  const selected = mapValuesToLabels(dropdownOptions.hbu, query.hbu);
+  const filtered = selected.filter(h => allowedHbus.includes(h));
+
+  filter.hbuNames = filtered.length ? filtered : allowedHbus;
+}
 else if (allowedHbus.length > 0) {
-  filter.hbuName = allowedHbus[0];
+  filter.hbuNames = allowedHbus;
+}
+else if (Array.isArray(query.hbu) && query.hbu.length > 0) {
+  filter.hbuNames = mapValuesToLabels(dropdownOptions.hbu, query.hbu);
 }
 
-// ✅ CASE 3: only UI
-else if (clean(query.hbu)) {
-  filter.hbuName = clean(query.hbu);
-}
+    // if (clean(query.primarySkills)) {
+    //   const raw = clean(query.primarySkills);
+    //   const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
+    //   filter.primarySkillNames = names;
+    // }
+    // if (clean(query.secondarySkills)) {
+    //   const raw = clean(query.secondarySkills);
+    //   const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
+    //   filter.secondarySkillNames = names;
+    // }
 
-    if (clean(query.primarySkills)) {
-      const raw = clean(query.primarySkills);
-      const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
-      filter.primarySkillNames = names;
-    }
-    if (clean(query.secondarySkills)) {
-      const raw = clean(query.secondarySkills);
-      const names = raw.includes(",") ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [raw];
-      filter.secondarySkillNames = names;
-    }
+
+
+   if (addList(query.primarySkills))
+  filter.primarySkillNames = mapValuesToLabels(
+    dropdownOptions.primarySkills,
+    query.primarySkills
+  );
+
+if (addList(query.secondarySkills))
+  filter.secondarySkillNames = mapValuesToLabels(
+    dropdownOptions.secondarySkills,
+    query.secondarySkills
+  );
+
+if (addList(query.profileStatus))
+  filter.profileStatusNames = mapValuesToLabels(
+    dropdownOptions.profileStatus,
+    query.profileStatus
+  );
+
+if (addList(query.origin))
+  filter.originNames = mapValuesToLabels(
+    dropdownOptions.origins,
+    query.origin
+  );
+
+if (addList(query.karatStatus))
+  filter.karatStatusNames = mapValuesToLabels(
+    dropdownOptions.karatStatuses,
+    query.karatStatus
+  );
+
+if (addList(query.source))
+  filter.sourceNames = mapValuesToLabels(
+    dropdownOptions.sources,
+    query.source
+  );
+
+if (addList(query.overallStatus))
+  filter.overallStatusRdgNames = mapValuesToLabels(
+    dropdownOptions.overallStatuses,
+    query.overallStatus
+  );
 
     if (clean(query.summary)) filter.summary = clean(query.summary);
 
@@ -745,9 +830,9 @@ else if (clean(query.hbu)) {
         //   ? resp.items.map((it) => adaptRow(it))
         //   : [];
         const list = resp.items || resp.content || [];
-const adapted = Array.isArray(list)
-  ? list.map((it) => adaptRow(it))
-  : [];
+        const adapted = Array.isArray(list)
+          ? list.map((it) => adaptRow(it))
+          : [];
 
         setRows(adapted);
         setTotal(resp.totalElements ?? adapted.length);
@@ -779,25 +864,25 @@ const adapted = Array.isArray(list)
 
 
 
-useEffect(() => {
-  if (!isHbuReady) return; // ✅ WAIT FOR HBU
+  useEffect(() => {
+    if (!isHbuReady) return; // ✅ WAIT FOR HBU
 
-  fetchServer(0, size);
-}, [isHbuReady]);
+    fetchServer(0, size);
+  }, [isHbuReady]);
 
 
 
-useEffect(() => {
-  if (allowedHbus.length > 0) {
-    setQuery((prev) => ({
-      ...prev,
-      hbu: allowedHbus[0]
-    }));
-  }
+  useEffect(() => {
+    if (allowedHbus.length > 0) {
+      setQuery((prev) => ({
+        ...prev,
+        hbu: allowedHbus
+      }));
+    }
 
-  // ✅ mark ready AFTER setting filter
-  setIsHbuReady(true);
-}, [allowedHbus]);
+    // ✅ mark ready AFTER setting filter
+    setIsHbuReady(true);
+  }, [allowedHbus]);
 
 
 

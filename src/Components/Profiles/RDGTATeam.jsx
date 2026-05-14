@@ -324,6 +324,9 @@ export default function RDGTATeam() {
     profileStatus: null,
 
 
+    externalInternal: null,
+
+
     origin: null,
     karatStatus: null,
     source: null,
@@ -390,6 +393,34 @@ export default function RDGTATeam() {
 
           setDropdowns(profileDto);
           setOptions(adapted);
+
+          setForm((prev) => {
+            if (prev.externalInternal) return prev;
+
+            const role = String(roleName || "").toLowerCase();
+
+            let defaultOption = null;
+
+            if (role.includes("rdg")) {
+              defaultOption = adapted.externalInternal.find(
+                (o) => o.label.toLowerCase() === "internal"
+              );
+            } else if (role.includes("ta")) {
+              defaultOption = adapted.externalInternal.find(
+                (o) => o.label.toLowerCase() === "external"
+              );
+            }
+
+            return {
+              ...prev,
+              externalInternal: defaultOption || null,
+            };
+          });
+
+
+
+
+
           const codes = umResp?.data?.countryCodes || [];
           setCountries(codes);
 
@@ -510,7 +541,17 @@ export default function RDGTATeam() {
   // }, [options, isInternal]);
 
   // ✅ Internal if empId exists, else External
-  const externalInternalId = form.empId ? 1 : 2;
+
+
+  const externalInternalId = useMemo(() => {
+    const r = String(roleName || "").toLowerCase();
+
+    if (r.includes("rdg")) return 1; // Internal
+    if (r.includes("ta")) return 2;  // External
+
+    return null;
+  }, [roleName]);
+
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -599,7 +640,9 @@ export default function RDGTATeam() {
       skillClusterId: form.skillCluster?.value ? Number(form.skillCluster.value) : null,
       locationId: form.location ? Number(form.location) : null,
       hbuId: form.hbu ? Number(form.hbu) : null,
-      externalInternalId,
+      externalInternalId: form.externalInternal?.value
+        ? Number(form.externalInternal.value)
+        : null,
       countryId: form.countryId ? Number(form.countryId) : null,
       summary: form.summary?.trim() || "",
       primarySkillsIds: safe(form.primarySkills).map((i) => Number(i.value)), // UPDATED key name
@@ -680,7 +723,55 @@ export default function RDGTATeam() {
   return (
     <Layout>
       <section className={cardWrap}>
-        <SectionTitle>Add Profile</SectionTitle>
+        <div className="relative mb-10">
+
+          {/* ✅ CENTER TITLE */}
+          <div className="text-center">
+            <SectionTitle>Add Profile</SectionTitle>
+          </div>
+
+          {/* ✅ TOP RIGHT DROPDOWN */}
+          <div className="absolute top-0 right-0 flex flex-col items-end">
+            <label className="text-[10px] font-bold text-gray-700 mb-1">
+              External / Internal
+            </label>
+
+            <Select
+              options={safe(options.externalInternal)}
+              value={form.externalInternal}
+              onChange={(val) =>
+                setForm((p) => ({
+                  ...p,
+                  externalInternal: val,
+                }))
+              }
+              placeholder="Type"
+              styles={{
+                ...selectStyles,
+                control: (base) => ({
+                  ...base,
+                  minHeight: 28,
+                  height: 28,
+                  width: 150,   // 🔹 small compact
+                  fontSize: 12,
+                }),
+                valueContainer: (base) => ({
+                  ...base,
+                  padding: "0 6px",
+                }),
+                indicatorsContainer: (base) => ({
+                  ...base,
+                  height: 28,
+                }),
+                dropdownIndicator: (base) => ({
+                  ...base,
+                  padding: 4,
+                }),
+              }}
+            />
+          </div>
+
+        </div>
 
         {/* Profile Type info (read-only display if present)
         {resolvedProfileType ? (
@@ -841,6 +932,7 @@ export default function RDGTATeam() {
                 <p className="text-[11px] text-red-600 mt-1">{panError}</p>
               )}
             </div>
+
 
             <div>
               <label className={labelCls}>Experience (years)</label>
